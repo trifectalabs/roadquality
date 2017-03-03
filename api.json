@@ -1,0 +1,120 @@
+{
+	"name": "road_quality",
+	"description": "Crowd-sourced road quality data",
+	"apidoc": { "version": "0.9.11" },
+  "enums": { },
+  "models": {
+		"point": {
+			"description": "A longitudinal or latitudinal coordatine",
+			"fields": [
+				{ "name": "lat",
+    		  "type" : "double"
+        },
+				{ "name": "lng",
+    		  "type" : "double"
+        }
+			]
+		},
+		"segment": {
+			"description": "A segment of road which will be rated and tagged",
+			"fields": [
+				{ "name": "id",
+    		  "type" : "uuid"
+        },
+				{ "name": "name",
+    		  "type" : "string"
+        },
+				{ "name": "description",
+    		  "type" : "string"
+        },
+				{ "name": "start",
+    		  "type" : "point"
+        },
+				{ "name": "end",
+    		  "type" : "point"
+        },
+				{ "name": "polyline",
+    		  "type" : "string",
+					"required": false
+        }
+			]
+		},
+		"segment_form": {
+			"description": "Form the client uses to create a segment",
+			"fields": [
+				{ "name": "name",
+    		  "type" : "string",
+					"required": false
+        },
+				{ "name": "description",
+    		  "type" : "string",
+					"required": false
+        },
+				{ "name": "start",
+    		  "type" : "point"
+        },
+				{ "name": "end",
+    		  "type" : "point"
+        },
+        { "name": "points",
+          "type" : "[point]",
+          "required": false
+        }
+      ]
+    },
+    "version_info": {
+      "plural": "info",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "description": "Name of this service"
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "description": "Version of this service"
+        },
+        {
+          "name": "scalaVersion",
+          "type": "string",
+          "description": "Version of Scala used to build this service"
+        },
+        {
+          "name": "sbtVersion",
+          "type": "string",
+          "description": "Version of SBT used to build this service"
+        }
+      ]
+    }
+  },
+  "resources" : {
+		"segment": {
+			"operations": [
+				{ "method": "GET",
+					"path": "/:segment_id",
+					"responses": {
+						"200": { "type": "segment" },
+						"404": { "type": "string" }
+					}
+				},
+				{ "method": "POST",
+					"body": { "type": "segment_form" },
+					"responses": {
+						"201": { "type": "segment" },
+						"400": { "type": "string" }
+					}
+				}
+			]
+		},
+		"version_info": {
+			"operations": [
+				{ "method": "GET",
+					"responses": {
+						"200": { "type": "version_info" }
+					}
+				}
+			]
+		}
+	}
+}
