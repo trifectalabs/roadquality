@@ -14,10 +14,13 @@ lazy val root = (project in file("."))
   .settings(dockerSettings: _*)
 
 libraryDependencies ++= Seq(
+  "com.typesafe.play" %% "play-slick" % "2.0.0",
+  "com.typesafe.play" %% "play-slick-evolutions" % "2.0.0",
   "com.github.tminglei" %% "slick-pg" % "0.15.0-M4",
   "com.github.tminglei" %% "slick-pg_joda-time" % "0.15.0-M4",
   "com.github.tminglei" %% "slick-pg_jts" % "0.15.0-M4",
-	ws
+	ws,
+  jdbc
 )
 
 lazy val dockerSettings: Seq[Setting[_]] = Seq(
