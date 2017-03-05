@@ -18,8 +18,8 @@ package com.trifectalabs.road.quality.v0.models {
    */
   case class Segment(
     id: _root_.java.util.UUID,
-    name: String,
-    description: String,
+    name: _root_.scala.Option[String] = None,
+    description: _root_.scala.Option[String] = None,
     start: com.trifectalabs.road.quality.v0.models.Point,
     end: com.trifectalabs.road.quality.v0.models.Point,
     polyline: _root_.scala.Option[String] = None
@@ -36,12 +36,66 @@ package com.trifectalabs.road.quality.v0.models {
     points: _root_.scala.Option[Seq[com.trifectalabs.road.quality.v0.models.Point]] = None
   )
 
+  /**
+   * A user of the application
+   */
+  case class User(
+    id: _root_.java.util.UUID,
+    firstName: String,
+    lastName: String,
+    email: String,
+    role: com.trifectalabs.road.quality.v0.models.Role
+  )
+
   case class VersionInfo(
     name: String,
     version: String,
     scalaVersion: String,
     sbtVersion: String
   )
+
+  /**
+   * The type of account a person has on the application
+   */
+  sealed trait Role
+
+  object Role {
+
+    /**
+     * A typical public user
+     */
+    case object User extends Role { override def toString = "user" }
+    /**
+     * An administrative account for the application
+     */
+    case object Admin extends Role { override def toString = "admin" }
+
+    /**
+     * UNDEFINED captures values that are sent either in error or
+     * that were added by the server after this library was
+     * generated. We want to make it easy and obvious for users of
+     * this library to handle this case gracefully.
+     *
+     * We use all CAPS for the variable name to avoid collisions
+     * with the camel cased values above.
+     */
+    case class UNDEFINED(override val toString: String) extends Role
+
+    /**
+     * all returns a list of all the valid, known values. We use
+     * lower case to avoid collisions with the camel cased values
+     * above.
+     */
+    val all = Seq(User, Admin)
+
+    private[this]
+    val byName = all.map(x => x.toString.toLowerCase -> x).toMap
+
+    def apply(value: String): Role = fromString(value).getOrElse(UNDEFINED(value))
+
+    def fromString(value: String): _root_.scala.Option[Role] = byName.get(value.toLowerCase)
+
+  }
 
 }
 
@@ -73,6 +127,36 @@ package com.trifectalabs.road.quality.v0.models {
       }
     }
 
+    implicit val jsonReadsRoadQualityRole = new play.api.libs.json.Reads[com.trifectalabs.road.quality.v0.models.Role] {
+      def reads(js: play.api.libs.json.JsValue): play.api.libs.json.JsResult[com.trifectalabs.road.quality.v0.models.Role] = {
+        js match {
+          case v: play.api.libs.json.JsString => play.api.libs.json.JsSuccess(com.trifectalabs.road.quality.v0.models.Role(v.value))
+          case _ => {
+            (js \ "value").validate[String] match {
+              case play.api.libs.json.JsSuccess(v, _) => play.api.libs.json.JsSuccess(com.trifectalabs.road.quality.v0.models.Role(v))
+              case err: play.api.libs.json.JsError => err
+            }
+          }
+        }
+      }
+    }
+
+    def jsonWritesRoadQualityRole(obj: com.trifectalabs.road.quality.v0.models.Role) = {
+      play.api.libs.json.JsString(obj.toString)
+    }
+
+    def jsObjectRole(obj: com.trifectalabs.road.quality.v0.models.Role) = {
+      play.api.libs.json.Json.obj("value" -> play.api.libs.json.JsString(obj.toString))
+    }
+
+    implicit def jsonWritesRoadQualityRole: play.api.libs.json.Writes[Role] = {
+      new play.api.libs.json.Writes[com.trifectalabs.road.quality.v0.models.Role] {
+        def writes(obj: com.trifectalabs.road.quality.v0.models.Role) = {
+          jsonWritesRoadQualityRole(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsRoadQualityPoint: play.api.libs.json.Reads[Point] = {
       (
         (__ \ "lat").read[Double] and
@@ -98,8 +182,8 @@ package com.trifectalabs.road.quality.v0.models {
     implicit def jsonReadsRoadQualitySegment: play.api.libs.json.Reads[Segment] = {
       (
         (__ \ "id").read[_root_.java.util.UUID] and
-        (__ \ "name").read[String] and
-        (__ \ "description").read[String] and
+        (__ \ "name").readNullable[String] and
+        (__ \ "description").readNullable[String] and
         (__ \ "start").read[com.trifectalabs.road.quality.v0.models.Point] and
         (__ \ "end").read[com.trifectalabs.road.quality.v0.models.Point] and
         (__ \ "polyline").readNullable[String]
@@ -109,11 +193,17 @@ package com.trifectalabs.road.quality.v0.models {
     def jsObjectSegment(obj: com.trifectalabs.road.quality.v0.models.Segment) = {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id.toString),
-        "name" -> play.api.libs.json.JsString(obj.name),
-        "description" -> play.api.libs.json.JsString(obj.description),
         "start" -> jsObjectPoint(obj.start),
         "end" -> jsObjectPoint(obj.end)
-      ) ++ (obj.polyline match {
+      ) ++ (obj.name match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("name" -> play.api.libs.json.JsString(x))
+      }) ++
+      (obj.description match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("description" -> play.api.libs.json.JsString(x))
+      }) ++
+      (obj.polyline match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("polyline" -> play.api.libs.json.JsString(x))
       })
@@ -159,6 +249,34 @@ package com.trifectalabs.road.quality.v0.models {
       new play.api.libs.json.Writes[com.trifectalabs.road.quality.v0.models.SegmentForm] {
         def writes(obj: com.trifectalabs.road.quality.v0.models.SegmentForm) = {
           jsObjectSegmentForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsRoadQualityUser: play.api.libs.json.Reads[User] = {
+      (
+        (__ \ "id").read[_root_.java.util.UUID] and
+        (__ \ "first_name").read[String] and
+        (__ \ "last_name").read[String] and
+        (__ \ "email").read[String] and
+        (__ \ "role").read[com.trifectalabs.road.quality.v0.models.Role]
+      )(User.apply _)
+    }
+
+    def jsObjectUser(obj: com.trifectalabs.road.quality.v0.models.User) = {
+      play.api.libs.json.Json.obj(
+        "id" -> play.api.libs.json.JsString(obj.id.toString),
+        "first_name" -> play.api.libs.json.JsString(obj.firstName),
+        "last_name" -> play.api.libs.json.JsString(obj.lastName),
+        "email" -> play.api.libs.json.JsString(obj.email),
+        "role" -> play.api.libs.json.JsString(obj.role.toString)
+      )
+    }
+
+    implicit def jsonWritesRoadQualityUser: play.api.libs.json.Writes[User] = {
+      new play.api.libs.json.Writes[com.trifectalabs.road.quality.v0.models.User] {
+        def writes(obj: com.trifectalabs.road.quality.v0.models.User) = {
+          jsObjectUser(obj)
         }
       }
     }
@@ -218,7 +336,16 @@ package com.trifectalabs.road.quality.v0 {
       ISODateTimeFormat.yearMonthDay.parseLocalDate(_), _.toString, (key: String, e: _root_.java.lang.Exception) => s"Error parsing date $key. Example: 2014-04-29"
     )
 
+    // Enum: Role
+    private[this] val enumRoleNotFound = (key: String, e: _root_.java.lang.Exception) => s"Unrecognized $key, should be one of ${com.trifectalabs.road.quality.v0.models.Role.all.mkString(", ")}"
 
+    implicit val pathBindableEnumRole = new PathBindable.Parsing[com.trifectalabs.road.quality.v0.models.Role] (
+      Role.fromString(_).get, _.toString, enumRoleNotFound
+    )
+
+    implicit val queryStringBindableEnumRole = new QueryStringBindable.Parsing[com.trifectalabs.road.quality.v0.models.Role](
+      Role.fromString(_).get, _.toString, enumRoleNotFound
+    )
 
   }
 

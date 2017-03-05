@@ -19,6 +19,7 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg" % "0.15.0-M4",
   "com.github.tminglei" %% "slick-pg_joda-time" % "0.15.0-M4",
   "com.github.tminglei" %% "slick-pg_jts" % "0.15.0-M4",
+  "com.github.tminglei" %% "slick-pg_play-json" % "0.15.0-M4",
 	ws,
   jdbc
 )
