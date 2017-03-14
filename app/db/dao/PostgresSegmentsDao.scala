@@ -4,10 +4,9 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
 import com.trifectalabs.road.quality.v0.models.{Segment, SegmentForm}
-import db.{MyPostgresDriver, Tables}
+import db.MyPostgresDriver
+import db.Tables._
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import play.db.Database
-import Tables._
 
 import scala.concurrent.{ExecutionContext, Future}
 

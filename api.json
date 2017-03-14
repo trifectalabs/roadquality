@@ -15,6 +15,17 @@
         }
       ]
     },
+    "route": {
+      "description": "A routable path on a map - not necessarily a segment",
+      "fields": [
+        { "name": "polyline",
+          "type" : "string"
+        },
+        { "name": "distance",
+          "type" : "double"
+        }
+      ]
+    },
     "segment": {
       "description": "A segment of road which will be rated and tagged",
       "fields": [
@@ -91,6 +102,21 @@
     }
   },
   "resources" : {
+    "route": {
+      "operations": [
+        { "method": "GET",
+          "parameters": [
+            { "name": "start_lat", "type": "double" },
+            { "name": "start_lng", "type": "double" },
+            { "name": "end_lat", "type": "double" },
+            { "name": "end_lng", "type": "double" }
+          ],
+          "responses": {
+            "200": { "type": "route" }
+          }
+        }
+      ]
+    },
     "segment": {
       "operations": [
         { "method": "GET",

@@ -1,7 +1,6 @@
 package db
 
 import com.github.tminglei.slickpg._
-import com.github.tminglei.slickpg._
 
 trait MyPostgresDriver extends ExPostgresDriver
                           with PgArraySupport

@@ -2,11 +2,13 @@ package controllers
 
 import java.util.UUID
 import javax.inject.Inject
-import db.dao.SegmentsDao
-import play.api.mvc.{Action, Controller}
-import play.api.libs.json.Json
-import com.trifectalabs.road.quality.v0.models.{Segment, SegmentForm}
+
+import com.trifectalabs.road.quality.v0.models.SegmentForm
 import com.trifectalabs.road.quality.v0.models.json._
+import db.dao.SegmentsDao
+import play.api.libs.json.Json
+import play.api.mvc.{Action, Controller}
+
 import scala.concurrent.ExecutionContext
 
 class Segments @Inject() (segmentsDao: SegmentsDao)(implicit ec: ExecutionContext) extends Controller {
