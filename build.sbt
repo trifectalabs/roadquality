@@ -14,14 +14,15 @@ lazy val root = (project in file("."))
   .settings(dockerSettings: _*)
 
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-slick" % "2.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "2.0.0",
-  "com.github.tminglei" %% "slick-pg" % "0.15.0-M4",
-  "com.github.tminglei" %% "slick-pg_joda-time" % "0.15.0-M4",
-  "com.github.tminglei" %% "slick-pg_jts" % "0.15.0-M4",
-  "com.github.tminglei" %% "slick-pg_play-json" % "0.15.0-M4",
-	ws,
-  jdbc
+  "com.vividsolutions" % "jts" % "1.13",
+  "com.typesafe.play" %% "play-slick" % "2.0.2",
+  "com.typesafe.play" %% "play-slick-evolutions" % "2.0.2",
+  "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
+  "com.github.tminglei" %% "slick-pg" % "0.14.6",
+  "com.github.tminglei" %% "slick-pg_date2" % "0.14.6",
+  "com.github.tminglei" %% "slick-pg_play-json" % "0.14.6",
+  "com.github.tminglei" %% "slick-pg_jts" % "0.14.6",
+	ws
 )
 
 lazy val dockerSettings: Seq[Setting[_]] = Seq(
@@ -29,5 +30,6 @@ lazy val dockerSettings: Seq[Setting[_]] = Seq(
   maintainer in Docker := "Christopher Poenaru <kiambogo@gmail.com>",
   dockerBaseImage := "openjdk",
   dockerExposedPorts := Seq(9000),
-  dockerExposedVolumes := Seq("/opt/docker/logs")
+  dockerExposedVolumes := Seq("/opt/docker/logs"),
+  version in Docker := version.value
 )

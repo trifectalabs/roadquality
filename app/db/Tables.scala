@@ -1,17 +1,16 @@
 package db
 
 import java.util.UUID
-import com.trifectalabs.road.quality.v0.models.{Segment, Point}
-import CustomPostgresDriver.api._
 
-import com.vividsolutions.jts.geom.{GeometryFactory, Coordinate}
-import com.vividsolutions.jts.geom.{Geometry, Point => JTSPoint}
+import com.trifectalabs.road.quality.v0.models.{Point, Segment}
+import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory, Point => JTSPoint}
 
 object Tables {
+  import MyPostgresDriver.api._
 
   private val geometryFactory: GeometryFactory = new GeometryFactory()
 
-  private[this] def pts2Point(jtsPoint: JTSPoint): Point = Point(jtsPoint.getX(), jtsPoint.getY())
+  private[this] def pts2Point(jtsPoint: JTSPoint): Point = Point(jtsPoint.getX, jtsPoint.getY)
   private[this] def point2Pts(point: Point): JTSPoint = geometryFactory.createPoint(new Coordinate(point.lng, point.lat))
 
 
@@ -25,11 +24,11 @@ object Tables {
     def id = column[UUID]("id", O.PrimaryKey)
     def name = column[Option[String]]("name")
     def description = column[Option[String]]("description")
-    def start = column[JTSPoint]("start")
-    def end = column[JTSPoint]("end")
+    def startPoint = column[JTSPoint]("start_point")
+    def endPoint = column[JTSPoint]("end_point")
     def polyline = column[Option[String]]("polyline")
 
-    override def * = (id, name, description, start, end, polyline) <> (segmentTupled, segmentUnapply)
+    override def * = (id, name, description, startPoint, endPoint, polyline) <> (segmentTupled, segmentUnapply)
   }
 
   val segments = TableQuery[Segments]
