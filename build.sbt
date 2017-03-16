@@ -15,6 +15,7 @@ lazy val root = (project in file("."))
 
 libraryDependencies ++= Seq(
   "com.vividsolutions" % "jts" % "1.13",
+  "com.github.trifectalabs" %% "polyline-scala" % "1.1.0",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
   "com.typesafe.play" %% "play-slick-evolutions" % "2.0.2",
   "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
