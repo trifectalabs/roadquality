@@ -47,8 +47,10 @@
           "type" : "point"
         },
         { "name": "polyline",
-          "type" : "string",
-          "required": false
+          "type" : "string"
+        },
+        { "name": "rating",
+          "type" : "double"
         }
       ]
     },
@@ -63,15 +65,11 @@
           "type" : "string",
           "required": false
         },
-        { "name": "start",
-          "type" : "point"
-        },
-        { "name": "end",
-          "type" : "point"
-        },
         { "name": "points",
-          "type" : "[point]",
-          "required": false
+          "type" : "[point]"
+        },
+        { "name": "rating",
+          "type" : "double"
         }
       ]
     },
