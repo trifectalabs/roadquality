@@ -4,6 +4,7 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
 import com.trifectalabs.road.quality.v0.models.{Segment, SegmentForm}
+import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.MyPostgresDriver
 import db.Tables._
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -28,15 +29,21 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
   }
 
   override def upsert(segmentForm: SegmentForm): Future[Segment] = {
-    // TODO Generated polyline from passed points
+    val polyline = Polyline.encode(segmentForm.points.map { point =>
+      LatLng(
+        lat = BigDecimal(point.lat),
+        lng = BigDecimal(point.lng)
+      )
+    }.toList)
+
     val segment = Segment(
       id = UUID.randomUUID(),
       name = segmentForm.name,
       description = segmentForm.description,
       start = segmentForm.points.head,
       end = segmentForm.points.last,
-      polyline = "TODO",
-      rating = 3)
+      polyline = polyline,
+      rating = segmentForm.rating)
     db.run(segments += segment).map(_ => segment)
   }
 }
