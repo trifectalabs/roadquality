@@ -28,13 +28,15 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
   }
 
   override def upsert(segmentForm: SegmentForm): Future[Segment] = {
-    val segment = Segment(
-      UUID.randomUUID(),
-      segmentForm.name,
-      segmentForm.description,
-      segmentForm.start,
-      segmentForm.end)
     // TODO Generated polyline from passed points
+    val segment = Segment(
+      id = UUID.randomUUID(),
+      name = segmentForm.name,
+      description = segmentForm.description,
+      start = segmentForm.points.head,
+      end = segmentForm.points.last,
+      polyline = "TODO",
+      rating = 3)
     db.run(segments += segment).map(_ => segment)
   }
 }
