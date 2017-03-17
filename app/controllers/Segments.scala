@@ -26,4 +26,8 @@ class Segments @Inject() (segmentsDao: SegmentsDao)(implicit ec: ExecutionContex
     segmentsDao.upsert(segForm).map(s => Ok(Json.toJson(s)))
 	}
 
+  def patchRatingBySegmentIdAndRating(segment_id: _root_.java.util.UUID, rating: Double) = Action.async { implicit request =>
+    segmentsDao.updateRating(segment_id, rating).map(s => Ok(Json.toJson(s)))
+	}
+
 }

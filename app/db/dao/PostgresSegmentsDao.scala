@@ -46,4 +46,10 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
       rating = segmentForm.rating)
     db.run(segments += segment).map(_ => segment)
   }
+
+  def updateRating(id: UUID, rating: Double): Future[Segment] = {
+    val query = for { s <- segments if s.id === id } yield s.rating
+    db.run(query.update(rating)).flatMap(i => getSegment(id).map(_.get))
+  }
+
 }

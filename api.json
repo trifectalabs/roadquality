@@ -140,6 +140,18 @@
             "201": { "type": "segment" },
             "400": { "type": "string" }
           }
+        },
+        { "method": "PATCH",
+          "path": "/:segment_id/rating/:rating",
+          "parameters": [
+            { "name": "segment_id", "type": "uuid" },
+            { "name": "rating", "type": "double" }
+          ],
+          "responses": {
+            "200": { "type": "segment" },
+            "400": { "type": "string" },
+            "404": { "type": "string" }
+          }
         }
       ]
     },
