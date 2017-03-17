@@ -23,7 +23,8 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg_date2" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_play-json" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_jts" % "0.14.6",
-	ws
+	ws,
+  filters
 )
 
 lazy val dockerSettings: Seq[Setting[_]] = Seq(
