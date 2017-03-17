@@ -112,6 +112,12 @@
           "responses": {
             "200": { "type": "route" }
           }
+        },
+        { "method": "POST",
+          "body": { "type": "[point]" },
+          "responses": {
+            "200": { "type": "route" }
+          }
         }
       ]
     },
