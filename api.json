@@ -2,7 +2,42 @@
   "name": "road_quality",
   "description": "Crowd-sourced road quality data",
   "apidoc": { "version": "0.9.11" },
-  "enums": { },
+  "enums": {
+    "path_type": {
+      "description": "The level of dedication of the segment to cycling",
+      "values": [
+        {
+          "name": "shared",
+          "description": "A shared road for cars and bikes (road shoulder)"
+        },
+        {
+          "name": "dedicated_lane",
+          "description": "A dedicated bike lane on the road"
+        },
+        {
+          "name": "bike_path",
+          "description": "A completely isolated bike lane (a natural barrier from road traffic)"
+        }
+      ]
+    },
+    "surface": {
+      "description": "The surface type of a segment (road type)",
+      "values": [
+        {
+          "name": "gravel",
+          "description": "Road consisting of small rocks"
+        },
+        {
+          "name": "asphalt",
+          "description": "Road consisting of paved asphalt"
+        },
+        {
+          "name": "dirt",
+          "description": "Road consisting of cleared dirt"
+        }
+      ]
+    }
+  },
   "models": {
     "point": {
       "description": "A longitudinal or latitudinal coordatine",
@@ -51,6 +86,12 @@
         },
         { "name": "rating",
           "type" : "double"
+        },
+        { "name": "surface",
+          "type" : "surface"
+        },
+        { "name": "path_type",
+          "type" : "path_type"
         }
       ]
     },
@@ -70,6 +111,14 @@
         },
         { "name": "rating",
           "type" : "double"
+        },
+        { "name": "surface",
+          "type" : "surface",
+          "default": "asphalt"
+        },
+        { "name": "path_type",
+          "type" : "path_type",
+          "default": "shared"
         }
       ]
     },

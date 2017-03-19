@@ -43,7 +43,9 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
       start = segmentForm.points.head,
       end = segmentForm.points.last,
       polyline = polyline,
-      rating = segmentForm.rating)
+      rating = segmentForm.rating,
+      surface = segmentForm.surface,
+      pathType = segmentForm.pathType)
     db.run(segments += segment).map(_ => segment)
   }
 
