@@ -1,10 +1,11 @@
 package db.dao
 
-import com.trifectalabs.road.quality.v0.models.Route
+import com.trifectalabs.road.quality.v0.models.{ Route, Point }
 
 import scala.concurrent.Future
 
 
 trait RoutesDao {
-  def get(start_lat: Double, start_lng: Double, end_lat: Double, end_lng: Double): Future[Route]
+  def route(startPoint: Point, endPoint: Point): Future[Route]
+  def snapPoint(point: Point): Future[Point]
 }

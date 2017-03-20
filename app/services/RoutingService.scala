@@ -10,22 +10,36 @@ import db.dao.RoutesDao
 
 trait RoutingService {
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[Route]
-  def generateRoute(points: Seq[Point]): Route
+  def generateRoute(points: Seq[Point]): Future[Route]
+  def snapPoint(point: Point): Future[Point]
 }
 
 
-class RoutingServiceImpl @Inject()(routesDao: RoutesDao) extends RoutingService {
+class RoutingServiceImpl @Inject()(routesDao: RoutesDao)(implicit ec: ExecutionContext) extends RoutingService {
 
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[Route] = {
-    routesDao.get(startLat, startLng, endLat, endLng)
+    routesDao.route(
+      Point(startLat, startLng),
+      Point(endLat, endLng)
+    )
   }
 
-  def generateRoute(points: Seq[Point]): Route = {
-  // TODO: Use PGRouting instead of this naive implmentation
-    val polyline = Polyline.encode(points.map { point =>
-      LatLng(lat = BigDecimal(point.lat), lng = BigDecimal(point.lng))
-    }.toList)
-
-    Route(polyline = polyline, distance = 0)
+  def generateRoute(points: Seq[Point]): Future[Route] = {
+      println(s"Points: $points")
+    Future.sequence {
+      (points.init zip points.tail).map { case (p1, p2) =>
+        println(s"Generating polyline between $p1 and $p2")
+        routesDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
+      }
+    } map { b =>
+      println(b)
+      val pl = Polyline.encode(b.flatten.toList)
+      println(pl)
+      Route(polyline = pl, distance = 0) }
   }
+
+  def snapPoint(point: Point): Future[Point] = {
+    routesDao.snapPoint(point)
+  }
+
 }

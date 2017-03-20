@@ -162,6 +162,16 @@
             "200": { "type": "route" }
           }
         },
+        { "method": "GET",
+          "path": "/snap",
+          "parameters": [
+            { "name": "lat", "type": "double" },
+            { "name": "lng", "type": "double" }
+          ],
+          "responses": {
+            "200": { "type": "route" }
+          }
+        },
         { "method": "POST",
           "body": { "type": "[point]" },
           "responses": {
