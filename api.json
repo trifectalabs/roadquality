@@ -36,6 +36,19 @@
           "description": "Road consisting of cleared dirt"
         }
       ]
+    },
+    "user_role": {
+      "description": "The type of user (user or admin)",
+      "values": [
+        {
+          "name": "user",
+          "description": "A standard consumer of the service"
+        },
+        {
+          "name": "admin",
+          "description": "An administrator of the application"
+        }
+      ]
     }
   },
   "models": {
@@ -154,6 +167,44 @@
           "name": "sbtVersion",
           "type": "string",
           "description": "Version of SBT used to build this service"
+        }
+      ]
+    },
+    "user": {
+      "description": "A user of the service",
+      "fields": [
+        { "name": "id",
+          "type" : "uuid"
+        },
+        { "name": "first_name",
+          "type" : "string"
+        },
+        { "name": "last_name",
+          "type" : "string"
+        },
+        { "name": "email",
+          "type" : "string"
+        },
+        { "name": "created_at",
+          "type" : "date-time-iso8601"
+        },
+        { "name": "role",
+          "type" : "user_role",
+          "default": "user"
+        }
+      ]
+    },
+    "user_form": {
+      "description": "A form used to create a user",
+      "fields": [
+        { "name": "first_name",
+          "type" : "string"
+        },
+        { "name": "last_name",
+          "type" : "string"
+        },
+        { "name": "email",
+          "type" : "string"
         }
       ]
     }
