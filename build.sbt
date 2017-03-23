@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick-evolutions" % "2.0.2",
   "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
   "com.github.tminglei" %% "slick-pg" % "0.14.6",
-  "com.github.tminglei" %% "slick-pg_date2" % "0.14.6",
+  "com.github.tminglei" %% "slick-pg_joda-time" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_play-json" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_jts" % "0.14.6",
   "io.megl" %% "play-json-extra" % "2.4.3",
