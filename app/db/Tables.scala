@@ -35,8 +35,9 @@ object Tables {
     def email = column[String]("email")
     def createdAt = column[DateTime]("created_at")
     def role = column[UserRole]("role")
+    def stravaToken = column[String]("strava_token")
 
-    override def * = (id, firstName, lastName, email, createdAt, role) <> (User.tupled, User.unapply)
+    override def * = (id, firstName, lastName, email, createdAt, role, stravaToken) <> (User.tupled, User.unapply)
   }
 
   val users = TableQuery[Users]

@@ -18,4 +18,3 @@ ALTER TABLE segments ALTER COLUMN traffic_rating SET NOT NULL;
 ALTER TABLE segments DROP COLUMN surface_rating double precision;
 ALTER TABLE segments DROP COLUMN traffic_rating double precision;
 ALTER TABLE segments RENAME overall_rating TO rating;
-

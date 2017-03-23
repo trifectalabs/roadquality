@@ -2,16 +2,21 @@ package util
 
 import javax.inject.Inject
 import java.util.UUID
+import java.util.NoSuchElementException
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 import play.api.mvc._
 import play.api.libs.ws._
 import play.api.http.{MimeTypes, HeaderNames}
 import play.api.Configuration
 
-class OAuth2 @Inject() (configuration: Configuration, ws: WSClient) extends Controller {
+import com.trifectalabs.road.quality.v0.models.{ User, UserForm, UserRole }
+import db.dao.UsersDao
+
+class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao) extends Controller {
   lazy val stravaAuthUri = configuration.getString("strava.auth.uri").get
   lazy val stravaTokenUri = configuration.getString("strava.auth.token_uri").get
   lazy val stravaClientId = configuration.getString("strava.client.id").get
@@ -26,8 +31,9 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient) extends Cont
       oauthState <- request.session.get("oauth-state")
     } yield {
       if (state == oauthState) {
-        getToken(code).map { accessToken =>
-          Redirect(util.routes.OAuth2.success()).withSession("oauth-token" -> accessToken)
+        getToken(code).map { userForm =>
+          userDao.upsert(userForm)
+          Redirect(util.routes.OAuth2.success()).withSession("oauth-token" -> userForm.stravaToken)
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
         }
@@ -52,18 +58,24 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient) extends Cont
     stravaAuthUri.format(stravaClientId, stravaClientRedirectUri, stravaClientScope, state)
   }
 
-  private[this] def getToken(code: String): Future[String] = {
+  private[this] def getToken(code: String): Future[UserForm] = {
     val tokenResponse = ws.url(stravaTokenUri).
       withQueryString("client_id" -> stravaClientId,
         "client_secret" -> stravaClientSecret,
         "code" -> code).
       post(Results.EmptyContent())
 
-    tokenResponse.flatMap { response =>
-      (response.json \ "access_token").asOpt[String].fold {
-        Future.failed[String](new IllegalStateException("Failed to parse access token")) } { accessToken =>
-        Future.successful(accessToken)
+      tokenResponse.map { response =>
+        val accessToken = (response.json \ "access_token").as[String]
+        val firstName = (response.json \ "athlete" \ "firstname").as[String]
+        val lastName = (response.json \ "athlete" \ "lastname").as[String]
+        val email = (response.json \ "athlete" \ "email").as[String]
+
+        UserForm(
+          firstName = firstName,
+          lastName = lastName,
+          email = email,
+          stravaToken = accessToken)
       }
-    }
   }
 }

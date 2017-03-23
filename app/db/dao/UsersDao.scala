@@ -12,4 +12,5 @@ trait UsersDao {
   def findByEmail(email: String): Future[Option[User]]
   def insert(userForm: UserForm): Future[User]
   def update(user: User): Future[User]
+  def upsert(userForm: UserForm): Future[User]
 }

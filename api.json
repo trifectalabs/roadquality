@@ -191,6 +191,10 @@
         { "name": "role",
           "type" : "user_role",
           "default": "user"
+        },
+        { "name": "strava_token",
+          "type" : "string",
+          "description": "Strava API token"
         }
       ]
     },
@@ -205,6 +209,10 @@
         },
         { "name": "email",
           "type" : "string"
+        },
+        { "name": "strava_token",
+          "type" : "string",
+          "description": "Strava API token"
         }
       ]
     }

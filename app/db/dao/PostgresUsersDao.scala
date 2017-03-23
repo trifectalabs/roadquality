@@ -23,7 +23,7 @@ class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfig
   }
 
   override def findByEmail(email: String): Future[Option[User]] = {
-    db.run(users.filter(_.email === email).result.headOption)
+    db.run(users.filter(_.email === email.trim.toLowerCase).result.headOption)
   }
 
   override def insert(userForm: UserForm): Future[User] = {
@@ -34,14 +34,25 @@ class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfig
       lastName = userForm.lastName,
       email = userForm.email,
       createdAt = DateTime.now(),
+      stravaToken = userForm.stravaToken,
       role = UserRole.User)
 
     db.run((users += user).map(_ => user))
   }
 
   override def update(user: User): Future[User] = {
-    val query = for { u <- users if u.id === user.id } yield (u.firstName, u.lastName, u.email)
-    db.run(query.update(user.firstName, user.lastName, user.email)).map(i => user)
+    val query = for { u <- users if u.id === user.id } yield (u.firstName, u.lastName, u.email, u.stravaToken)
+    db.run(query.update(user.firstName, user.lastName, user.email, user.stravaToken)).map(i => user)
   }
 
+  override def upsert(userForm: UserForm): Future[User] = {
+    val isExistingUser = db.run(users.filter(_.email === userForm.email.trim.toLowerCase).result.headOption)
+
+    isExistingUser.flatMap { isEu =>
+      isEu match {
+        case Some(eu) => update(eu)
+        case None => insert(userForm)
+      }
+    }
+  }
 }
