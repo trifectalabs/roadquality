@@ -7,6 +7,7 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
   override def configure(): Unit = {
     bind(classOf[SegmentsDao]).to(classOf[PostgresSegmentsDao])
     bind(classOf[RoutesDao]).to(classOf[PostgresRoutesDao])
+    bind(classOf[UsersDao]).to(classOf[PostgresUsersDao])
     bind(classOf[RoutingService]).to(classOf[RoutingServiceImpl])
   }
 }

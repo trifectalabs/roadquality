@@ -68,7 +68,8 @@ package com.trifectalabs.road.quality.v0.models {
     lastName: String,
     email: String,
     createdAt: _root_.org.joda.time.DateTime,
-    role: com.trifectalabs.road.quality.v0.models.UserRole = com.trifectalabs.road.quality.v0.models.UserRole.User
+    role: com.trifectalabs.road.quality.v0.models.UserRole = com.trifectalabs.road.quality.v0.models.UserRole.User,
+    stravaToken: String
   )
 
   /**
@@ -77,7 +78,8 @@ package com.trifectalabs.road.quality.v0.models {
   case class UserForm(
     firstName: String,
     lastName: String,
-    email: String
+    email: String,
+    stravaToken: String
   )
 
   case class VersionInfo(
@@ -483,7 +485,8 @@ package com.trifectalabs.road.quality.v0.models {
         (__ \ "last_name").read[String] and
         (__ \ "email").read[String] and
         (__ \ "created_at").read[_root_.org.joda.time.DateTime] and
-        (__ \ "role").read[com.trifectalabs.road.quality.v0.models.UserRole]
+        (__ \ "role").read[com.trifectalabs.road.quality.v0.models.UserRole] and
+        (__ \ "strava_token").read[String]
       )(User.apply _)
     }
 
@@ -494,7 +497,8 @@ package com.trifectalabs.road.quality.v0.models {
         "last_name" -> play.api.libs.json.JsString(obj.lastName),
         "email" -> play.api.libs.json.JsString(obj.email),
         "created_at" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.createdAt)),
-        "role" -> play.api.libs.json.JsString(obj.role.toString)
+        "role" -> play.api.libs.json.JsString(obj.role.toString),
+        "strava_token" -> play.api.libs.json.JsString(obj.stravaToken)
       )
     }
 
@@ -510,7 +514,8 @@ package com.trifectalabs.road.quality.v0.models {
       (
         (__ \ "first_name").read[String] and
         (__ \ "last_name").read[String] and
-        (__ \ "email").read[String]
+        (__ \ "email").read[String] and
+        (__ \ "strava_token").read[String]
       )(UserForm.apply _)
     }
 
@@ -518,7 +523,8 @@ package com.trifectalabs.road.quality.v0.models {
       play.api.libs.json.Json.obj(
         "first_name" -> play.api.libs.json.JsString(obj.firstName),
         "last_name" -> play.api.libs.json.JsString(obj.lastName),
-        "email" -> play.api.libs.json.JsString(obj.email)
+        "email" -> play.api.libs.json.JsString(obj.email),
+        "strava_token" -> play.api.libs.json.JsString(obj.stravaToken)
       )
     }
 
@@ -784,7 +790,7 @@ package com.trifectalabs.road.quality.v0 {
     }
 
     def _requestHolder(path: String): play.api.libs.ws.WSRequest = {
-      
+
       val holder = ws.url(baseUrl + path).withHeaders(
         "User-Agent" -> Constants.UserAgent,
         "X-Apidoc-Version" -> Constants.Version,
