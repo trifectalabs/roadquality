@@ -2,6 +2,7 @@ package controllers
 
 import java.util.UUID
 import javax.inject.Inject
+import play.json.extra.Jsonx
 
 import com.trifectalabs.road.quality.v0.models.SegmentForm
 import com.trifectalabs.road.quality.v0.models.json._
@@ -13,6 +14,7 @@ import util.actions.LoggingAction
 import scala.concurrent.ExecutionContext
 
 class Segments @Inject() (segmentsDao: SegmentsDao)(implicit ec: ExecutionContext) extends Controller {
+  implicit def jsonFormat = Jsonx.formatCaseClass[SegmentForm]
 
   def getAll() = LoggingAction.async {
     segmentsDao.getAllSegments.map(s => Ok(Json.toJson(s)))

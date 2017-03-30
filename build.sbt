@@ -13,6 +13,8 @@ lazy val root = (project in file("."))
   .enablePlugins(BuildInfoPlugin)
   .settings(dockerSettings: _*)
 
+resolvers += "Sonatype releases" at "https://oss.sonatype.org/content/repositories/releases"
+
 libraryDependencies ++= Seq(
   "com.vividsolutions" % "jts" % "1.13",
   "com.github.trifectalabs" %% "polyline-scala" % "1.1.0",
@@ -23,7 +25,8 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg_date2" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_play-json" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_jts" % "0.14.6",
-	ws,
+  "io.megl" %% "play-json-extra" % "2.4.3",
+  ws,
   filters
 )
 
