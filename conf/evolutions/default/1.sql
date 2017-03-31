@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-CREATE TABLE segments (
+CREATE TABLE IF NOT EXISTS segments (
     id uuid NOT NULL,
     name varchar(255),
     description text,
@@ -14,4 +14,4 @@ CREATE TABLE segments (
 
 # --- !Downs
 
-DROP TABLE segments;
+DROP TABLE IF EXISTS segments;
