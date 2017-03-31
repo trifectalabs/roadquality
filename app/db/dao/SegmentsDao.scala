@@ -12,5 +12,6 @@ trait SegmentsDao {
   // TODO: Get segments by bounded box
   def delete(id: UUID): Future[Unit]
   def upsert(segmentForm: SegmentForm): Future[Segment]
-  def updateRating(id: UUID, rating: Double): Future[Segment]
+  def updateTrafficRating(id: UUID, rating: Double): Future[Segment]
+  def updateSurfaceRating(id: UUID, rating: Double): Future[Segment]
 }

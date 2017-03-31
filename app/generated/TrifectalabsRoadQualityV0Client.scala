@@ -31,7 +31,9 @@ package com.trifectalabs.road.quality.v0.models {
     start: com.trifectalabs.road.quality.v0.models.Point,
     end: com.trifectalabs.road.quality.v0.models.Point,
     polyline: String,
-    rating: Double,
+    overallRating: Double,
+    surfaceRating: Double,
+    trafficRating: Double,
     surface: com.trifectalabs.road.quality.v0.models.Surface,
     pathType: com.trifectalabs.road.quality.v0.models.PathType
   )
@@ -43,7 +45,8 @@ package com.trifectalabs.road.quality.v0.models {
     name: _root_.scala.Option[String] = None,
     description: _root_.scala.Option[String] = None,
     points: Seq[com.trifectalabs.road.quality.v0.models.Point],
-    rating: Double,
+    surfaceRating: Double,
+    trafficRating: Double,
     surface: com.trifectalabs.road.quality.v0.models.Surface = com.trifectalabs.road.quality.v0.models.Surface.Asphalt,
     pathType: com.trifectalabs.road.quality.v0.models.PathType = com.trifectalabs.road.quality.v0.models.PathType.Shared
   )
@@ -291,7 +294,9 @@ package com.trifectalabs.road.quality.v0.models {
         (__ \ "start").read[com.trifectalabs.road.quality.v0.models.Point] and
         (__ \ "end").read[com.trifectalabs.road.quality.v0.models.Point] and
         (__ \ "polyline").read[String] and
-        (__ \ "rating").read[Double] and
+        (__ \ "overall_rating").read[Double] and
+        (__ \ "surface_rating").read[Double] and
+        (__ \ "traffic_rating").read[Double] and
         (__ \ "surface").read[com.trifectalabs.road.quality.v0.models.Surface] and
         (__ \ "path_type").read[com.trifectalabs.road.quality.v0.models.PathType]
       )(Segment.apply _)
@@ -303,7 +308,9 @@ package com.trifectalabs.road.quality.v0.models {
         "start" -> jsObjectPoint(obj.start),
         "end" -> jsObjectPoint(obj.end),
         "polyline" -> play.api.libs.json.JsString(obj.polyline),
-        "rating" -> play.api.libs.json.JsNumber(obj.rating),
+        "overall_rating" -> play.api.libs.json.JsNumber(obj.overallRating),
+        "surface_rating" -> play.api.libs.json.JsNumber(obj.surfaceRating),
+        "traffic_rating" -> play.api.libs.json.JsNumber(obj.trafficRating),
         "surface" -> play.api.libs.json.JsString(obj.surface.toString),
         "path_type" -> play.api.libs.json.JsString(obj.pathType.toString)
       ) ++ (obj.name match {
@@ -329,7 +336,8 @@ package com.trifectalabs.road.quality.v0.models {
         (__ \ "name").readNullable[String] and
         (__ \ "description").readNullable[String] and
         (__ \ "points").read[Seq[com.trifectalabs.road.quality.v0.models.Point]] and
-        (__ \ "rating").read[Double] and
+        (__ \ "surface_rating").read[Double] and
+        (__ \ "traffic_rating").read[Double] and
         (__ \ "surface").read[com.trifectalabs.road.quality.v0.models.Surface] and
         (__ \ "path_type").read[com.trifectalabs.road.quality.v0.models.PathType]
       )(SegmentForm.apply _)
@@ -338,7 +346,8 @@ package com.trifectalabs.road.quality.v0.models {
     def jsObjectSegmentForm(obj: com.trifectalabs.road.quality.v0.models.SegmentForm) = {
       play.api.libs.json.Json.obj(
         "points" -> play.api.libs.json.Json.toJson(obj.points),
-        "rating" -> play.api.libs.json.JsNumber(obj.rating),
+        "surface_rating" -> play.api.libs.json.JsNumber(obj.surfaceRating),
+        "traffic_rating" -> play.api.libs.json.JsNumber(obj.trafficRating),
         "surface" -> play.api.libs.json.JsString(obj.surface.toString),
         "path_type" -> play.api.libs.json.JsString(obj.pathType.toString)
       ) ++ (obj.name match {
@@ -566,12 +575,25 @@ package com.trifectalabs.road.quality.v0 {
         }
       }
 
-      override def patchRatingBySegmentIdAndRating(
+      override def patchRatingAndTrafficBySegmentIdAndRating(
         segmentId: _root_.java.util.UUID,
         rating: Double,
         requestHeaders: Seq[(String, String)] = Nil
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.road.quality.v0.models.Segment] = {
-        _executeRequest("PATCH", s"/segments/${segmentId}/rating/${rating}", requestHeaders = requestHeaders).map {
+        _executeRequest("PATCH", s"/segments/${segmentId}/rating/traffic/${rating}", requestHeaders = requestHeaders).map {
+          case r if r.status == 200 => _root_.com.trifectalabs.road.quality.v0.Client.parseJson("com.trifectalabs.road.quality.v0.models.Segment", r, _.validate[com.trifectalabs.road.quality.v0.models.Segment])
+          case r if r.status == 400 => throw new com.trifectalabs.road.quality.v0.errors.ValueResponse(r)
+          case r if r.status == 404 => throw new com.trifectalabs.road.quality.v0.errors.ValueResponse(r)
+          case r => throw new com.trifectalabs.road.quality.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 400, 404")
+        }
+      }
+
+      override def patchRatingAndSurfaceBySegmentIdAndRating(
+        segmentId: _root_.java.util.UUID,
+        rating: Double,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.road.quality.v0.models.Segment] = {
+        _executeRequest("PATCH", s"/segments/${segmentId}/rating/surface/${rating}", requestHeaders = requestHeaders).map {
           case r if r.status == 200 => _root_.com.trifectalabs.road.quality.v0.Client.parseJson("com.trifectalabs.road.quality.v0.models.Segment", r, _.validate[com.trifectalabs.road.quality.v0.models.Segment])
           case r if r.status == 400 => throw new com.trifectalabs.road.quality.v0.errors.ValueResponse(r)
           case r if r.status == 404 => throw new com.trifectalabs.road.quality.v0.errors.ValueResponse(r)
@@ -731,7 +753,13 @@ package com.trifectalabs.road.quality.v0 {
       requestHeaders: Seq[(String, String)] = Nil
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.road.quality.v0.models.Segment]
 
-    def patchRatingBySegmentIdAndRating(
+    def patchRatingAndTrafficBySegmentIdAndRating(
+      segmentId: _root_.java.util.UUID,
+      rating: Double,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.road.quality.v0.models.Segment]
+
+    def patchRatingAndSurfaceBySegmentIdAndRating(
       segmentId: _root_.java.util.UUID,
       rating: Double,
       requestHeaders: Seq[(String, String)] = Nil
