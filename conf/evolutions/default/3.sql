@@ -13,3 +13,6 @@ ALTER TABLE segments ALTER COLUMN surface SET NOT NULL;
 ALTER TABLE segments ALTER COLUMN path_type SET NOT NULL;
 
 # --- !Downs
+
+ALTER TABLE segments DROP COLUMN surface text;
+ALTER TABLE segments DROP COLUMN path_type text;

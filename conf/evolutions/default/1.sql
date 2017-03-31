@@ -13,3 +13,5 @@ CREATE TABLE segments (
 );
 
 # --- !Downs
+
+DROP TABLE segments;
