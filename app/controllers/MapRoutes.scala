@@ -11,7 +11,7 @@ import util.actions.LoggingAction
 
 import scala.concurrent.ExecutionContext
 
-class Routes @Inject() (routingService: RoutingService)(implicit ec: ExecutionContext) extends Controller {
+class MapRoutes @Inject() (routingService: RoutingService)(implicit ec: ExecutionContext) extends Controller {
 
   def get(start_lat: Double, start_lng: Double, end_lat: Double, end_lng: Double) = LoggingAction.async  {
     routingService.generateRoute(start_lat, start_lng, end_lat, end_lng).map { r =>

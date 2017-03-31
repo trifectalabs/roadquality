@@ -50,7 +50,7 @@
         }
       ]
     },
-    "route": {
+    "map_route": {
       "description": "A routable path on a map - not necessarily a segment",
       "fields": [
         { "name": "polyline",
@@ -149,7 +149,7 @@
     }
   },
   "resources" : {
-    "route": {
+    "map_route": {
       "operations": [
         { "method": "GET",
           "parameters": [
@@ -159,7 +159,7 @@
             { "name": "end_lng", "type": "double" }
           ],
           "responses": {
-            "200": { "type": "route" }
+            "200": { "type": "map_route" }
           }
         },
         { "method": "GET",
@@ -169,13 +169,13 @@
             { "name": "lng", "type": "double" }
           ],
           "responses": {
-            "200": { "type": "route" }
+            "200": { "type": "map_route" }
           }
         },
         { "method": "POST",
           "body": { "type": "[point]" },
           "responses": {
-            "200": { "type": "route" }
+            "200": { "type": "map_route" }
           }
         }
       ]
