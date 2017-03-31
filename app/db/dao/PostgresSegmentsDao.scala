@@ -30,10 +30,7 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
 
   override def upsert(segmentForm: SegmentForm): Future[Segment] = {
     val polyline = Polyline.encode(segmentForm.points.map { point =>
-      LatLng(
-        lat = BigDecimal(point.lat),
-        lng = BigDecimal(point.lng)
-      )
+      LatLng(lat = point.lat, lng = point.lng)
     }.toList)
 
     val segment = Segment(
@@ -43,14 +40,21 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
       start = segmentForm.points.head,
       end = segmentForm.points.last,
       polyline = polyline,
-      rating = segmentForm.rating,
+      overallRating = (segmentForm.surfaceRating + segmentForm.trafficRating)/2,
+      surfaceRating = segmentForm.surfaceRating,
+      trafficRating = segmentForm.trafficRating,
       surface = segmentForm.surface,
       pathType = segmentForm.pathType)
     db.run(segments += segment).map(_ => segment)
   }
 
-  def updateRating(id: UUID, rating: Double): Future[Segment] = {
-    val query = for { s <- segments if s.id === id } yield s.rating
+  def updateSurfaceRating(id: UUID, rating: Double): Future[Segment] = {
+    val query = for { s <- segments if s.id === id } yield (s.surfaceRating)
+    db.run(query.update(rating)).flatMap(i => getSegment(id).map(_.get))
+  }
+
+  def updateTrafficRating(id: UUID, rating: Double): Future[Segment] = {
+    val query = for { s <- segments if s.id === id } yield (s.trafficRating)
     db.run(query.update(rating)).flatMap(i => getSegment(id).map(_.get))
   }
 

@@ -84,7 +84,14 @@
         { "name": "polyline",
           "type" : "string"
         },
-        { "name": "rating",
+        { "name": "overall_rating",
+          "type" : "double",
+          "description": "The average of all ratings for this segment"
+        },
+        { "name": "surface_rating",
+          "type" : "double"
+        },
+        { "name": "traffic_rating",
           "type" : "double"
         },
         { "name": "surface",
@@ -109,7 +116,10 @@
         { "name": "points",
           "type" : "[point]"
         },
-        { "name": "rating",
+        { "name": "surface_rating",
+          "type" : "double"
+        },
+        { "name": "traffic_rating",
           "type" : "double"
         },
         { "name": "surface",
@@ -207,7 +217,19 @@
           }
         },
         { "method": "PATCH",
-          "path": "/:segment_id/rating/:rating",
+          "path": "/:segment_id/rating/traffic/:rating",
+          "parameters": [
+            { "name": "segment_id", "type": "uuid" },
+            { "name": "rating", "type": "double" }
+          ],
+          "responses": {
+            "200": { "type": "segment" },
+            "400": { "type": "string" },
+            "404": { "type": "string" }
+          }
+        },
+        { "method": "PATCH",
+          "path": "/:segment_id/rating/surface/:rating",
           "parameters": [
             { "name": "segment_id", "type": "uuid" },
             { "name": "rating", "type": "double" }

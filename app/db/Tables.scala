@@ -22,11 +22,11 @@ object Tables {
   )
 
 
-   private[this] def segmentTupled: ((UUID, Option[String], Option[String], JTSPoint, JTSPoint, String, Double, Surface, PathType)) => Segment = {
-      case (id: UUID, name: Option[String], description: Option[String], start: JTSPoint, end: JTSPoint, polyline: String, rating: Double, surface: Surface, pathType: PathType) =>
-        Segment(id, name, description, pts2Point(start), pts2Point(end), polyline, rating, surface, pathType)
+   private[this] def segmentTupled: ((UUID, Option[String], Option[String], JTSPoint, JTSPoint, String, Double, Double, Double, Surface, PathType)) => Segment = {
+      case (id: UUID, name: Option[String], description: Option[String], start: JTSPoint, end: JTSPoint, polyline: String, overallRating: Double, surfaceRating: Double, trafficRating: Double, surface: Surface, pathType: PathType) =>
+        Segment(id, name, description, pts2Point(start), pts2Point(end), polyline, overallRating, surfaceRating, trafficRating, surface, pathType)
     }
-   private[this] def segmentUnapply(seg: Segment) = Some(seg.id, seg.name, seg.description, point2Pts(seg.start), point2Pts(seg.end), seg.polyline, seg.rating, seg.surface, seg.pathType)
+   private[this] def segmentUnapply(seg: Segment) = Some(seg.id, seg.name, seg.description, point2Pts(seg.start), point2Pts(seg.end), seg.polyline, seg.overallRating, seg.surfaceRating, seg.trafficRating, seg.surface, seg.pathType)
 
   class Segments(tag: Tag) extends Table[Segment](tag, "segments") {
     def id = column[UUID]("id", O.PrimaryKey)
@@ -35,11 +35,13 @@ object Tables {
     def startPoint = column[JTSPoint]("start_point")
     def endPoint = column[JTSPoint]("end_point")
     def polyline = column[String]("polyline")
-    def rating = column[Double]("rating")
+    def overallRating = column[Double]("overall_rating")
+    def surfaceRating = column[Double]("surface_rating")
+    def trafficRating = column[Double]("traffic_rating")
     def surface = column[Surface]("surface")
     def pathType = column[PathType]("path_type")
 
-    override def * = (id, name, description, startPoint, endPoint, polyline, rating, surface, pathType) <> (segmentTupled, segmentUnapply)
+    override def * = (id, name, description, startPoint, endPoint, polyline, overallRating, surfaceRating, trafficRating, surface, pathType) <> (segmentTupled, segmentUnapply)
   }
 
   val segments = TableQuery[Segments]

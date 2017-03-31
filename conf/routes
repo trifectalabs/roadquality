@@ -2,11 +2,12 @@
 # Service version: 0.0.12
 # apidoc:0.11.76 http://www.apidoc.me/trifectalabs/road_quality/0.0.12/play_2_x_routes
 
-GET       /map_routes                              controllers.MapRoutes.get(start_lat: Double, start_lng: Double, end_lat: Double, end_lng: Double)
-GET       /map_routes/snap                         controllers.MapRoutes.getSnap(lat: Double, lng: Double)
-POST      /map_routes                              controllers.MapRoutes.post()
-GET       /segments/all                            controllers.Segments.getAll()
-GET       /segments/:segment_id                    controllers.Segments.getBySegmentId(segment_id: _root_.java.util.UUID)
-POST      /segments                                controllers.Segments.post()
-PATCH     /segments/:segment_id/rating/:rating     controllers.Segments.patchRatingBySegmentIdAndRating(segment_id: _root_.java.util.UUID, rating: Double)
-GET       /info                                    controllers.Info.get()
+GET       /map_routes                                      controllers.MapRoutes.get(start_lat: Double, start_lng: Double, end_lat: Double, end_lng: Double)
+GET       /map_routes/snap                                 controllers.MapRoutes.getSnap(lat: Double, lng: Double)
+POST      /map_routes                                      controllers.MapRoutes.post()
+GET       /segments/all                                    controllers.Segments.getAll()
+GET       /segments/:segment_id                            controllers.Segments.getBySegmentId(segment_id: _root_.java.util.UUID)
+POST      /segments                                        controllers.Segments.post()
+PATCH     /segments/:segment_id/rating/traffic/:rating     controllers.Segments.patchRatingAndTrafficBySegmentIdAndRating(segment_id: _root_.java.util.UUID, rating: Double)
+PATCH     /segments/:segment_id/rating/surface/:rating     controllers.Segments.patchRatingAndSurfaceBySegmentIdAndRating(segment_id: _root_.java.util.UUID, rating: Double)
+GET       /info                                            controllers.Info.get()
