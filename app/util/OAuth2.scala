@@ -13,10 +13,10 @@ import play.api.libs.ws._
 import play.api.http.{MimeTypes, HeaderNames}
 import play.api.Configuration
 
-import com.trifectalabs.road.quality.v0.models.{ User, UserForm, UserRole }
+import com.trifectalabs.road.quality.v0.models.{ User, UserRole }
 import db.dao.UsersDao
 
-class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao) extends Controller {
+class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JWT) extends Controller {
   lazy val stravaAuthUri = configuration.getString("strava.auth.uri").get
   lazy val stravaTokenUri = configuration.getString("strava.auth.token_uri").get
   lazy val stravaClientId = configuration.getString("strava.client.id").get
@@ -31,9 +31,17 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
       oauthState <- request.session.get("oauth-state")
     } yield {
       if (state == oauthState) {
-        getToken(code).map { userForm =>
-          userDao.upsert(userForm)
-          Redirect(util.routes.OAuth2.success()).withSession("oauth-token" -> userForm.stravaToken)
+        getStravaUserData(code).flatMap { userData =>
+          userDao.upsert(
+            userData.firstName,
+            userData.lastName,
+            userData.email,
+            None,
+						userData.sex,
+						userData.stravaToken).map { user =>
+							val jwtToken = jwt.createToken(user)
+							Redirect(s"/dashboard?token=$jwtToken")
+						}
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
         }
@@ -44,21 +52,11 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
     }).getOrElse(Future.successful(BadRequest("No parameters supplied")))
   }
 
-  def success() = Action.async { request =>
-    request.session.get("oauth-token").fold(Future.successful(Unauthorized("Not authorized. Please login."))) { authToken =>
-      ws.url("https://www.strava.com/api/v3/athlete").
-        withHeaders(HeaderNames.AUTHORIZATION -> s"Bearer $authToken").
-        get().map { response =>
-          Ok(response.json)
-        }
-    }
-  }
-
   def getAuthorizationUrl(state: String): String = {
     stravaAuthUri.format(stravaClientId, stravaClientRedirectUri, stravaClientScope, state)
   }
 
-  private[this] def getToken(code: String): Future[UserForm] = {
+  private[this] def getStravaUserData(code: String): Future[StravaUserData] = {
     val tokenResponse = ws.url(stravaTokenUri).
       withQueryString("client_id" -> stravaClientId,
         "client_secret" -> stravaClientSecret,
@@ -70,12 +68,21 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
         val firstName = (response.json \ "athlete" \ "firstname").as[String]
         val lastName = (response.json \ "athlete" \ "lastname").as[String]
         val email = (response.json \ "athlete" \ "email").as[String]
+        val sex = (response.json \ "athlete" \ "sex").asOpt[String]
 
-        UserForm(
+        StravaUserData(
           firstName = firstName,
           lastName = lastName,
           email = email,
-          stravaToken = accessToken)
+          stravaToken = accessToken,
+          sex = sex)
       }
   }
 }
+
+case class StravaUserData(
+  firstName: String,
+  lastName: String,
+  email: String,
+  stravaToken: String,
+  sex: Option[String])

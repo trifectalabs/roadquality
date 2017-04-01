@@ -25,14 +25,9 @@ object TablesHelper {
   private[db] def pts2Point(jtsPoint: JTSPoint): Point = Point(jtsPoint.getX, jtsPoint.getY)
   private[db] def point2Pts(point: Point): JTSPoint = geometryFactory.createPoint(new Coordinate(point.lng, point.lat))
 
-
-
-
-   private[db] def segmentTupled: ((UUID, Option[String], Option[String], JTSPoint, JTSPoint, String, Double, Surface, PathType)) => Segment = {
-      case (id: UUID, name: Option[String], description: Option[String], start: JTSPoint, end: JTSPoint, polyline: String, rating: Double, surface: Surface, pathType: PathType) =>
-        Segment(id, name, description, pts2Point(start), pts2Point(end), polyline, rating, surface, pathType)
-    }
-   private[db] def segmentUnapply(seg: Segment) = Some(seg.id, seg.name, seg.description, point2Pts(seg.start), point2Pts(seg.end), seg.polyline, seg.rating, seg.surface, seg.pathType)
-
-
+  private[db] def segmentTupled: ((UUID, Option[String], Option[String], JTSPoint, JTSPoint, String, Double, Double, Double, Surface, PathType)) => Segment = {
+    case (id: UUID, name: Option[String], description: Option[String], start: JTSPoint, end: JTSPoint, polyline: String, overallRating: Double, surfaceRating: Double, trafficRating: Double, surface: Surface, pathType: PathType) =>
+      Segment(id, name, description, pts2Point(start), pts2Point(end), polyline, overallRating, surfaceRating, trafficRating, surface, pathType)
+  }
+  private[db] def segmentUnapply(seg: Segment) = Some(seg.id, seg.name, seg.description, point2Pts(seg.start), point2Pts(seg.end), seg.polyline, seg.overallRating, seg.surfaceRating, seg.trafficRating, seg.surface, seg.pathType)
 }

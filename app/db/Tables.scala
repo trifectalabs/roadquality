@@ -28,16 +28,20 @@ object Tables {
 
   val segments = TableQuery[Segments]
 
-  class Users(tag: Tag) extends Table[User](tag, "users") {
+class Users(tag: Tag) extends Table[User](tag, "users") {
     def id = column[UUID]("id", O.PrimaryKey)
     def firstName = column[String]("first_name")
     def lastName = column[String]("last_name")
     def email = column[String]("email")
-    def createdAt = column[DateTime]("created_at")
+    def birthdate = column[Option[DateTime]]("birthdate")
+    def sex = column[Option[String]]("sex")
     def role = column[UserRole]("role")
     def stravaToken = column[String]("strava_token")
+    def createdAt = column[DateTime]("created_at")
+    def updatedAt = column[DateTime]("updated_at")
+    def deletedAt = column[Option[DateTime]]("deleted_at")
 
-    override def * = (id, firstName, lastName, email, createdAt, role, stravaToken) <> (User.tupled, User.unapply)
+    override def * = (id, firstName, lastName, email, birthdate, sex, role, stravaToken, createdAt, updatedAt, deletedAt) <> (User.tupled, User.unapply)
   }
 
   val users = TableQuery[Users]
