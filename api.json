@@ -173,46 +173,54 @@
     "user": {
       "description": "A user of the service",
       "fields": [
-        { "name": "id",
-          "type" : "uuid"
+        {
+          "name": "id",
+          "type": "uuid"
         },
-        { "name": "first_name",
-          "type" : "string"
+        {
+          "name": "first_name",
+          "type": "string"
         },
-        { "name": "last_name",
-          "type" : "string"
+        {
+          "name": "last_name",
+          "type": "string"
         },
-        { "name": "email",
-          "type" : "string"
+        {
+          "name": "email",
+          "type": "string"
         },
-        { "name": "created_at",
-          "type" : "date-time-iso8601"
+        {
+          "name": "birthdate",
+          "type": "date-time-iso8601",
+          "required": false
         },
-        { "name": "role",
-          "type" : "user_role",
+        {
+          "name": "sex",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "role",
+          "type": "user_role",
           "default": "user"
         },
-        { "name": "strava_token",
-          "type" : "string",
+        {
+          "name": "strava_token",
+          "type": "string",
           "description": "Strava API token"
-        }
-      ]
-    },
-    "user_form": {
-      "description": "A form used to create a user",
-      "fields": [
-        { "name": "first_name",
-          "type" : "string"
         },
-        { "name": "last_name",
-          "type" : "string"
+        {
+          "name": "created_at",
+          "type": "date-time-iso8601"
         },
-        { "name": "email",
-          "type" : "string"
+        {
+          "name": "updated_at",
+          "type": "date-time-iso8601"
         },
-        { "name": "strava_token",
-          "type" : "string",
-          "description": "Strava API token"
+        {
+          "name": "deleted_at",
+          "type": "date-time-iso8601",
+          "required": false
         }
       ]
     }
@@ -296,6 +304,62 @@
           "responses": {
             "200": { "type": "segment" },
             "400": { "type": "string" },
+            "404": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "user": {
+      "operations": [
+        { "method": "GET",
+          "path": "/:user_id",
+          "parameters": [
+            { "name": "user_id", "type": "uuid" }
+          ],
+          "responses": {
+            "200": { "type": "user" },
+            "404": { "type": "string" }
+          }
+        },
+        { "method": "GET",
+          "path": "/email/:user_email",
+          "parameters": [
+            { "name": "user_email", "type": "string" }
+          ],
+          "responses": {
+            "200": { "type": "user" },
+            "404": { "type": "string" }
+          }
+        },
+        { "method": "PATCH",
+          "path": "/:user_id/sex/:sex",
+          "parameters": [
+            { "name": "user_id", "type": "uuid" },
+            { "name": "sex", "type": "string" }
+          ],
+          "responses": {
+            "202": { "type": "user" },
+            "404": { "type": "string" }
+          }
+        },
+        { "method": "DELETE",
+          "path": "/:user_id",
+          "parameters": [
+            { "name": "user_id", "type": "uuid" }
+          ],
+          "responses": {
+            "202": { "type": "user" },
+            "404": { "type": "string" }
+          }
+        },
+        { "method": "PATCH",
+          "path": "/:user_id/birthdate/:birthdate",
+          "parameters": [
+            { "name": "user_id", "type": "uuid" },
+            { "name": "birthdate", "type": "date-time-iso8601" }
+          ],
+          "responses": {
+            "202": { "type": "user" },
             "404": { "type": "string" }
           }
         }

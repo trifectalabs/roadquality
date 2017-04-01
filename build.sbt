@@ -12,6 +12,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings(dockerSettings: _*)
+  .settings(routesImport += "com.trifectalabs.road.quality.v0.Bindables._")
 
 resolvers += "Sonatype releases" at "https://oss.sonatype.org/content/repositories/releases"
 
@@ -20,12 +21,13 @@ libraryDependencies ++= Seq(
   "com.github.trifectalabs" %% "polyline-scala" % "1.2.0",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
   "com.typesafe.play" %% "play-slick-evolutions" % "2.0.2",
-  "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
+  "org.postgresql" % "postgresql" % "9.4.1212",
   "com.github.tminglei" %% "slick-pg" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_joda-time" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_play-json" % "0.14.6",
   "com.github.tminglei" %% "slick-pg_jts" % "0.14.6",
   "io.megl" %% "play-json-extra" % "2.4.3",
+  "com.pauldijou" %% "jwt-core" % "0.12.1",
   ws,
   filters
 )
