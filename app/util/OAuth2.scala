@@ -16,7 +16,7 @@ import play.api.Configuration
 import com.trifectalabs.road.quality.v0.models.{ User, UserRole }
 import db.dao.UsersDao
 
-class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JWT) extends Controller {
+class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JwtUtil) extends Controller {
   lazy val stravaAuthUri = configuration.getString("strava.auth.uri").get
   lazy val stravaTokenUri = configuration.getString("strava.auth.token_uri").get
   lazy val stravaClientId = configuration.getString("strava.client.id").get
