@@ -1,2 +1,3 @@
+GET        /                controllers.Dashboard.get
 GET        /login           controllers.Login.oauth
 GET        /callback        util.OAuth2.callback(code: Option[String], state: Option[String])
