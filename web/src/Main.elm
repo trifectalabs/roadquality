@@ -33,7 +33,7 @@ main =
 
 host : String
 host =
-    "http://roadquality.org"
+    "https://api.roadquality.org"
 
 
 type alias Model =
