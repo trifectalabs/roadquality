@@ -246,7 +246,7 @@
             { "name": "lng", "type": "double" }
           ],
           "responses": {
-            "200": { "type": "map_route" }
+            "200": { "type": "point" }
           }
         },
         { "method": "POST",
