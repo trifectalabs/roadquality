@@ -16,5 +16,3 @@ PATCH      /users/:user_id/sex/:sex                         controllers.Users.pa
 DELETE     /users/:user_id                                  controllers.Users.deleteByUserId(user_id: _root_.java.util.UUID)
 PATCH      /users/:user_id/birthdate/:birthdate             controllers.Users.patchBirthdateByUserIdAndBirthdate(user_id: _root_.java.util.UUID, birthdate: _root_.org.joda.time.DateTime)
 GET        /info                                            controllers.Info.get()
-
-->         /                                                oauth.Routes
