@@ -1,17 +1,18 @@
 # Road Quality
 ## Crowdsourced road quality data for cyclists
 
-[https://roadquality.org]() 
+[https://roadquality.org]()
 
 ### Development
 To compile server components:
 
-    sbt compile
-    
+    sbt api/compile
+
 To compile web assets:
 
-    elm make src/Main.elm --output=dist/main.js
-    elm-css src/Stylesheets.elm --output=dist/
+    cd web/
+    elm make src/Main.elm --output=public/javascripts/main.js
+    elm-css src/Stylesheets.elm --output=public/stylesheets/main.css
 
 
 

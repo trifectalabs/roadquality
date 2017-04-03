@@ -5,7 +5,7 @@ let mymap;
 let markers = {};
 let polylines = [];
 let icon = L.icon({
-  iconUrl: 'img/marker.png',
+  iconUrl: '/assets/img/marker.png',
   iconSize: [10, 10],
   iconAnchor: [5, 5]
 });
