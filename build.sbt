@@ -18,7 +18,7 @@ lazy val api = project
     buildInfoPackage := "buildInfo")
   .settings(commonSettings: _*)
   .settings(dockerSettings: _*)
-  .settings(routesImport += "com.trifectalabs.road.quality.v0.Bindables._")
+  .settings(routesImport += "com.trifectalabs.roadquality.v0.Bindables._")
 
 lazy val commonSettings = Seq(
   organization := "com.github.trifectalabs",

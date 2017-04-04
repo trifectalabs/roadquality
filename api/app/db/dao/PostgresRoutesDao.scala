@@ -2,7 +2,7 @@ package db.dao
 
 import javax.inject.{Inject, Singleton}
 
-import com.trifectalabs.road.quality.v0.models.{ Point, MapRoute }
+import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.MyPostgresDriver
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}

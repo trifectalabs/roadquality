@@ -3,7 +3,7 @@ package db.dao
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
-import com.trifectalabs.road.quality.v0.models.{Segment, SegmentForm}
+import com.trifectalabs.roadquality.v0.models.{Segment, SegmentForm}
 import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.MyPostgresDriver
 import db.Tables._

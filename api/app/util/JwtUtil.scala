@@ -7,8 +7,8 @@ import play.api.libs.json.Json._
 import scala.util._
 
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader, JwtClaim, JwtOptions}
-import com.trifectalabs.road.quality.v0.models.{ User, UserRole }
-import com.trifectalabs.road.quality.v0.models.json._
+import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
+import com.trifectalabs.roadquality.v0.models.json._
 
 class JwtUtil @Inject() (configuration: Configuration) {
   lazy val secret = configuration.getString("play.crypto.secret").get

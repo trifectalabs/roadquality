@@ -1,9 +1,9 @@
 {
-  "name": "road_quality",
+  "name": "roadquality",
   "description": "Crowd-sourced road quality data",
   "apidoc": { "version": "0.9.11" },
   "enums": {
-    "path_type": {
+    "pathType": {
       "description": "The level of dedication of the segment to cycling",
       "values": [
         {
@@ -11,11 +11,11 @@
           "description": "A shared road for cars and bikes (road shoulder)"
         },
         {
-          "name": "dedicated_lane",
+          "name": "dedicatedLane",
           "description": "A dedicated bike lane on the road"
         },
         {
-          "name": "bike_path",
+          "name": "bikePath",
           "description": "A completely isolated bike lane (a natural barrier from road traffic)"
         }
       ]
@@ -37,7 +37,7 @@
         }
       ]
     },
-    "user_role": {
+    "userRole": {
       "description": "The type of user (user or admin)",
       "values": [
         {
@@ -63,7 +63,7 @@
         }
       ]
     },
-    "map_route": {
+    "mapRoute": {
       "description": "A routable path on a map - not necessarily a segment",
       "fields": [
         { "name": "polyline",
@@ -97,25 +97,25 @@
         { "name": "polyline",
           "type" : "string"
         },
-        { "name": "overall_rating",
+        { "name": "overallRating",
           "type" : "double",
           "description": "The average of all ratings for this segment"
         },
-        { "name": "surface_rating",
+        { "name": "surfaceRating",
           "type" : "double"
         },
-        { "name": "traffic_rating",
+        { "name": "trafficRating",
           "type" : "double"
         },
         { "name": "surface",
           "type" : "surface"
         },
-        { "name": "path_type",
-          "type" : "path_type"
+        { "name": "pathType",
+          "type" : "pathType"
         }
       ]
     },
-    "segment_form": {
+    "segmentForm": {
       "description": "Form the client uses to create a segment",
       "fields": [
         { "name": "name",
@@ -129,23 +129,25 @@
         { "name": "points",
           "type" : "[point]"
         },
-        { "name": "surface_rating",
-          "type" : "double"
+        { "name": "surfaceRating",
+          "type" : "double",
+          "default": 0
         },
-        { "name": "traffic_rating",
-          "type" : "double"
+        { "name": "trafficRating",
+          "type" : "double",
+          "default": 0
         },
         { "name": "surface",
           "type" : "surface",
           "default": "asphalt"
         },
-        { "name": "path_type",
-          "type" : "path_type",
+        { "name": "pathType",
+          "type" : "pathType",
           "default": "shared"
         }
       ]
     },
-    "version_info": {
+    "versionInfo": {
       "plural": "info",
       "fields": [
         {
@@ -178,11 +180,11 @@
           "type": "uuid"
         },
         {
-          "name": "first_name",
+          "name": "firstName",
           "type": "string"
         },
         {
-          "name": "last_name",
+          "name": "lastName",
           "type": "string"
         },
         {
@@ -201,24 +203,24 @@
         },
         {
           "name": "role",
-          "type": "user_role",
+          "type": "userRole",
           "default": "user"
         },
         {
-          "name": "strava_token",
+          "name": "stravaToken",
           "type": "string",
           "description": "Strava API token"
         },
         {
-          "name": "created_at",
+          "name": "createdAt",
           "type": "date-time-iso8601"
         },
         {
-          "name": "updated_at",
+          "name": "updatedAt",
           "type": "date-time-iso8601"
         },
         {
-          "name": "deleted_at",
+          "name": "deletedAt",
           "type": "date-time-iso8601",
           "required": false
         }
@@ -226,17 +228,17 @@
     }
   },
   "resources" : {
-    "map_route": {
+    "mapRoute": {
       "operations": [
         { "method": "GET",
           "parameters": [
-            { "name": "start_lat", "type": "double" },
-            { "name": "start_lng", "type": "double" },
-            { "name": "end_lat", "type": "double" },
-            { "name": "end_lng", "type": "double" }
+            { "name": "startLat", "type": "double" },
+            { "name": "startLng", "type": "double" },
+            { "name": "endLat", "type": "double" },
+            { "name": "endLng", "type": "double" }
           ],
           "responses": {
-            "200": { "type": "map_route" }
+            "200": { "type": "mapRoute" }
           }
         },
         { "method": "GET",
@@ -252,7 +254,7 @@
         { "method": "POST",
           "body": { "type": "[point]" },
           "responses": {
-            "200": { "type": "map_route" }
+            "200": { "type": "mapRoute" }
           }
         }
       ]
@@ -277,16 +279,16 @@
           }
         },
         { "method": "POST",
-          "body": { "type": "segment_form" },
+          "body": { "type": "segmentForm" },
           "responses": {
             "201": { "type": "segment" },
             "400": { "type": "string" }
           }
         },
         { "method": "PATCH",
-          "path": "/:segment_id/rating/traffic/:rating",
+          "path": "/:segmentId/rating/traffic/:rating",
           "parameters": [
-            { "name": "segment_id", "type": "uuid" },
+            { "name": "segmentId", "type": "uuid" },
             { "name": "rating", "type": "double" }
           ],
           "responses": {
@@ -296,9 +298,9 @@
           }
         },
         { "method": "PATCH",
-          "path": "/:segment_id/rating/surface/:rating",
+          "path": "/:segmentId/rating/surface/:rating",
           "parameters": [
-            { "name": "segment_id", "type": "uuid" },
+            { "name": "segmentId", "type": "uuid" },
             { "name": "rating", "type": "double" }
           ],
           "responses": {
@@ -312,9 +314,9 @@
     "user": {
       "operations": [
         { "method": "GET",
-          "path": "/:user_id",
+          "path": "/:userId",
           "parameters": [
-            { "name": "user_id", "type": "uuid" }
+            { "name": "userId", "type": "uuid" }
           ],
           "responses": {
             "200": { "type": "user" },
@@ -322,9 +324,9 @@
           }
         },
         { "method": "GET",
-          "path": "/email/:user_email",
+          "path": "/email/:userEmail",
           "parameters": [
-            { "name": "user_email", "type": "string" }
+            { "name": "userEmail", "type": "string" }
           ],
           "responses": {
             "200": { "type": "user" },
@@ -332,9 +334,9 @@
           }
         },
         { "method": "PATCH",
-          "path": "/:user_id/sex/:sex",
+          "path": "/:userId/sex/:sex",
           "parameters": [
-            { "name": "user_id", "type": "uuid" },
+            { "name": "userId", "type": "uuid" },
             { "name": "sex", "type": "string" }
           ],
           "responses": {
@@ -343,9 +345,9 @@
           }
         },
         { "method": "DELETE",
-          "path": "/:user_id",
+          "path": "/:userId",
           "parameters": [
-            { "name": "user_id", "type": "uuid" }
+            { "name": "userId", "type": "uuid" }
           ],
           "responses": {
             "202": { "type": "user" },
@@ -353,9 +355,9 @@
           }
         },
         { "method": "PATCH",
-          "path": "/:user_id/birthdate/:birthdate",
+          "path": "/:userId/birthdate/:birthdate",
           "parameters": [
-            { "name": "user_id", "type": "uuid" },
+            { "name": "userId", "type": "uuid" },
             { "name": "birthdate", "type": "date-time-iso8601" }
           ],
           "responses": {
@@ -365,11 +367,11 @@
         }
       ]
     },
-    "version_info": {
+    "versionInfo": {
       "operations": [
         { "method": "GET",
           "responses": {
-            "200": { "type": "version_info" }
+            "200": { "type": "versionInfo" }
           }
         }
       ]

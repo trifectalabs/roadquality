@@ -3,9 +3,9 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.trifectalabs.road.quality.v0.models.User
-import com.trifectalabs.road.quality.v0.models.json._
-import com.trifectalabs.road.quality.v0.Bindables
+import com.trifectalabs.roadquality.v0.models.User
+import com.trifectalabs.roadquality.v0.models.json._
+import com.trifectalabs.roadquality.v0.Bindables
 import db.dao.UsersDao
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}

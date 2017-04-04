@@ -2,8 +2,8 @@ package controllers
 
 import javax.inject.Inject
 
-import com.trifectalabs.road.quality.v0.models.Point
-import com.trifectalabs.road.quality.v0.models.json._
+import com.trifectalabs.roadquality.v0.models.Point
+import com.trifectalabs.roadquality.v0.models.json._
 import services.RoutingService
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}

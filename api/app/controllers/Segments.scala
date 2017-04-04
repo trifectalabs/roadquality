@@ -4,8 +4,8 @@ import java.util.UUID
 import javax.inject.Inject
 import play.json.extra.Jsonx
 
-import com.trifectalabs.road.quality.v0.models.SegmentForm
-import com.trifectalabs.road.quality.v0.models.json._
+import com.trifectalabs.roadquality.v0.models.SegmentForm
+import com.trifectalabs.roadquality.v0.models.json._
 import db.dao.SegmentsDao
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}

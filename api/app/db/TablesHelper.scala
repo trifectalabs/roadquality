@@ -1,7 +1,7 @@
 package db
 
 import java.util.UUID
-import com.trifectalabs.road.quality.v0.models._
+import com.trifectalabs.roadquality.v0.models._
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory, Point => JTSPoint}
 import MyPostgresDriver.api._
 

@@ -7,6 +7,8 @@ import play.api.mvc._
 import scala.concurrent.Future
 import util.JwtUtil
 
+import com.trifectalabs.roadquality.v0.models.User
+
 class AuthLoggingAction @Inject() (jwt: JwtUtil) {
   object AuthLoggingAction extends ActionBuilder[Request] {
     val logger = LoggerFactory.getLogger("requests")

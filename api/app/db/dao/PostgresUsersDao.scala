@@ -8,7 +8,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
 import scala.concurrent.{ExecutionContext, Future}
 
-import com.trifectalabs.road.quality.v0.models.{ User, UserRole }
+import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 import db.MyPostgresDriver
 import db.Tables._
 

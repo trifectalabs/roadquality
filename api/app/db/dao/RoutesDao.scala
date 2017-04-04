@@ -1,6 +1,6 @@
 package db.dao
 
-import com.trifectalabs.road.quality.v0.models.{ MapRoute, Point }
+import com.trifectalabs.roadquality.v0.models.{ MapRoute, Point }
 
 import scala.concurrent.Future
 

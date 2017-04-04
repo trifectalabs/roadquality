@@ -3,7 +3,7 @@ package services
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-import com.trifectalabs.road.quality.v0.models.{ Point, MapRoute }
+import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.dao.RoutesDao
 
