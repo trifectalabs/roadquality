@@ -1,0 +1,7 @@
+code:
+  trifectalabs:
+    road_quality:
+      version: latest
+      generators:
+        play_2_5_client: app/generated
+        play_2_x_routes: conf/routes
