@@ -23,6 +23,7 @@ class MapRoutes @Inject() (routingService: RoutingService, authLoggingAction: Au
 
   def getSnap(lat: Double, lng: Double) = AuthLoggingAction.async {
     routingService.snapPoint(Point(lat, lng)).map(p => Ok(Json.toJson(p)))
+    }
   }
 
   def post() = AuthLoggingAction.async(parse.json[Seq[Point]]) { implicit request =>

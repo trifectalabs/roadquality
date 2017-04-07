@@ -13,7 +13,7 @@ import play.api.libs.ws._
 import play.api.http.{MimeTypes, HeaderNames}
 import play.api.Configuration
 
-import com.trifectalabs.road.quality.v0.models.{ User, UserRole }
+import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 import db.dao.UsersDao
 
 class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JwtUtil) extends Controller {

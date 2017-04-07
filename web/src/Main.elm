@@ -67,8 +67,8 @@ type alias Point =
 decodePoint : Decoder Point
 decodePoint =
     decode Point
-        |> required "lat" Decode.float
         |> required "lng" Decode.float
+        |> required "lat" Decode.float
 
 
 encodePoint : Point -> Value

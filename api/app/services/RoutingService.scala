@@ -25,14 +25,11 @@ class RoutingServiceImpl @Inject()(routesDao: RoutesDao)(implicit ec: ExecutionC
   }
 
   def generateRoute(points: Seq[Point]): Future[MapRoute] = {
-      println(s"Points: $points")
     Future.sequence {
       (points.init zip points.tail).map { case (p1, p2) =>
-        println(s"Generating polyline between $p1 and $p2")
         routesDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
       }
     } map { b =>
-      println(b)
       val pl = Polyline.encode(b.flatten.toList)
       println(pl)
       MapRoute(polyline = pl, distance = 0) }

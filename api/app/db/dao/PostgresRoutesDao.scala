@@ -19,23 +19,18 @@ class PostgresRoutesDao @Inject() (protected val dbConfigProvider: DatabaseConfi
   implicit val getPointResult = GetResult(r => Point(r.nextDouble(), r.nextDouble()))
 
   override def route(startPoint: Point, endPoint: Point): Future[MapRoute] = {
-    val sql = sql"""
-      SELECT ST_AsEncodedPolyline(r.the_geom), r.distance
-      FROM tri_route_1(
-        (SELECT * from tri_nearest(${startPoint.lat}, ${startPoint.lng}))
-      , (SELECT * FROM tri_nearest(${endPoint.lat},${endPoint.lng}))) r""".as[String]
-    val a = db.run(sql).map(r => r.head)
-    a.map(r => MapRoute(r, 0))
+    val strSql = s"""SELECT x, y from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});"""
+    val sql = sql"""SELECT y, x from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});""".as[Point]
+    println(strSql)
+    db.run(sql).map { t =>
+      val points = t.toList.map(p => LatLng(p.lat, p.lng))
+      val pl = Polyline.encode(points)
+      MapRoute(pl, 0)
+    }
   }
 
   override def snapPoint(point: Point): Future[Point] = {
-    val sql = sql"""
-      SELECT lat, lon
-      FROM ways_vertices_pgr
-      WHERE id = (
-        SELECT * from tri_nearest(${point.lat}, ${point.lng})
-      );
-    """.as[Point]
+    val sql = sql"""SELECT * from closest_point_on_road(${point.lng}, ${point.lat});""".as[Point]
     db.run(sql).map(r => r.head)
   }
 
