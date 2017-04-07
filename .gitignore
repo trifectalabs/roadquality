@@ -3,5 +3,5 @@
 logs/
 .DS_Store
 elm-stuff/
-web/dist/main.js
-web/dist/main.css
+web/public/javascripts/main.js
+web/public/stylesheets/main.css
