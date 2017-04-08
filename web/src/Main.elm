@@ -32,17 +32,13 @@ main =
 -- MODEL
 
 
-host : String
-host =
-    "https://api.roadquality.org"
-
-
 type alias Model =
     { anchors : Dict Int Point
     , anchorOrder : List Int
     , route : Maybe Route
     , rating : Int
     , page : UrlRoute
+    , host : String
     }
 
 
@@ -105,14 +101,22 @@ decodeSegment =
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
-    ( { anchors = Dict.empty
-      , anchorOrder = []
-      , route = Nothing
-      , rating = 5
-      , page = MainPage
-      }
-    , up True
-    )
+    let
+        host =
+            if location.host == "localhost:9000" then
+                "http://localhost:9001"
+            else
+                "https://api.roadquality.org"
+    in
+        ( { anchors = Dict.empty
+          , anchorOrder = []
+          , route = Nothing
+          , rating = 5
+          , page = MainPage
+          , host = host
+          }
+        , up True
+        )
 
 
 
@@ -181,7 +185,7 @@ update msg model =
                         , headers = []
                         , url =
                             String.concat
-                                [ host
+                                [ model.host
                                 , "/map_routes/snap?lat="
                                 , toString lat
                                 , "&lng="
@@ -216,7 +220,7 @@ update msg model =
                     Http.request
                         { method = "POST"
                         , headers = []
-                        , url = String.concat [ host, "/map_routes" ]
+                        , url = String.concat [ model.host, "/map_routes" ]
                         , body = Http.jsonBody points
                         , expect = Http.expectJson decodeRoute
                         , timeout = Nothing
@@ -277,7 +281,7 @@ update msg model =
                     Http.request
                         { method = "POST"
                         , headers = []
-                        , url = String.concat [ host, "/segments" ]
+                        , url = String.concat [ model.host, "/segments" ]
                         , body = Http.jsonBody body
                         , expect = Http.expectJson decodeSegment
                         , timeout = Nothing
