@@ -9,6 +9,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
 import Json.Encode as Encode exposing (encode, Value)
 import Navigation
+import Polyline
 import Stylesheets exposing (mapNamespace, CssIds(..))
 import UrlParser exposing (Parser, s)
 
@@ -238,9 +239,7 @@ update msg model =
         ReceiveRoute (Ok route) ->
             let
                 line =
-                    model.anchorOrder
-                        |> List.filterMap (\id -> Dict.get id model.anchors)
-                        |> List.map (\anchor -> ( anchor.lat, anchor.lng ))
+                    Polyline.decode route.polyline
             in
                 ( { model | route = Just route }, displayRoute line )
 
