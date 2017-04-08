@@ -3,7 +3,7 @@ let app = Elm.Main.embed(node);
 
 let mymap;
 let markers = {};
-let polylines = [];
+let polyline;
 let icon = L.icon({
   iconUrl: '/assets/img/marker.png',
   iconSize: [10, 10],
@@ -42,8 +42,11 @@ app.ports.snapAnchor.subscribe(function(values) {
 
 // PLOT ROUTE
 app.ports.displayRoute.subscribe(function(line) {
-  var polyline = L.polyline(line, {color: 'red'}).addTo(myMap);
-  polylines.push(polyline);
+    if (polyline) {
+        polyline.remove();
+    }
+    polyline = L.polyline(line, {color: 'red'});
+    polyline.addTo(myMap);
 });
 
 // CLEAR ROUTE
