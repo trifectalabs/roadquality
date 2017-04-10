@@ -262,19 +262,26 @@
     "segment": {
       "operations": [
         { "method": "GET",
-          "path": "/all",
+          "description": "Search all segments",
+          "parameters": [
+            { "name": "segment_id", "type": "uuid", "required": false }
+          ],
           "responses": {
             "200": { "type": "[segment]" },
             "404": { "type": "string" }
           }
         },
         { "method": "GET",
-          "path": "/:segment_id",
+          "description": "Search all segments within a bounding box",
+          "path": "/boundingbox",
           "parameters": [
-            { "name": "segment_id", "type": "uuid" }
+            { "name": "xmin", "type": "double", "required": false },
+            { "name": "ymin", "type": "double", "required": false },
+            { "name": "xmax", "type": "double", "required": false },
+            { "name": "ymax", "type": "double", "required": false }
           ],
           "responses": {
-            "200": { "type": "segment" },
+            "200": { "type": "[segment]" },
             "404": { "type": "string" }
           }
         },

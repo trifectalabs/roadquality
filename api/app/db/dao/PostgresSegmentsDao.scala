@@ -24,6 +24,12 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
     db.run(segments.filter(_.id === id).result.headOption)
   }
 
+  override def getSegmentsBoundingBox(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Future[Seq[Segment]] = {
+   // @&& - intersection
+   db.run(segments.filter(_.startPoint @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326))).result)
+  }
+
+
   override def delete(id: UUID): Future[Unit] = {
     db.run(segments.filter(_.id === id).delete.map(_ => ()))
   }

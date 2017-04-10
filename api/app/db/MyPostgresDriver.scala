@@ -14,7 +14,6 @@ trait MyPostgresDriver extends ExPostgresDriver
                           with PgSearchSupport {
 
   override val pgjson = "jsonb"
-  ///
   override val api = new API with ArrayImplicits
                              with DateTimeImplicits
                              with PostGISImplicits
@@ -25,6 +24,8 @@ trait MyPostgresDriver extends ExPostgresDriver
                              with HStoreImplicits
                              with SearchImplicits
                              with SearchAssistants {}
+
+  trait API extends super.API with PostGISImplicits with PostGISAssistants
 }
 
 object MyPostgresDriver extends MyPostgresDriver
