@@ -1,6 +1,6 @@
 code:
   trifectalabs:
-    road_quality:
+    roadquality:
       version: latest
       generators:
         play_2_5_client: app/generated

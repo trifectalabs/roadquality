@@ -11,18 +11,30 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import util.actions.AuthLoggingAction
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class Segments @Inject() (segmentsDao: SegmentsDao, authLoggingAction:AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
   import authLoggingAction._
   implicit def jsonFormat = Jsonx.formatCaseClass[SegmentForm]
 
-  def getAll() = AuthLoggingAction.async {
-    segmentsDao.getAllSegments.map(s => Ok(Json.toJson(s)))
+  def get(segment_id: Option[UUID]) = AuthLoggingAction.async {
+    segment_id.map(id => segmentsDao.getSegment(id).map(s => Ok(Json.toJson(s))))
+              .getOrElse(segmentsDao.getAllSegments.map(s => Ok(Json.toJson(s))))
   }
 
-  def getBySegmentId(segment_id: UUID) = AuthLoggingAction.async {
-    segmentsDao.getSegment(segment_id).map(s => Ok(Json.toJson(s)))
+  def getBoundingbox(xmin: _root_.scala.Option[Double], ymin: _root_.scala.Option[Double], xmax: _root_.scala.Option[Double], ymax: _root_.scala.Option[Double]) = AuthLoggingAction.async {
+    (for {
+      x_min <- xmin
+      y_min <- ymin
+      x_max <- xmax
+      y_max <- ymax
+      } yield {
+        segmentsDao.getSegmentsBoundingBox(x_min, y_min, x_max, y_max).map(s => Ok(Json.toJson(s)))
+      }).getOrElse(Future(BadRequest))
+	}
+
+  def getBoundingbox(xmin: Double, ymin: Double, xmax: Double, ymax: Double) = AuthLoggingAction.async {
+    segmentsDao.getSegmentsBoundingBox(xmin, ymin, xmax, ymax).map(s => Ok(Json.toJson(s)))
 	}
 
   def post() = AuthLoggingAction.async(parse.json[SegmentForm]) { implicit request =>
