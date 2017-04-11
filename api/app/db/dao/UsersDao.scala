@@ -24,7 +24,5 @@ trait UsersDao {
     birthdate: _root_.scala.Option[_root_.org.joda.time.DateTime],
     sex: _root_.scala.Option[String],
     stravaToken: String): Future[User]
-  def delete(id: UUID): Future[Boolean]
-  def updateSex(id: UUID, sex: String): Future[User]
-  def updateBirthdate(id: UUID, birthdate: DateTime): Future[User]
+  def softDelete(id: UUID): Future[Boolean]
 }

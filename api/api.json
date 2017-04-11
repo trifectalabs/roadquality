@@ -55,10 +55,12 @@
     "point": {
       "description": "A longitudinal or latitudinal coordatine",
       "fields": [
-        { "name": "lat",
+        {
+          "name": "lat",
           "type" : "double"
         },
-        { "name": "lng",
+        {
+          "name": "lng",
           "type" : "double"
         }
       ]
@@ -66,10 +68,12 @@
     "mapRoute": {
       "description": "A routable path on a map - not necessarily a segment",
       "fields": [
-        { "name": "polyline",
+        {
+          "name": "polyline",
           "type" : "string"
         },
-        { "name": "distance",
+        {
+          "name": "distance",
           "type" : "double"
         }
       ]
@@ -77,73 +81,126 @@
     "segment": {
       "description": "A segment of road which will be rated and tagged",
       "fields": [
-        { "name": "id",
+        {
+          "name": "id",
           "type" : "uuid"
         },
-        { "name": "name",
+        {
+          "name": "name",
           "type" : "string",
           "required": false
         },
-        { "name": "description",
+        {
+          "name": "description",
           "type" : "string",
           "required": false
         },
-        { "name": "start",
+        {
+          "name": "start",
           "type" : "point"
         },
-        { "name": "end",
+        {
+          "name": "end",
           "type" : "point"
         },
-        { "name": "polyline",
+        {
+          "name": "polyline",
           "type" : "string"
         },
-        { "name": "overallRating",
+        {
+          "name": "overallRating",
           "type" : "double",
           "description": "The average of all ratings for this segment"
         },
-        { "name": "surfaceRating",
+        {
+          "name": "surfaceRating",
           "type" : "double"
         },
-        { "name": "trafficRating",
+        {
+          "name": "trafficRating",
           "type" : "double"
         },
-        { "name": "surface",
+        {
+          "name": "surface",
           "type" : "surface"
         },
-        { "name": "pathType",
+        {
+          "name": "pathType",
           "type" : "pathType"
         }
       ]
     },
-    "segmentForm": {
+    "segmentCreateForm": {
       "description": "Form the client uses to create a segment",
       "fields": [
-        { "name": "name",
+        {
+          "name": "name",
           "type" : "string",
           "required": false
         },
-        { "name": "description",
+        {
+          "name": "description",
           "type" : "string",
           "required": false
         },
-        { "name": "points",
+        {
+          "name": "points",
           "type" : "[point]"
         },
-        { "name": "surfaceRating",
+        {
+          "name": "surfaceRating",
           "type" : "double",
           "default": 0
         },
-        { "name": "trafficRating",
+        {
+          "name": "trafficRating",
           "type" : "double",
           "default": 0
         },
-        { "name": "surface",
+        {
+          "name": "surface",
           "type" : "surface",
           "default": "asphalt"
         },
-        { "name": "pathType",
+        {
+          "name": "pathType",
           "type" : "pathType",
           "default": "shared"
+        }
+      ]
+    },
+    "segmentUpdateForm": {
+      "description": "Form to modify an existing segment",
+      "fields": [
+        {
+          "name": "name",
+          "type" : "string",
+          "required": false
+        },
+        {
+          "name": "description",
+          "type" : "string",
+          "required": false
+        },
+        {
+          "name": "surfaceRating",
+          "type" : "double",
+          "required": false
+        },
+        {
+          "name": "trafficRating",
+          "type" : "double",
+          "required": false
+        },
+        {
+          "name": "surface",
+          "type" : "surface",
+          "required": false
+        },
+        {
+          "name": "pathType",
+          "type" : "pathType",
+          "required": false
         }
       ]
     },
@@ -206,11 +263,7 @@
           "type": "userRole",
           "default": "user"
         },
-        {
-          "name": "stravaToken",
-          "type": "string",
-          "description": "Strava API token"
-        },
+        { "name": "stravaToken", "type": "string", "description": "Strava API token" },
         {
           "name": "createdAt",
           "type": "date-time-iso8601"
@@ -222,6 +275,21 @@
         {
           "name": "deletedAt",
           "type": "date-time-iso8601",
+          "required": false
+        }
+      ]
+    },
+    "userUpdateForm": {
+      "description": "A form to update attributes about a user",
+      "fields": [
+        {
+          "name": "birthdate",
+          "type": "date-time-iso8601",
+          "required": false
+        },
+        {
+          "name": "sex",
+          "type": "string",
           "required": false
         }
       ]
@@ -264,11 +332,10 @@
         { "method": "GET",
           "description": "Search all segments",
           "parameters": [
-            { "name": "segment_id", "type": "uuid", "required": false }
+            { "name": "segmentId", "type": "uuid", "required": false }
           ],
           "responses": {
-            "200": { "type": "[segment]" },
-            "404": { "type": "string" }
+            "200": { "type": "[segment]" }
           }
         },
         { "method": "GET",
@@ -286,29 +353,16 @@
           }
         },
         { "method": "POST",
-          "body": { "type": "segmentForm" },
+          "body": { "type": "segmentCreateForm" },
           "responses": {
             "201": { "type": "segment" },
             "400": { "type": "string" }
           }
         },
-        { "method": "PATCH",
-          "path": "/:segmentId/rating/traffic/:rating",
+        { "method": "PUT",
+          "body": { "type": "segmentUpdateForm" },
           "parameters": [
-            { "name": "segmentId", "type": "uuid" },
-            { "name": "rating", "type": "double" }
-          ],
-          "responses": {
-            "200": { "type": "segment" },
-            "400": { "type": "string" },
-            "404": { "type": "string" }
-          }
-        },
-        { "method": "PATCH",
-          "path": "/:segmentId/rating/surface/:rating",
-          "parameters": [
-            { "name": "segmentId", "type": "uuid" },
-            { "name": "rating", "type": "double" }
+            { "name": "segmentId", "type": "uuid", "required": true }
           ],
           "responses": {
             "200": { "type": "segment" },
@@ -321,30 +375,18 @@
     "user": {
       "operations": [
         { "method": "GET",
-          "path": "/:userId",
           "parameters": [
-            { "name": "userId", "type": "uuid" }
+            { "name": "userId", "type": "uuid", "required": false },
+            { "name": "userEmail", "type": "string", "required": false }
           ],
           "responses": {
-            "200": { "type": "user" },
-            "404": { "type": "string" }
+            "200": { "type": "[user]" }
           }
         },
-        { "method": "GET",
-          "path": "/email/:userEmail",
+        { "method": "PUT",
+          "body": { "type": "userUpdateForm" },
           "parameters": [
-            { "name": "userEmail", "type": "string" }
-          ],
-          "responses": {
-            "200": { "type": "user" },
-            "404": { "type": "string" }
-          }
-        },
-        { "method": "PATCH",
-          "path": "/:userId/sex/:sex",
-          "parameters": [
-            { "name": "userId", "type": "uuid" },
-            { "name": "sex", "type": "string" }
+            { "name": "userId", "type": "uuid", "required": true }
           ],
           "responses": {
             "202": { "type": "user" },
@@ -352,20 +394,8 @@
           }
         },
         { "method": "DELETE",
-          "path": "/:userId",
           "parameters": [
-            { "name": "userId", "type": "uuid" }
-          ],
-          "responses": {
-            "202": { "type": "user" },
-            "404": { "type": "string" }
-          }
-        },
-        { "method": "PATCH",
-          "path": "/:userId/birthdate/:birthdate",
-          "parameters": [
-            { "name": "userId", "type": "uuid" },
-            { "name": "birthdate", "type": "date-time-iso8601" }
+            { "name": "userId", "type": "uuid", "required": true }
           ],
           "responses": {
             "202": { "type": "user" },
