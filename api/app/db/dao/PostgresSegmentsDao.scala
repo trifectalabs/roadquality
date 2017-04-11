@@ -3,7 +3,7 @@ package db.dao
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
-import com.trifectalabs.roadquality.v0.models.{Segment, SegmentForm}
+import com.trifectalabs.roadquality.v0.models._
 import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.MyPostgresDriver
 import db.Tables._
@@ -14,31 +14,32 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends SegmentsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
+  import _root_.db.TablesHelper._
   import driver.api._
 
-  override def getAllSegments: Future[Seq[Segment]] = {
+  override def getAll: Future[Seq[Segment]] = {
     db.run(segments.result)
   }
 
-  override def getSegment(id: UUID): Future[Option[Segment]] = {
-    db.run(segments.filter(_.id === id).result.headOption)
+  override def getById(id: UUID): Future[Segment] = {
+    db.run(segments.filter(_.id === id).result.head)
   }
 
-  override def getSegmentsBoundingBox(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Future[Seq[Segment]] = {
+  override def getByBoundingBox(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Future[Seq[Segment]] = {
    // @&& - intersection
    db.run(segments.filter(_.startPoint @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326))).result)
   }
-
 
   override def delete(id: UUID): Future[Unit] = {
     db.run(segments.filter(_.id === id).delete.map(_ => ()))
   }
 
-  override def upsert(segmentForm: SegmentForm): Future[Segment] = {
+  override def create(segmentForm: SegmentCreateForm): Future[Segment] = {
     val polyline = Polyline.encode(segmentForm.points.map { point =>
       LatLng(lat = point.lat, lng = point.lng)
     }.toList)
 
+    val id = UUID.randomUUID()
     val segment = Segment(
       id = UUID.randomUUID(),
       name = segmentForm.name,
@@ -51,17 +52,13 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
       trafficRating = segmentForm.trafficRating,
       surface = segmentForm.surface,
       pathType = segmentForm.pathType)
-    db.run(segments += segment).map(_ => segment)
+
+    db.run((segments += segment).map(_ => segment))
   }
 
-  def updateSurfaceRating(id: UUID, rating: Double): Future[Segment] = {
-    val query = for { s <- segments if s.id === id } yield (s.surfaceRating)
-    db.run(query.update(rating)).flatMap(i => getSegment(id).map(_.get))
-  }
-
-  def updateTrafficRating(id: UUID, rating: Double): Future[Segment] = {
-    val query = for { s <- segments if s.id === id } yield (s.trafficRating)
-    db.run(query.update(rating)).flatMap(i => getSegment(id).map(_.get))
+  override def update(segment: Segment): Future[Segment] = {
+    val query = for { s <- segments if s.id === segment.id } yield (s.name, s.description, s.surfaceRating, s.trafficRating, s.surface, s.pathType)
+    db.run(query.update(segment.name, segment.description, segment.surfaceRating, segment.trafficRating, segment.surface, segment.pathType)).map(_ => segment)
   }
 
 }

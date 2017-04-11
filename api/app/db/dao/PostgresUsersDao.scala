@@ -52,8 +52,8 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 	}
 
 	override def update(user: User): Future[User] = {
-		val query = for { u <- users if u.id === user.id } yield (u.firstName, u.lastName, u.email, u.stravaToken)
-		db.run(query.update(user.firstName, user.lastName, user.email, user.stravaToken)).map(i => user)
+		val query = for { u <- users if u.id === user.id } yield (u.firstName, u.lastName, u.email, u.stravaToken, u.sex, u.birthdate)
+		db.run(query.update(user.firstName, user.lastName, user.email, user.stravaToken, user.sex, user.birthdate)).map(i => user)
 	}
 
 	override def upsert(
@@ -74,17 +74,8 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 		}
 	}
 
-	override def delete(id: UUID): Future[Boolean] = {
-		db.run(users.filter(_.id === id).delete.map(_ => true))
-	}
-
-	def updateSex(id: UUID, sex: String): Future[User] = {
-		val query = for { s <- users if s.id === id } yield (s.sex)
-		db.run(query.update(Some(sex))).flatMap(i => getById(id))
-	}
-
-	def updateBirthdate(id: UUID, birthdate: DateTime): Future[User] = {
-		val query = for { s <- users if s.id === id } yield (s.birthdate)
-		db.run(query.update(Some(birthdate))).flatMap(i => getById(id))
+	override def softDelete(id: UUID): Future[Boolean] = {
+		val query = for { u <- users if u.id === id } yield (u.deletedAt)
+		db.run(query.update(Some(DateTime.now()))).map(i => true)
 	}
 }
