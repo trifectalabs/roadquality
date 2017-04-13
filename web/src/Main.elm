@@ -186,7 +186,7 @@ update msg model =
                         , url =
                             String.concat
                                 [ model.host
-                                , "/map_routes/snap?lat="
+                                , "/mapRoutes/snap?lat="
                                 , toString lat
                                 , "&lng="
                                 , toString lng
@@ -220,7 +220,7 @@ update msg model =
                     Http.request
                         { method = "POST"
                         , headers = []
-                        , url = String.concat [ model.host, "/map_routes" ]
+                        , url = String.concat [ model.host, "/mapRoutes" ]
                         , body = Http.jsonBody points
                         , expect = Http.expectJson decodeRoute
                         , timeout = Nothing
