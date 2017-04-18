@@ -1,102 +1,13 @@
-port module Main exposing (..)
+port module State exposing (..)
 
-import Dict exposing (Dict)
-import Html exposing (Html, a, div, text, input, button)
-import Html.Attributes exposing (href, type_, value, target)
-import Html.Events exposing (onClick, onInput)
+import Dict
 import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (decode, required)
-import Json.Encode as Encode exposing (encode, Value)
+import Json.Encode as Encode
 import Navigation
 import Polyline
-import Stylesheets exposing (mapNamespace, CssIds(..))
+import Rest exposing (decodePoint, encodePoint, decodeRoute, decodeSegment)
+import Types exposing (Model, Point, Route, Segment, UrlRoute(..))
 import UrlParser exposing (Parser, s)
-
-
-{ id, class, classList } =
-    mapNamespace
-
-
-main : Program Never Model Msg
-main =
-    Navigation.program UrlChange
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        }
-
-
-
--- MODEL
-
-
-type alias Model =
-    { anchors : Dict Int Point
-    , anchorOrder : List Int
-    , route : Maybe Route
-    , rating : Int
-    , page : UrlRoute
-    , host : String
-    }
-
-
-type alias Route =
-    { distance : Float
-    , polyline : String
-    }
-
-
-decodeRoute : Decoder Route
-decodeRoute =
-    decode Route
-        |> required "distance" Decode.float
-        |> required "polyline" Decode.string
-
-
-type alias Point =
-    { lat : Float
-    , lng : Float
-    }
-
-
-decodePoint : Decoder Point
-decodePoint =
-    decode Point
-        |> required "lng" Decode.float
-        |> required "lat" Decode.float
-
-
-encodePoint : Point -> Value
-encodePoint point =
-    Encode.object
-        [ ( "lat", Encode.float point.lat )
-        , ( "lng", Encode.float point.lng )
-        ]
-
-
-type alias Segment =
-    { id : String
-    , name : String
-    , description : String
-    , start : Point
-    , end : Point
-    , polyline : String
-    , rating : Float
-    }
-
-
-decodeSegment : Decoder Segment
-decodeSegment =
-    decode Segment
-        |> required "id" Decode.string
-        |> required "name" Decode.string
-        |> required "description" Decode.string
-        |> required "start" decodePoint
-        |> required "end" decodePoint
-        |> required "polyline" Decode.string
-        |> required "rating" Decode.float
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
@@ -119,10 +30,6 @@ init location =
         )
 
 
-
--- UPDATE
-
-
 type Msg
     = UrlChange Navigation.Location
     | PlaceAnchorPoint ( Int, Float, Float )
@@ -132,12 +39,6 @@ type Msg
     | ChangeRating String
     | SaveSegment
     | ReceiveSegment (Result Http.Error Segment)
-
-
-type UrlRoute
-    = LoginPage
-    | MainPage
-    | AccountPage
 
 
 route : Parser (UrlRoute -> a) a
@@ -300,10 +201,6 @@ update msg model =
             ( model, Cmd.none )
 
 
-
--- SUBSCRIPTIONS
-
-
 port up : Bool -> Cmd msg
 
 
@@ -323,41 +220,4 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ setAnchor PlaceAnchorPoint
-        ]
-
-
-
--- VIEW
-
-
-view : Model -> Html Msg
-view model =
-    case model.page of
-        LoginPage ->
-            loginView
-
-        MainPage ->
-            mainView model
-
-        AccountPage ->
-            div [] [ text "account" ]
-
-
-loginView : Html Msg
-loginView =
-    div [] [ a [ href "/login" ] [ text "Connect to Strava" ] ]
-
-
-mainView : Model -> Html Msg
-mainView model =
-    div []
-        [ div [ id MainView ] []
-        , input
-            [ type_ "number"
-            , value <| toString model.rating
-            , onInput ChangeRating
-            ]
-            []
-        , button [ onClick SaveSegment ] [ text "Save Segment" ]
-        , button [ onClick ClearAnchors ] [ text "Clear" ]
         ]

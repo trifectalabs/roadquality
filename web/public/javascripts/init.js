@@ -1,5 +1,5 @@
 let node = document.getElementById("elm-content");
-let app = Elm.Main.embed(node);
+let app = Elm.App.embed(node);
 
 let mymap;
 let markers = {};
