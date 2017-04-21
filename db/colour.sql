@@ -8,7 +8,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TYPE rgb as (r int, g int, b int);
 CREATE OR REPLACE FUNCTION ratingColour(rating double precision)
-RETURNS TABLE (colour text) AS $$
+RETURNS TABLE (t text) AS $$
 BEGIN
   RETURN QUERY
     WITH
@@ -39,7 +39,7 @@ BEGIN
         red AS (SELECT blend((SELECT * FROM startVal).r, (SELECT * from endVal).r, (SELECT * FROM normRating))),
         green AS (SELECT blend((SELECT * from startVal).g, (SELECT * from endVal).g, (SELECT * FROM normRating))),
         blue AS (SELECT blend((SELECT * from startVal).b, (SELECT * from endVal).b, (SELECT * FROM normRating)))
-        Select '#' || to_hex(re.blend) || to_hex(gr.blend) || to_hex(bl.blend)
+        Select '#' || lpad(to_hex(re.blend), 2, '0') || lpad(to_hex(gr.blend), 2, '0') || lpad(to_hex(bl.blend), 2, '0')
         FROM (SELECT * FROM red) as re, (SELECT * FROM green) as gr, (SELECT * FROM blue) as bl;
 END;
 $$ LANGUAGE plpgsql;
