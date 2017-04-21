@@ -55,7 +55,7 @@ BEGIN
                           (SELECT ST_LineLocatePoint((SELECT road from start_road), (SELECT * FROM start_point))),
                           (SELECT id from end_road)::integer,
                           (SELECT ST_LineLocatePoint((SELECT road from end_road), (SELECT * FROM end_point))),
-                          true, false) AS r INNER JOIN planet_osm_line_noded as ways on ways.id = r.id2
+                          false, false) AS r INNER JOIN planet_osm_line_noded as ways on ways.id = r.id2
                           where r.seq <> 1 and r.id2 <> ((SELECT id from end_road)::integer)),
        corrected_start AS (SELECT ST_SetPoint((SELECT ST_MakeLine(result.way) FROM route AS result), 0,
                           (ST_LineInterpolatePoint(
