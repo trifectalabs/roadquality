@@ -29,9 +29,14 @@ class PostgresRoutesDao @Inject() (protected val dbConfigProvider: DatabaseConfi
     }
   }
 
+
   override def snapPoint(point: Point): Future[Point] = {
     val sql = sql"""SELECT * from closest_point_on_road(${point.lng}, ${point.lat});""".as[Point]
     db.run(sql).map(r => r.head)
   }
 
+  override def waysFromSegment(segment_polyline: String): Future[Seq[Long]] = {
+    val sql = sql"""SELECT * from ways_from_segment(${segment_polyline});""".as[Long]
+    db.run(sql)
+  }
 }

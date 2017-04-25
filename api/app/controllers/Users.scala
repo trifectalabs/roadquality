@@ -2,7 +2,6 @@ package controllers
 
 import java.util.UUID
 import javax.inject.Inject
-import play.json.extra.Jsonx
 
 import com.trifectalabs.roadquality.v0.models.{ User, UserUpdateForm }
 import com.trifectalabs.roadquality.v0.models.json._
@@ -15,12 +14,11 @@ import util.actions.AuthLoggingAction
 import scala.concurrent.{ ExecutionContext, Future }
 
 class Users @Inject() (usersDao: UsersDao, authLoggingAction: AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
-  implicit def jsonFormat = Jsonx.formatCaseClass[UserUpdateForm]
   import authLoggingAction._
 
   def get(userId: Option[UUID], userEmail: Option[String]) = AuthLoggingAction.async {
     (userId, userEmail) match {
-      case (Some(id), _) => usersDao.getById(id).map(s => Ok(Json.toJson(s)))
+      case (Some(id), None) => usersDao.getById(id).map(s => Ok(Json.toJson(s)))
       case (None, Some(email)) => usersDao.findByEmail(email).map(s => Ok(Json.toJson(s)))
       case (None, None) => Future(BadRequest("User ID or email must be specified"))
       case (Some(_), Some(_)) => Future(BadRequest("User ID and email cannot both be specified"))

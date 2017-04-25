@@ -4,7 +4,6 @@ import models.{ FormValidator, FormError }
 
 import java.util.UUID
 import javax.inject.Inject
-import play.json.extra.Jsonx
 
 import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, SegmentUpdateForm }
 import com.trifectalabs.roadquality.v0.models.json._
@@ -12,13 +11,12 @@ import db.dao.SegmentsDao
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import util.actions.AuthLoggingAction
+import services.SegmentService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class Segments @Inject() (segmentsDao: SegmentsDao, authLoggingAction:AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
+class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentService, authLoggingAction:AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
   import authLoggingAction._
-  implicit def segmentCreateFormat = Jsonx.formatCaseClass[SegmentCreateForm]
-  implicit def segmentUpdateFormat = Jsonx.formatCaseClass[SegmentUpdateForm]
   implicit def formErrorFormat = Json.writes[FormError]
 
   def get(segment_id: Option[UUID]) = AuthLoggingAction.async {
@@ -44,7 +42,8 @@ class Segments @Inject() (segmentsDao: SegmentsDao, authLoggingAction:AuthLoggin
   def post() = AuthLoggingAction.async(parse.json[SegmentCreateForm]) { implicit request =>
     val segForm = request.body
     FormValidator.validateSegmentCreateForm(segForm) match {
-      case Nil => segmentsDao.create(segForm).map(s => Ok(Json.toJson(s)))
+      // TODO fix the user uuid
+      case Nil => segmentService.createSegment(segForm, UUID.fromString("e34f4f39-edcb-4d65-9969-264db37681eb")).map(s => Ok(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
 	}
@@ -56,11 +55,7 @@ class Segments @Inject() (segmentsDao: SegmentsDao, authLoggingAction:AuthLoggin
         segmentsDao.getById(segmentId).flatMap { existingSegment =>
           val updatedSegment = existingSegment.copy(
             name = if (!segmentUpdateForm.name.isDefined) existingSegment.name else Some(segmentUpdateForm.name.get),
-            description = if (!segmentUpdateForm.description.isDefined) existingSegment.description else Some(segmentUpdateForm.description.get),
-            surfaceRating = segmentUpdateForm.surfaceRating.getOrElse(existingSegment.surfaceRating),
-            trafficRating = segmentUpdateForm.trafficRating.getOrElse(existingSegment.trafficRating),
-            surface = segmentUpdateForm.surface.getOrElse(existingSegment.surface),
-            pathType = segmentUpdateForm.pathType.getOrElse(existingSegment.pathType)
+            description = if (!segmentUpdateForm.description.isDefined) existingSegment.description else Some(segmentUpdateForm.description.get)
           )
 
           segmentsDao.update(updatedSegment).map(s => Ok(Json.toJson(s)))
