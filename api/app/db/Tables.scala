@@ -14,16 +14,9 @@ object Tables {
     def id = column[UUID]("id", O.PrimaryKey)
     def name = column[Option[String]]("name")
     def description = column[Option[String]]("description")
-    def startPoint = column[JTSPoint]("start_point")
-    def endPoint = column[JTSPoint]("end_point")
     def polyline = column[String]("polyline")
-    def overallRating = column[Double]("overall_rating")
-    def surfaceRating = column[Double]("surface_rating")
-    def trafficRating = column[Double]("traffic_rating")
-    def surface = column[Surface]("surface")
-    def pathType = column[PathType]("path_type")
 
-    override def * = (id, name, description, startPoint, endPoint, polyline, overallRating, surfaceRating, trafficRating, surface, pathType) <> (segmentTupled, segmentUnapply)
+    override def * = (id, name, description, polyline) <> (Segment.tupled, Segment.unapply)
   }
 
   val segments = TableQuery[Segments]
@@ -45,5 +38,22 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
   }
 
   val users = TableQuery[Users]
+
+  class Ratings(tag: Tag) extends Table[Rating](tag, "ratings") {
+    def wayId = column[Long]("way_id")
+    def segmentId = column[UUID]("segment_id")
+    def userId = column[UUID]("user_id")
+    def trafficRating  = column[Int]("traffic_rating")
+    def surfaceRating  = column[Int]("surface_rating")
+    def surface = column[SurfaceType]("surface")
+    def pathType = column[PathType]("path_type")
+    def createdAt = column[DateTime]("created_at")
+    def updatedAt = column[DateTime]("updated_at")
+    def deletedAt = column[Option[DateTime]]("deleted_at")
+
+    override def * = (wayId, segmentId, userId, trafficRating, surfaceRating, surface, pathType, createdAt, updatedAt, deletedAt) <> (Rating.tupled, Rating.unapply)
+  }
+
+  val ratings = TableQuery[Ratings]
 
 }

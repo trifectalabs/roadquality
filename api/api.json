@@ -20,7 +20,7 @@
         }
       ]
     },
-    "surface": {
+    "surfaceType": {
       "description": "The surface type of a segment (road type)",
       "values": [
         {
@@ -96,37 +96,8 @@
           "required": false
         },
         {
-          "name": "start",
-          "type" : "point"
-        },
-        {
-          "name": "end",
-          "type" : "point"
-        },
-        {
           "name": "polyline",
           "type" : "string"
-        },
-        {
-          "name": "overallRating",
-          "type" : "double",
-          "description": "The average of all ratings for this segment"
-        },
-        {
-          "name": "surfaceRating",
-          "type" : "double"
-        },
-        {
-          "name": "trafficRating",
-          "type" : "double"
-        },
-        {
-          "name": "surface",
-          "type" : "surface"
-        },
-        {
-          "name": "pathType",
-          "type" : "pathType"
         }
       ]
     },
@@ -144,28 +115,24 @@
           "required": false
         },
         {
-          "name": "points",
-          "type" : "[point]"
+          "name": "polyline",
+          "type" : "string"
         },
         {
           "name": "surfaceRating",
-          "type" : "double",
-          "default": 0
+          "type" : "integer"
         },
         {
           "name": "trafficRating",
-          "type" : "double",
-          "default": 0
+          "type" : "integer"
         },
         {
           "name": "surface",
-          "type" : "surface",
-          "default": "asphalt"
+          "type" : "surfaceType"
         },
         {
           "name": "pathType",
-          "type" : "pathType",
-          "default": "shared"
+          "type" : "pathType"
         }
       ]
     },
@@ -184,23 +151,102 @@
         },
         {
           "name": "surfaceRating",
-          "type" : "double",
+          "type" : "integer",
           "required": false
         },
         {
           "name": "trafficRating",
-          "type" : "double",
+          "type" : "integer",
           "required": false
         },
         {
           "name": "surface",
-          "type" : "surface",
+          "type" : "surfaceType",
           "required": false
         },
         {
           "name": "pathType",
           "type" : "pathType",
           "required": false
+        }
+      ]
+    },
+    "rating": {
+      "description": "Ratings for ways",
+      "fields": [
+        {
+          "name": "wayId",
+          "type" : "long"
+        },
+        {
+          "name": "segmentId",
+          "type" : "uuid"
+        },
+        {
+          "name": "userId",
+          "type" : "uuid"
+        },
+        {
+          "name": "trafficRating",
+          "type" : "integer"
+        },
+        {
+          "name": "surfaceRating",
+          "type" : "integer"
+        },
+        {
+          "name": "surface",
+          "type" : "surfaceType"
+        },
+        {
+          "name": "pathType",
+          "type" : "pathType"
+        },
+        {
+          "name": "createdAt",
+          "type" : "date-time-iso8601"
+        },
+        {
+          "name": "updatedAt",
+          "type" : "date-time-iso8601"
+        },
+        {
+          "name": "deletedAt",
+          "type" : "date-time-iso8601",
+          "required": false
+        }
+      ]
+    },
+    "ratingSummary": {
+      "description": "Summary of ratings for ways",
+      "fields": [
+        {
+          "name": "wayId",
+          "type" : "uuid"
+        },
+        {
+          "name": "streetName",
+          "type" : "string"
+        },
+        {
+          "name": "trafficRating",
+          "type" : "double"
+        },
+        {
+          "name": "surfaceRating",
+          "type" : "double"
+        },
+        {
+          "name": "surface",
+          "type" : "surfaceType"
+        },
+        {
+          "name": "pathType",
+          "type" : "pathType"
+        },
+        {
+          "name": "lastUpdatedAt",
+          "type" : "date-time-iso8601"
         }
       ]
     },
@@ -260,8 +306,7 @@
         },
         {
           "name": "role",
-          "type": "userRole",
-          "default": "user"
+          "type": "userRole"
         },
         { "name": "stravaToken", "type": "string", "description": "Strava API token" },
         {
@@ -399,6 +444,29 @@
           ],
           "responses": {
             "202": { "type": "user" },
+            "404": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "rating": {
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+            { "name": "wayId", "type": "long", "required": true }
+          ],
+          "responses": {
+            "200": { "type": "rating" }
+          }
+        },
+        { "method": "DELETE",
+          "parameters": [
+            { "name": "userId", "type": "uuid", "required": true },
+            { "name": "wayId", "type": "long", "required": true }
+          ],
+          "responses": {
+            "202": { "type": "boolean" },
             "404": { "type": "string" }
           }
         }
