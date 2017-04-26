@@ -20,7 +20,7 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
   implicit def formErrorFormat = Json.writes[FormError]
 
   def get(segment_id: Option[UUID]) = AuthLoggingAction.async {
-    segment_id.map(id => segmentsDao.getById(id).map(s => Ok(Json.toJson(s))))
+    segment_id.map(id => segmentsDao.getById(id).map(s => Ok(Json.toJson(Seq(s)))))
       .getOrElse(segmentsDao.getAll.map(s => Ok(Json.toJson(s))))
   }
 
