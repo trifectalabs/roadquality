@@ -1,5 +1,7 @@
 package controllers
 
+import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
+
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
@@ -10,11 +12,16 @@ import play.api.db.slick.DatabaseConfigProvider
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import slick.driver.JdbcProfile
+import org.joda.time.DateTime
+import java.util.UUID
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-trait BaseSpec extends PlaySpec with GuiceOneServerPerSuite with BeforeAndAfterEach with ScalaFutures {
+trait BaseSpec extends PlaySpec
+  with GuiceOneServerPerSuite
+  with BeforeAndAfterEach
+  with ScalaFutures {
 
   override lazy val port: Int = 9010
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
@@ -34,14 +41,25 @@ trait BaseSpec extends PlaySpec with GuiceOneServerPerSuite with BeforeAndAfterE
   val db = dbConfig.db
   val profile = dbConfig.driver
 
+  val testuser = User(
+    UUID.fromString("e34f4f39-edcb-4d65-9969-264db37681eb"),
+    firstName = "Test",
+    lastName = "User",
+    email = "tuser@test.com",
+    role = UserRole.User,
+    stravaToken = "123",
+    createdAt = DateTime.now(),
+    updatedAt = DateTime.now())
+
   override def beforeEach() {
-    wipeDb
+    setupDb
   }
 
-  private[this] def wipeDb = {
+  private[this] def setupDb = {
     import profile.api._
 
     Await.result(db.run(sqlu"TRUNCATE TABLE segments, ratings, users RESTART IDENTITY;"), Duration.Inf)
+    Await.result(db.run((_root_.db.Tables.users += testuser)), Duration.Inf)
   }
 
 }

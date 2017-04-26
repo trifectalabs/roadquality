@@ -16,6 +16,10 @@ class PostgresRatingsDao @Inject() (protected val dbConfigProvider: DatabaseConf
   import _root_.db.TablesHelper._
   import driver.api._
 
+  override def getAll(): Future[Seq[Rating]] = {
+    db.run(ratings.result)
+  }
+
   override def getByWayId(wayId: Long): Future[Rating] = {
     db.run(ratings.filter(_.wayId === wayId).result.head)
   }

@@ -21,13 +21,11 @@ class SegmentServiceImpl @Inject()(segmentsDao: SegmentsDao, routesDao: RoutesDa
     segmentsDao.create(segmentId, segmentCreateForm) map { segment =>
       val waysFut = routesDao.waysFromSegment(segmentCreateForm.polyline)
       waysFut.map { _ foreach { id =>
-        println(id)
         val r = Rating(
           id, segmentId, userId, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
           segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
         )
-        println(r)
-        ratingsDao.insert(r).map(s => println(s))
+        ratingsDao.insert(r)
       } }
       segment
     }

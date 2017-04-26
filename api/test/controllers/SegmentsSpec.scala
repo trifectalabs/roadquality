@@ -1,6 +1,6 @@
 package controllers
 
-import db.dao.SegmentsDao
+import db.dao.{ SegmentsDao, RatingsDao }
 import util.TestHelpers._
 import com.trifectalabs.roadquality.v0.models.Point
 
@@ -11,6 +11,7 @@ import scala.concurrent.duration.Duration
 class SegmentsSpec extends BaseSpec {
 
   val segmentsDao = app.injector.instanceOf[SegmentsDao]
+  val ratingsDao = app.injector.instanceOf[RatingsDao]
 
     "/GET segments" must {
       "return a list of all segments" in {
@@ -20,7 +21,7 @@ class SegmentsSpec extends BaseSpec {
         )
 
         whenReady(testClient.segments.get()) { segments =>
-          segments.size must be(3)
+          segments.size must be (3)
         }
       }
     }
@@ -33,8 +34,8 @@ class SegmentsSpec extends BaseSpec {
         ).head.id
 
         whenReady(testClient.segments.get(Some(id))) { segments =>
-          segments.size must be(1)
-          segments.head.id must be(id)
+          segments.size must be (1)
+          segments.head.id must be (id)
         }
       }
     }
@@ -56,7 +57,7 @@ class SegmentsSpec extends BaseSpec {
         whenReady(
           testClient.segments.getBoundingbox(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
         ) { segments =>
-          segments.size must be(1)
+          segments.size must be (1)
         }
       }
     }
@@ -68,7 +69,29 @@ class SegmentsSpec extends BaseSpec {
         whenReady(
           Future.sequence(forms.map(f => testClient.segments.post(f)))
         ) { segments =>
-          segments.size must be(3)
+          segments.size must be (3)
+        }
+      }
+
+      "create ratings for the underlying ways" in {
+        val waterlooPoints = Seq( Point(43.464150, -80.549123), Point(43.465886, -80.550400) )
+        val forms = createTestSegmentCreateForms(count = 3, points = waterlooPoints)
+
+        Await.result(
+          Future.sequence(forms.map(f => testClient.segments.post(f))),
+          Duration.Inf
+        )
+
+        // Wait for asynchronous rating generation to complete
+        Await.result(
+          Future.successful(Thread.sleep(1000)),
+          Duration.Inf
+        )
+
+        whenReady(
+          ratingsDao.getAll()
+        ) { ratings =>
+          ratings.size must be > 3
         }
       }
     }
