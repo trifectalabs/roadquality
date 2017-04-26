@@ -35,15 +35,11 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
       }).getOrElse(Future(BadRequest))
 	}
 
-  def getBoundingbox(xmin: Double, ymin: Double, xmax: Double, ymax: Double) = AuthLoggingAction.async {
-    segmentsDao.getByBoundingBox(xmin, ymin, xmax, ymax).map(s => Ok(Json.toJson(s)))
-	}
-
   def post() = AuthLoggingAction.async(parse.json[SegmentCreateForm]) { implicit request =>
     val segForm = request.body
     FormValidator.validateSegmentCreateForm(segForm) match {
       // TODO fix the user uuid
-      case Nil => segmentService.createSegment(segForm, UUID.fromString("e34f4f39-edcb-4d65-9969-264db37681eb")).map(s => Ok(Json.toJson(s)))
+      case Nil => segmentService.createSegment(segForm, UUID.fromString("e34f4f39-edcb-4d65-9969-264db37681eb")).map(s => Created(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
 	}

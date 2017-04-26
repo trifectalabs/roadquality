@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.trifectalabs.roadquality.v0.models._
 import db.dao.SegmentsDao
+import com.trifectalabs.polyline.{ Polyline, LatLng }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -12,18 +13,22 @@ import scala.util.Random
 
 object TestHelpers {
 
-  def populateTestSegments(count: Int = 1, segmentsDao: SegmentsDao): Future[Seq[Segment]] = {
+  def populateTestSegments(count: Int = 1, points: Seq[Point] = Seq(), segmentsDao: SegmentsDao): Future[Seq[Segment]] = {
     Future.sequence {
-      createTestSegmentCreateForms(count).map { form =>
+      createTestSegmentCreateForms(count, points).map { form =>
         val id = UUID.randomUUID()
         segmentsDao.create(id, form)
       }
     }
   }
 
-  def createTestSegmentCreateForms(count: Int = 1): Seq[SegmentCreateForm] = {
+  def createTestSegmentCreateForms(count: Int = 1, points: Seq[Point] = Seq()): Seq[SegmentCreateForm] = {
     (1 to count) map { _ =>
-      SegmentCreateForm(polyline = Random.alphanumeric take 10 mkString,
+      SegmentCreateForm(
+        polyline = points match {
+          case Nil => randomPolylineGenerator
+          case p => Polyline.encode(p.map(a => LatLng(lat=a.lat, lng=a.lng)).toList)
+        },
         surfaceRating = Random.nextInt(5) + 1,
         trafficRating = Random.nextInt(5) + 1,
         surface = SurfaceType("asphalt"),
@@ -34,6 +39,14 @@ object TestHelpers {
     (1 to count) map { _ =>
       Segment(id = UUID.randomUUID(), polyline = Random.alphanumeric take 10 mkString)
     }
+  }
+
+  private[this] def randomPolylineGenerator: String = {
+    val points = (1 to Random.nextInt(10)) map { _ =>
+      LatLng((Random.nextDouble() * 360) - 180, (Random.nextDouble() * 360) - 180)
+    } toList
+
+    Polyline.encode(points)
   }
 
 }
