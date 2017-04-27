@@ -35,6 +35,23 @@ object TestHelpers {
         pathType = PathType("shared"))
     }
   }
+
+  def createTestSegmentUpdateForms(count: Int = 1,
+    surfaceRating: Option[Int] = None,
+    trafficRating: Option[Int] = None,
+    surface: Option[SurfaceType] = None,
+    pathType: Option[PathType] = None): Seq[SegmentUpdateForm] = {
+    (1 to count) map { _ =>
+      SegmentUpdateForm(
+        name = Some(Random.alphanumeric take 10 mkString),
+        description = Some(Random.alphanumeric take 10 mkString),
+        surfaceRating = surfaceRating,
+        trafficRating = trafficRating,
+        surface = surface,
+        pathType = pathType)
+    }
+  }
+
   def createTestSegments(count: Int = 1): Seq[Segment] = {
     (1 to count) map { _ =>
       Segment(id = UUID.randomUUID(), polyline = Random.alphanumeric take 10 mkString)

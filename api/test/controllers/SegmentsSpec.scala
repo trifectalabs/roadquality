@@ -2,7 +2,7 @@ package controllers
 
 import db.dao.{ SegmentsDao, RatingsDao }
 import util.TestHelpers._
-import com.trifectalabs.roadquality.v0.models.Point
+import com.trifectalabs.roadquality.v0.models.{ Point, SurfaceType, PathType }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ Await, Future }
@@ -92,6 +92,64 @@ class SegmentsSpec extends BaseSpec {
           ratingsDao.getAll()
         ) { ratings =>
           ratings.size must be > 3
+        }
+      }
+    }
+
+    "/PUT segments" must {
+      "update a pre-existing segment" in {
+        val createForm = createTestSegmentCreateForms()
+        val updateForm = createTestSegmentUpdateForms()
+
+        val segmentId = Await.result(
+          Future.sequence(createForm.map(f => testClient.segments.post(f))),
+          Duration.Inf
+        ).head.id
+
+        whenReady(
+          Future.sequence(updateForm.map(f => testClient.segments.put(segmentId, f)))
+        ) { segment =>
+          segment.head.name must be (updateForm.head.name)
+          segment.head.name must not be (createForm.head.name)
+          segment.head.description must be (updateForm.head.description)
+          segment.head.description must not be (createForm.head.description)
+        }
+      }
+
+      "update the corresponding ratings" in {
+        val waterlooPoints = Seq( Point(43.464150, -80.549123), Point(43.465886, -80.550400) )
+
+        val createForm = createTestSegmentCreateForms(points = waterlooPoints)
+        val updateForm = createTestSegmentUpdateForms(
+          surfaceRating = Some(4),
+          trafficRating = Some(2),
+          surface = Some(SurfaceType("gravel")),
+          pathType = Some(PathType("dedicatedLane")))
+
+        val segmentId = Await.result(
+          Future.sequence(createForm.map(f => testClient.segments.post(f))),
+          Duration.Inf
+        ).head.id
+
+        // Wait for asynchronous rating generation to complete
+        Await.result(
+          Future.successful(Thread.sleep(1000)),
+          Duration.Inf
+        )
+
+        val segments = Await.result(
+          Future.sequence(updateForm.map(f => testClient.segments.put(segmentId, f))),
+          Duration.Inf
+        )
+
+        whenReady(
+          ratingsDao.getBySegmentId(segments.head.id)
+        ) { ratings =>
+          ratings.size must be > 1
+          ratings.head.surfaceRating must be (updateForm.head.surfaceRating.get)
+          ratings.head.trafficRating must be (updateForm.head.trafficRating.get)
+          ratings.head.surface must be (updateForm.head.surface.get)
+          ratings.head.pathType must be (updateForm.head.pathType.get)
         }
       }
     }

@@ -53,8 +53,7 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
             name = if (!segmentUpdateForm.name.isDefined) existingSegment.name else Some(segmentUpdateForm.name.get),
             description = if (!segmentUpdateForm.description.isDefined) existingSegment.description else Some(segmentUpdateForm.description.get)
           )
-
-          segmentsDao.update(updatedSegment).map(s => Ok(Json.toJson(s)))
+            segmentService.updateSegment(updatedSegment, segmentUpdateForm).map(s => Ok(Json.toJson(s)))
         }
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
