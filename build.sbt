@@ -5,12 +5,14 @@ lazy val root = (project in file("."))
   .aggregate(web, api)
 
 lazy val web = project
+  .settings(name:= "roadquality_web")
   .dependsOn(api)
   .enablePlugins(PlayScala)
   .settings(commonSettings: _*)
   .settings(dockerSettings: _*)
 
 lazy val api = project
+  .settings(name:= "roadquality_api")
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings(
