@@ -5,8 +5,24 @@ import Http
 import Json.Encode as Encode
 import Navigation
 import Polyline
-import Rest exposing (decodePoint, encodePoint, decodeRoute, decodeSegment)
-import Types exposing (Model, Point, Route, Segment, UrlRoute(..))
+import Rest
+    exposing
+        ( decodePoint
+        , encodePoint
+        , decodeRoute
+        , decodeSegment
+        , encodeCreateSegmentForm
+        )
+import Types
+    exposing
+        ( Model
+        , Point
+        , Route
+        , Segment
+        , UrlRoute(..)
+        , PathType(..)
+        , SurfaceType(..)
+        )
 import UrlParser exposing (Parser, s)
 
 
@@ -22,12 +38,24 @@ init location =
         ( { anchors = Dict.empty
           , anchorOrder = []
           , route = Nothing
-          , rating = 5
           , page = MainPage
           , host = host
+          , menu = initMenu
           }
         , up True
         )
+
+
+initMenu : Types.RatingsInterfaceState
+initMenu =
+    { drawingSegment = False
+    , name = ""
+    , description = ""
+    , surfaceRating = 5
+    , trafficRating = 5
+    , surface = Asphalt
+    , pathType = Shared
+    }
 
 
 type Msg
@@ -36,7 +64,12 @@ type Msg
     | SetAnchorPoint Int (Result Http.Error Point)
     | ReceiveRoute (Result Http.Error Route)
     | ClearAnchors
-    | ChangeRating String
+    | ChangeName String
+    | ChangeDescription String
+    | ChangeSurfaceRating String
+    | ChangeTrafficRating String
+    | ChangePathType String
+    | ChangeSurfaceType String
     | SaveSegment
     | ReceiveSegment (Result Http.Error Segment)
 
@@ -80,6 +113,15 @@ update msg model =
 
         PlaceAnchorPoint ( pointId, lat, lng ) ->
             let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    if oldMenu.drawingSegment then
+                        oldMenu
+                    else
+                        { oldMenu | drawingSegment = True }
+
                 req =
                     Http.request
                         { method = "GET"
@@ -98,7 +140,9 @@ update msg model =
                         , withCredentials = False
                         }
             in
-                ( model, Http.send (SetAnchorPoint pointId) req )
+                ( { model | menu = newMenu }
+                , Http.send (SetAnchorPoint pointId) req
+                )
 
         SetAnchorPoint _ (Err error) ->
             ( model, Cmd.none )
@@ -153,30 +197,124 @@ update msg model =
                 | anchors = Dict.empty
                 , anchorOrder = []
                 , route = Nothing
+                , menu = initMenu
               }
             , clearRoute ()
             )
 
-        ChangeRating rating ->
+        ChangeName name ->
+            let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | name = name }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeDescription description ->
+            let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | description = description }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeSurfaceRating rating ->
             let
                 r =
                     String.toInt rating
-                        |> Result.withDefault model.rating
+                        |> Result.withDefault model.menu.surfaceRating
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | surfaceRating = r }
             in
-                ( { model | rating = r }, Cmd.none )
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeTrafficRating rating ->
+            let
+                r =
+                    String.toInt rating
+                        |> Result.withDefault model.menu.trafficRating
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | trafficRating = r }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangePathType pathType ->
+            let
+                parsed =
+                    case pathType of
+                        "DedicatedLane" ->
+                            DedicatedLane
+
+                        "Shared" ->
+                            Shared
+
+                        "BikePath" ->
+                            BikePath
+
+                        _ ->
+                            model.menu.pathType
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | pathType = parsed }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeSurfaceType surfaceType ->
+            let
+                parsed =
+                    case surfaceType of
+                        "Asphalt" ->
+                            Asphalt
+
+                        "Dirt" ->
+                            Dirt
+
+                        "Gravel" ->
+                            Gravel
+
+                        _ ->
+                            model.menu.surface
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | surface = parsed }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
 
         SaveSegment ->
             let
                 points =
-                    model.anchorOrder
-                        |> List.filterMap (\id -> Dict.get id model.anchors)
-                        |> List.map encodePoint
+                    List.filterMap
+                        (\id -> Dict.get id model.anchors)
+                        model.anchorOrder
 
                 body =
-                    Encode.object
-                        [ ( "points", Encode.list points )
-                        , ( "rating", Encode.int model.rating )
-                        ]
+                    encodeCreateSegmentForm
+                        { name = model.menu.name
+                        , description = model.menu.description
+                        , points = points
+                        , surfaceRating = model.menu.surfaceRating
+                        , trafficRating = model.menu.trafficRating
+                        , surface = model.menu.surface
+                        , pathType = model.menu.pathType
+                        }
 
                 req =
                     Http.request
@@ -190,9 +328,12 @@ update msg model =
                         }
 
                 cmd =
-                    Http.send ReceiveSegment req
+                    Cmd.batch
+                        [ Http.send ReceiveSegment req
+                        , clearRoute ()
+                        ]
             in
-                ( model, cmd )
+                ( { model | menu = initMenu }, cmd )
 
         ReceiveSegment (Err error) ->
             ( model, Cmd.none )

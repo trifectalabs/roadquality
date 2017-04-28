@@ -7,9 +7,9 @@ type alias Model =
     { anchors : Dict Int Point
     , anchorOrder : List Int
     , route : Maybe Route
-    , rating : Int
     , page : UrlRoute
     , host : String
+    , menu : RatingsInterfaceState
     }
 
 
@@ -17,6 +17,17 @@ type UrlRoute
     = LoginPage
     | MainPage
     | AccountPage
+
+
+type alias RatingsInterfaceState =
+    { drawingSegment : Bool
+    , name : String
+    , description : String
+    , surfaceRating : Int
+    , trafficRating : Int
+    , surface : SurfaceType
+    , pathType : PathType
+    }
 
 
 type alias Route =
@@ -31,6 +42,18 @@ type alias Point =
     }
 
 
+type SurfaceType
+    = Gravel
+    | Asphalt
+    | Dirt
+
+
+type PathType
+    = Shared
+    | DedicatedLane
+    | BikePath
+
+
 type alias Segment =
     { id : String
     , name : String
@@ -39,4 +62,15 @@ type alias Segment =
     , end : Point
     , polyline : String
     , rating : Float
+    }
+
+
+type alias CreateSegmentForm =
+    { name : String
+    , description : String
+    , points : List Point
+    , surfaceRating : Int
+    , trafficRating : Int
+    , surface : SurfaceType
+    , pathType : PathType
     }

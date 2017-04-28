@@ -1,7 +1,7 @@
 let node = document.getElementById("elm-content");
 let app = Elm.App.embed(node);
 
-let mymap;
+let myMap;
 let markers = {};
 let polyline;
 let icon = L.icon({
@@ -12,11 +12,17 @@ let icon = L.icon({
 
 // SETUP MAP
 app.ports.up.subscribe(function() {
-  myMap = L.map("MainView").setView([43.48,-80.51], 13);
+  myMap = L.map("MainView", {
+      center: [43.48,-80.51],
+      zoom: 13,
+      zoomControl: false
+  });
 
   L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
     attribution: "&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
   }).addTo(myMap);
+
+  L.control.zoom({position: "bottomright"}).addTo(myMap);
 
   function onMapClick(e) {
     var marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true, icon: icon}).addTo(e.target);
@@ -54,7 +60,5 @@ app.ports.clearRoute.subscribe(function() {
   for (let key in markers) {
     markers[key].remove();
   }
-  for (j = 0; j < markers.length; j++) {
-    polylines[j].remove();
-  }
+  polyline.remove();
 });
