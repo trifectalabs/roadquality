@@ -1,7 +1,19 @@
 port module Stylesheets exposing (..)
 
 import Css exposing (..)
-import Css.Elements exposing (body, div, input, label, button, select, textarea)
+import Css.Elements
+    exposing
+        ( body
+        , div
+        , input
+        , label
+        , button
+        , select
+        , textarea
+        , img
+        , span
+        , a
+        )
 import Css.File exposing (CssFileStructure, CssCompilerProgram)
 import Css.Namespace exposing (namespace)
 import Html.CssHelpers exposing (withNamespace, Namespace)
@@ -34,6 +46,7 @@ mapNamespace =
 
 type CssIds
     = MainView
+    | TrifectaAffiliate
     | SaveRatingControl
     | NameInput
     | DescriptionInput
@@ -67,6 +80,30 @@ mapCss =
             , width (vw 100)
             , zIndex (int 0)
             ]
+        , id TrifectaAffiliate
+            [ position fixed
+            , bottom (px -5)
+            , width (pct 100)
+            , textAlign center
+            , children
+                [ a
+                    [ textDecoration none
+                    , children
+                        [ img
+                            [ height (px 35)
+                            ]
+                        , span
+                            [ height (px 24)
+                            , fontWeight (int 700)
+                            , verticalAlign top
+                            , lineHeight (px 35)
+                            , marginLeft (px 5)
+                            , color (rgb 0 0 0)
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         , id SaveRatingControl
             [ position absolute
             , top (px 10)
@@ -77,18 +114,19 @@ mapCss =
             , zIndex (int 1)
             , borderRadius (px 2)
             , boxShadow4 zero (px 2) (px 4) (rgba 0 0 0 0.2)
-            , padding (px 15)
             , boxSizing borderBox
             , textAlign center
             , property "transition" "height 1s"
             , withClass DrawingSegment
-                [ height (px 420)
+                [ height (px 275)
                 , overflow hidden
                 ]
             , children
                 [ div
-                    [ height (px 35)
+                    [ height (px 20)
                     , borderBottom3 (px 1) solid (rgb 200 200 200)
+                    , padding (px 15)
+                    , backgroundColor (rgb 255 255 255)
                     ]
                 , button
                     [ marginTop (px 10)

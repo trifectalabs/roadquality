@@ -1,7 +1,32 @@
 module View exposing (..)
 
-import Html exposing (Html, a, div, text, input, button, select, option, label, textarea)
-import Html.Attributes exposing (href, type_, value, target, placeholder, step, for, selected)
+import Html
+    exposing
+        ( Html
+        , a
+        , div
+        , text
+        , input
+        , button
+        , select
+        , option
+        , label
+        , textarea
+        , img
+        , span
+        )
+import Html.Attributes
+    exposing
+        ( href
+        , type_
+        , value
+        , target
+        , placeholder
+        , step
+        , for
+        , selected
+        , src
+        )
 import Html.Events exposing (onClick, onInput)
 import State exposing (Msg(..))
 import Stylesheets exposing (mapNamespace, CssIds(..), CssClasses(..))
@@ -35,6 +60,12 @@ mainView model =
     div []
         [ div [ id MainView ] []
         , ratingsInterface model.menu <| List.length model.anchorOrder
+        , div [ id TrifectaAffiliate ]
+            [ a [ href "http://trifectalabs.com" ]
+                [ img [ src "/assets/img/trifecta_mountains.png" ] []
+                , span [] [ text "Trifecta Labs" ]
+                ]
+            ]
         ]
 
 
@@ -42,32 +73,33 @@ ratingsInterface : RatingsInterfaceState -> Int -> Html Msg
 ratingsInterface menu anchorCount =
     if not menu.drawingSegment then
         div [ id SaveRatingControl ]
-            [ text "Click anywhere to start making a rating" ]
+            [ div [] [ text "Click the map to make a rating" ] ]
     else if anchorCount < 2 then
         div [ id SaveRatingControl ]
-            [ text "Place one or more points to make a rating" ]
+            [ div [] [ text "Place another anchor to make a rating" ] ]
     else
         div [ id SaveRatingControl, class [ DrawingSegment ] ]
-            [ div [] [ text "Make a rating" ]
-            , label [ for "mapNameInput" ] [ text "Name" ]
-            , input
-                [ type_ "text"
-                , value menu.name
-                , onInput ChangeName
-                , placeholder "Name me!"
-                , id NameInput
-                , class [ MenuInput ]
-                ]
-                []
-            , label [ for "mapDescriptionInput" ] [ text "Description" ]
-            , textarea
-                [ value menu.description
-                , onInput ChangeDescription
-                , placeholder "Give some deets"
-                , id DescriptionInput
-                , class [ MenuInput ]
-                ]
-                []
+            [ div [] [ text "Make a Rating" ]
+              -- TODO: add segments
+              -- , label [ for "mapNameInput" ] [ text "Name" ]
+              -- , input
+              --     [ type_ "text"
+              --     , value menu.name
+              --     , onInput ChangeName
+              --     , placeholder "Name me!"
+              --     , id NameInput
+              --     , class [ MenuInput ]
+              --     ]
+              --     []
+              -- , label [ for "mapDescriptionInput" ] [ text "Description" ]
+              -- , textarea
+              --     [ value menu.description
+              --     , onInput ChangeDescription
+              --     , placeholder "Give some deets"
+              --     , id DescriptionInput
+              --     , class [ MenuInput ]
+              --     ]
+              --     []
             , label [ for "mapSurfaceInput" ] [ text "Surface" ]
             , div
                 [ id SurfaceInput
