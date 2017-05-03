@@ -2,6 +2,21 @@
 
 # --- !Ups
 
+CREATE TABLE colours (
+    level integer,
+    red integer,
+    green integer,
+    blue integer,
+    CONSTRAINT level_key PRIMARY KEY(level)
+);
+
+INSERT INTO colours VALUES (0, 110, 32, 32);
+INSERT INTO colours VALUES (1, 227, 59, 59);
+INSERT INTO colours VALUES (2, 255, 166, 0);
+INSERT INTO colours VALUES (3, 255, 250, 94);
+INSERT INTO colours VALUES (4, 48, 219, 60);
+INSERT INTO colours VALUES (5, 22, 105, 28);
+
 CREATE OR REPLACE FUNCTION blend(start_val integer, end_val integer, ratio double precision)
 RETURNS integer AS $$
 BEGIN
@@ -50,6 +65,7 @@ $$ LANGUAGE plpgsql;
 
 	# --- !Downs
 
+DROP TABLE colours;
 DROP FUNCTION blend(integer, integer, double precision);
 DROP TYPE rgb;
 DROP FUNCTION ratingColour(double precision);
