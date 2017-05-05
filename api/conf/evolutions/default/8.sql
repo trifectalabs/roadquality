@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS ratings (
   deleted_at timestamp with time zone
   );
 
+CREATE INDEX ON ratings (way_id);
+CREATE INDEX ON ratings (segment_id);
+CREATE INDEX ON ratings (user_id);
+
 CREATE VIEW ratings_summary AS
   SELECT way_id,
   avg(traffic_rating) as traffic_rating,
