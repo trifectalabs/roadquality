@@ -1,102 +1,29 @@
-port module Main exposing (..)
+port module State exposing (..)
 
-import Dict exposing (Dict)
-import Html exposing (Html, a, div, text, input, button)
-import Html.Attributes exposing (href, type_, value, target)
-import Html.Events exposing (onClick, onInput)
+import Dict
 import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (decode, required)
-import Json.Encode as Encode exposing (encode, Value)
+import Json.Encode as Encode
 import Navigation
 import Polyline
-import Stylesheets exposing (mapNamespace, CssIds(..))
+import Rest
+    exposing
+        ( decodePoint
+        , encodePoint
+        , decodeRoute
+        , decodeSegment
+        , encodeCreateSegmentForm
+        )
+import Types
+    exposing
+        ( Model
+        , Point
+        , Route
+        , Segment
+        , UrlRoute(..)
+        , PathType(..)
+        , SurfaceType(..)
+        )
 import UrlParser exposing (Parser, s)
-
-
-{ id, class, classList } =
-    mapNamespace
-
-
-main : Program Never Model Msg
-main =
-    Navigation.program UrlChange
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        }
-
-
-
--- MODEL
-
-
-type alias Model =
-    { anchors : Dict Int Point
-    , anchorOrder : List Int
-    , route : Maybe Route
-    , rating : Int
-    , page : UrlRoute
-    , host : String
-    }
-
-
-type alias Route =
-    { distance : Float
-    , polyline : String
-    }
-
-
-decodeRoute : Decoder Route
-decodeRoute =
-    decode Route
-        |> required "distance" Decode.float
-        |> required "polyline" Decode.string
-
-
-type alias Point =
-    { lat : Float
-    , lng : Float
-    }
-
-
-decodePoint : Decoder Point
-decodePoint =
-    decode Point
-        |> required "lng" Decode.float
-        |> required "lat" Decode.float
-
-
-encodePoint : Point -> Value
-encodePoint point =
-    Encode.object
-        [ ( "lat", Encode.float point.lat )
-        , ( "lng", Encode.float point.lng )
-        ]
-
-
-type alias Segment =
-    { id : String
-    , name : String
-    , description : String
-    , start : Point
-    , end : Point
-    , polyline : String
-    , rating : Float
-    }
-
-
-decodeSegment : Decoder Segment
-decodeSegment =
-    decode Segment
-        |> required "id" Decode.string
-        |> required "name" Decode.string
-        |> required "description" Decode.string
-        |> required "start" decodePoint
-        |> required "end" decodePoint
-        |> required "polyline" Decode.string
-        |> required "rating" Decode.float
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
@@ -111,16 +38,24 @@ init location =
         ( { anchors = Dict.empty
           , anchorOrder = []
           , route = Nothing
-          , rating = 5
           , page = MainPage
           , host = host
+          , menu = initMenu
           }
         , up True
         )
 
 
-
--- UPDATE
+initMenu : Types.RatingsInterfaceState
+initMenu =
+    { drawingSegment = False
+    , name = ""
+    , description = ""
+    , surfaceRating = 5
+    , trafficRating = 5
+    , surface = Asphalt
+    , pathType = Shared
+    }
 
 
 type Msg
@@ -129,15 +64,14 @@ type Msg
     | SetAnchorPoint Int (Result Http.Error Point)
     | ReceiveRoute (Result Http.Error Route)
     | ClearAnchors
-    | ChangeRating String
+    | ChangeName String
+    | ChangeDescription String
+    | ChangeSurfaceRating String
+    | ChangeTrafficRating String
+    | ChangePathType String
+    | ChangeSurfaceType String
     | SaveSegment
     | ReceiveSegment (Result Http.Error Segment)
-
-
-type UrlRoute
-    = LoginPage
-    | MainPage
-    | AccountPage
 
 
 route : Parser (UrlRoute -> a) a
@@ -179,6 +113,15 @@ update msg model =
 
         PlaceAnchorPoint ( pointId, lat, lng ) ->
             let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    if oldMenu.drawingSegment then
+                        oldMenu
+                    else
+                        { oldMenu | drawingSegment = True }
+
                 req =
                     Http.request
                         { method = "GET"
@@ -197,7 +140,9 @@ update msg model =
                         , withCredentials = False
                         }
             in
-                ( model, Http.send (SetAnchorPoint pointId) req )
+                ( { model | menu = newMenu }
+                , Http.send (SetAnchorPoint pointId) req
+                )
 
         SetAnchorPoint _ (Err error) ->
             ( model, Cmd.none )
@@ -252,30 +197,124 @@ update msg model =
                 | anchors = Dict.empty
                 , anchorOrder = []
                 , route = Nothing
+                , menu = initMenu
               }
             , clearRoute ()
             )
 
-        ChangeRating rating ->
+        ChangeName name ->
+            let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | name = name }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeDescription description ->
+            let
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | description = description }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeSurfaceRating rating ->
             let
                 r =
                     String.toInt rating
-                        |> Result.withDefault model.rating
+                        |> Result.withDefault model.menu.surfaceRating
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | surfaceRating = r }
             in
-                ( { model | rating = r }, Cmd.none )
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeTrafficRating rating ->
+            let
+                r =
+                    String.toInt rating
+                        |> Result.withDefault model.menu.trafficRating
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | trafficRating = r }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangePathType pathType ->
+            let
+                parsed =
+                    case pathType of
+                        "DedicatedLane" ->
+                            DedicatedLane
+
+                        "Shared" ->
+                            Shared
+
+                        "BikePath" ->
+                            BikePath
+
+                        _ ->
+                            model.menu.pathType
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | pathType = parsed }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
+
+        ChangeSurfaceType surfaceType ->
+            let
+                parsed =
+                    case surfaceType of
+                        "Asphalt" ->
+                            Asphalt
+
+                        "Dirt" ->
+                            Dirt
+
+                        "Gravel" ->
+                            Gravel
+
+                        _ ->
+                            model.menu.surface
+
+                oldMenu =
+                    model.menu
+
+                newMenu =
+                    { oldMenu | surface = parsed }
+            in
+                ( { model | menu = newMenu }, Cmd.none )
 
         SaveSegment ->
             let
                 points =
-                    model.anchorOrder
-                        |> List.filterMap (\id -> Dict.get id model.anchors)
-                        |> List.map encodePoint
+                    List.filterMap
+                        (\id -> Dict.get id model.anchors)
+                        model.anchorOrder
 
                 body =
-                    Encode.object
-                        [ ( "points", Encode.list points )
-                        , ( "rating", Encode.int model.rating )
-                        ]
+                    encodeCreateSegmentForm
+                        { name = model.menu.name
+                        , description = model.menu.description
+                        , points = points
+                        , surfaceRating = model.menu.surfaceRating
+                        , trafficRating = model.menu.trafficRating
+                        , surface = model.menu.surface
+                        , pathType = model.menu.pathType
+                        }
 
                 req =
                     Http.request
@@ -289,19 +328,18 @@ update msg model =
                         }
 
                 cmd =
-                    Http.send ReceiveSegment req
+                    Cmd.batch
+                        [ Http.send ReceiveSegment req
+                        , clearRoute ()
+                        ]
             in
-                ( model, cmd )
+                ( { model | menu = initMenu }, cmd )
 
         ReceiveSegment (Err error) ->
             ( model, Cmd.none )
 
         ReceiveSegment (Ok segment) ->
             ( model, Cmd.none )
-
-
-
--- SUBSCRIPTIONS
 
 
 port up : Bool -> Cmd msg
@@ -323,41 +361,4 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ setAnchor PlaceAnchorPoint
-        ]
-
-
-
--- VIEW
-
-
-view : Model -> Html Msg
-view model =
-    case model.page of
-        LoginPage ->
-            loginView
-
-        MainPage ->
-            mainView model
-
-        AccountPage ->
-            div [] [ text "account" ]
-
-
-loginView : Html Msg
-loginView =
-    div [] [ a [ href "/login" ] [ text "Connect to Strava" ] ]
-
-
-mainView : Model -> Html Msg
-mainView model =
-    div []
-        [ div [ id MainView ] []
-        , input
-            [ type_ "number"
-            , value <| toString model.rating
-            , onInput ChangeRating
-            ]
-            []
-        , button [ onClick SaveSegment ] [ text "Save Segment" ]
-        , button [ onClick ClearAnchors ] [ text "Clear" ]
         ]
