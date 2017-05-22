@@ -1,7 +1,6 @@
 package db.dao
 
 import java.util.UUID
-
 import com.trifectalabs.roadquality.v0.models.{ Segment, SegmentCreateForm }
 
 import scala.concurrent.Future
