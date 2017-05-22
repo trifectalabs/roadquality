@@ -6,20 +6,20 @@ import scala.concurrent.{ExecutionContext, Future}
 import org.joda.time.DateTime
 
 import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, Rating, Segment }
-import db.dao.{ SegmentsDao, RoutesDao, RatingsDao }
+import db.dao.{ SegmentsDao, MapsDao, RatingsDao }
 
 
 trait SegmentService {
   def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment]
 }
 
-class SegmentServiceImpl @Inject()(segmentsDao: SegmentsDao, routesDao: RoutesDao, ratingsDao: RatingsDao)(implicit ec: ExecutionContext) extends SegmentService {
+class SegmentServiceImpl @Inject()(segmentsDao: SegmentsDao, mapsDao: MapsDao, ratingsDao: RatingsDao)(implicit ec: ExecutionContext) extends SegmentService {
 
   def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
     // Create and store the segment, then create and store the rating. Return the segment
     val segmentId = UUID.randomUUID()
     segmentsDao.create(segmentId, segmentCreateForm) map { segment =>
-      val waysFut = routesDao.waysFromSegment(segmentCreateForm.polyline)
+      val waysFut = mapsDao.waysFromSegment(segmentCreateForm.polyline)
       waysFut.map { _ foreach { id =>
         println(id)
         val r = Rating(
