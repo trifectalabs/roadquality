@@ -20,7 +20,30 @@ class PostgresMapsDao @Inject() (protected val dbConfigProvider: DatabaseConfigP
 
   override def route(startPoint: Point, endPoint: Point): Future[MapRoute] = {
     val strSql = s"""SELECT x, y from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});"""
-    val sql = sql"""SELECT y, x from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});""".as[Point]
+    val sql = sql"""
+      WITH start_point     AS (SELECT ST_GeometryFromText('POINT(${startPoint.lng} ${startPoint.lat})',4326)),
+           end_point       AS (SELECT ST_GeometryFromText('POINT(${endPoint.lng} ${endPoint.lat})',4326)),
+           start_road      AS (SELECT id, way as road FROM planet_osm_line_noded ORDER BY way <-> (SELECT * FROM start_point) ASC LIMIT 1),
+           end_road        AS (SELECT id, way as road FROM planet_osm_line_noded ORDER BY way <-> (SELECT * FROM end_point) ASC LIMIT 1),
+           route           AS (SELECT * from pgr_trsp('SELECT id::integer, source::integer, target::integer,
+                                distance::float8 as cost FROM planet_osm_line_noded',
+                              (SELECT id from start_road)::integer,
+                              (SELECT ST_LineLocatePoint((SELECT road from start_road), (SELECT * FROM start_point))),
+                              (SELECT id from end_road)::integer,
+                              (SELECT ST_LineLocatePoint((SELECT road from end_road), (SELECT * FROM end_point))),
+                                false, false) AS r INNER JOIN planet_osm_line_noded as ways on ways.id = r.id2
+                              where r.seq <> 1 and r.id2 <> ((SELECT id from end_road)::integer)),
+           corrected_start AS (SELECT ST_SetPoint((SELECT ST_MakeLine(result.way) FROM route AS result), 0,
+                              (ST_LineInterpolatePoint(
+                              (SELECT way from planet_osm_line_noded where id = (SELECT id from start_road)),
+                              (SELECT ST_LineLocatePoint((SELECT road from start_road), (SELECT * FROM start_point))))))),
+           corrected_path  AS (SELECT ST_SetPoint((SELECT * FROM corrected_start), -1, (ST_LineInterpolatePoint(
+                              (SELECT way from planet_osm_line_noded where id = (SELECT id from end_road)),
+                              (SELECT ST_LineLocatePoint((SELECT road from end_road), (SELECT * FROM end_point))))))),
+           result          AS (SELECT ST_X((ST_dumppoints((SELECT * FROM corrected_path))).geom),
+                                ST_Y((ST_dumppoints((SELECT * FROM corrected_path))).geom))
+           SELECT * from result;
+    """.as[Point]
     println(strSql)
     db.run(sql).map { t =>
       val points = t.toList.map(p => LatLng(p.lat, p.lng))
