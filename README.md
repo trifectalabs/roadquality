@@ -1,7 +1,7 @@
 # Road Quality
 ## Crowdsourced road quality data for cyclists
 
-[https://roadquality.org]()
+[roadquality.org](http://www.roadquality.org)
 
 ### Development
 To compile server components:
