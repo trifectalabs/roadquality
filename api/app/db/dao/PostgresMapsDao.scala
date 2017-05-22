@@ -47,8 +47,19 @@ class PostgresMapsDao @Inject() (protected val dbConfigProvider: DatabaseConfigP
     db.run(sql).map(r => r.head)
   }
 
-  override def waysFromSegment(segment_polyline: String): Future[Seq[Long]] = {
-    val sql = sql"""SELECT * from ways_from_segment(${segment_polyline});""".as[Long]
+  override def waysFromSegment(segmentPolyline: String): Future[Seq[Long]] = {
+    val sql = sql"""
+      WITH
+        intersection_points AS (
+          SELECT osm_id id, name,
+            (st_intersection(planet_osm_line.way, (st_linefromencodedpolyline(${segmentPolyline})))) intersection
+          FROM planet_osm_line
+          WHERE st_intersects(st_linefromencodedpolyline(${segmentPolyline}),
+            planet_osm_line.way))
+      SELECT intersection_points.id FROM intersection_points
+      LEFT JOIN planet_osm_line_noded_vertices_pgr ON st_distance(intersection, the_geom) < 0.000005
+      WHERE planet_osm_line_noded_vertices_pgr.id is null;
+    """.as[Long]
     db.run(sql)
   }
 }
