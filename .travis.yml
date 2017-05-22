@@ -1,0 +1,22 @@
+sudo: required
+
+language: scala
+
+scala:
+  - 2.11.8
+
+services:
+  - docker
+
+before_install:
+- sudo /etc/init.d/postgresql stop
+- docker pull kiambogo/roadquality_test
+- docker run -d -p 5432:5432 kiambogo/roadquality_test
+
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION "api/test"
+
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
