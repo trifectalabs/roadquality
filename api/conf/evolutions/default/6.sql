@@ -2,21 +2,6 @@
 
 # --- !Ups
 
-CREATE OR REPLACE FUNCTION ways_from_segment(polyline text)
-RETURNS TABLE (way_id bigint) AS $$
-BEGIN
-  RETURN QUERY
-    WITH
-      intersection_points AS (SELECT osm_id id, name, (st_intersection(planet_osm_line.way, (st_linefromencodedpolyline(polyline)))) intersection
-        FROM planet_osm_line
-        WHERE st_intersects(st_linefromencodedpolyline(polyline),
-          planet_osm_line.way))
-    SELECT intersection_points.id FROM intersection_points
-    LEFT JOIN planet_osm_line_noded_vertices_pgr ON st_distance(intersection, the_geom) < 0.000005
-    WHERE planet_osm_line_noded_vertices_pgr.id is null;;
-END;;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION shortest_distance_route(start_lon double precision, start_lat double precision, end_lon double precision, end_lat double precision)
 RETURNS TABLE (x double precision, y double precision) AS $$
 BEGIN
@@ -46,5 +31,4 @@ $$ LANGUAGE plpgsql;
 
 	# --- !Downs
 
-DROP FUNCTION ways_from_segment(text);
 DROP FUNCTION shortest_distance_route(double precision, double precision, double precision, double precision);
