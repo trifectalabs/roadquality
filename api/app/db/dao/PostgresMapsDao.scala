@@ -11,8 +11,8 @@ import slick.jdbc.GetResult
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PostgresRoutesDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
-  extends RoutesDao with HasDatabaseConfigProvider[MyPostgresDriver] {
+class PostgresMapsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
+  extends MapsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
   import driver.api._
 
   implicit val getRouteResult = GetResult(r => MapRoute(r.nextString(), r.nextDouble()))

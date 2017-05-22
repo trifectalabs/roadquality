@@ -5,7 +5,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
-import db.dao.RoutesDao
+import db.dao.MapsDao
 
 
 trait RoutingService {
@@ -15,10 +15,10 @@ trait RoutingService {
 }
 
 
-class RoutingServiceImpl @Inject()(routesDao: RoutesDao)(implicit ec: ExecutionContext) extends RoutingService {
+class RoutingServiceImpl @Inject()(mapsDao: MapsDao)(implicit ec: ExecutionContext) extends RoutingService {
 
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute] = {
-    routesDao.route(
+    mapsDao.route(
       Point(startLat, startLng),
       Point(endLat, endLng)
     )
@@ -27,7 +27,7 @@ class RoutingServiceImpl @Inject()(routesDao: RoutesDao)(implicit ec: ExecutionC
   def generateRoute(points: Seq[Point]): Future[MapRoute] = {
     Future.sequence {
       (points.init zip points.tail).map { case (p1, p2) =>
-        routesDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
+        mapsDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
       }
     } map { b =>
       val pl = Polyline.encode(b.flatten.toList)
@@ -36,7 +36,7 @@ class RoutingServiceImpl @Inject()(routesDao: RoutesDao)(implicit ec: ExecutionC
   }
 
   def snapPoint(point: Point): Future[Point] = {
-    routesDao.snapPoint(point)
+    mapsDao.snapPoint(point)
   }
 
 }
