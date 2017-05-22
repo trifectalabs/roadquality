@@ -29,9 +29,21 @@ class PostgresMapsDao @Inject() (protected val dbConfigProvider: DatabaseConfigP
     }
   }
 
-
   override def snapPoint(point: Point): Future[Point] = {
-    val sql = sql"""SELECT * from closest_point_on_road(${point.lng}, ${point.lat});""".as[Point]
+    // TODO Lat and lng are backwards
+    val sql = sql"""
+      WITH closest_road AS (
+        SELECT way as road
+        FROM planet_osm_line_noded
+        ORDER BY way <-> ST_GeomFromText('POINT(${point.lng} ${point.lat})',4326) ASC
+        LIMIT 1)
+      SELECT ST_X(p) as x, ST_Y(p) as y
+      FROM ST_ClosestPoint(
+        (SELECT * FROM closest_road),
+        (SELECT ST_GeometryFromText('POINT(${point.lng} ${point.lat})',4326))
+      ) AS p
+      LIMIT 1;
+    """.as[Point]
     db.run(sql).map(r => r.head)
   }
 

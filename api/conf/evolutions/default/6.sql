@@ -2,30 +2,6 @@
 
 # --- !Ups
 
-CREATE OR REPLACE FUNCTION closest_point_on_road(lon double precision, lat double precision)
-RETURNS TABLE (x double precision, y double precision) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT ST_X(p) as x, ST_Y(p) as y
-  FROM ST_ClosestPoint(
-    (SELECT road from closest_road_to_point(lon, lat)),
-    (SELECT ST_GeometryFromText('POINT('||lon||' '||lat||')',4326))
-  ) AS p
-  LIMIT 1;;
-END;;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION closest_road_to_point(lon double precision, lat double precision)
-RETURNS TABLE (id bigint, road geometry) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT planet_osm_line_noded.id, way as road
-  FROM planet_osm_line_noded
-  ORDER BY way <-> ST_GeomFromText('POINT('||lon||' '||lat||')',4326) ASC
-  LIMIT 1;;
-END;;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION ways_from_segment(polyline text)
 RETURNS TABLE (way_id bigint) AS $$
 BEGIN
@@ -70,7 +46,5 @@ $$ LANGUAGE plpgsql;
 
 	# --- !Downs
 
-DROP FUNCTION closest_point_on_road(double precision, double precision);
-DROP FUNCTION closest_road_to_point(double precision, double precision);
 DROP FUNCTION ways_from_segment(text);
 DROP FUNCTION shortest_distance_route(double precision, double precision, double precision, double precision);
