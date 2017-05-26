@@ -4,10 +4,12 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
 import com.trifectalabs.roadquality.v0.models._
-import com.trifectalabs.polyline.{ Polyline, LatLng }
+import com.trifectalabs.polyline.{LatLng, Polyline}
+import com.vividsolutions.jts.geom.Geometry
 import db.MyPostgresDriver
 import db.Tables._
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.jdbc.GetResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,6 +18,8 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
   extends SegmentsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
   import _root_.db.TablesHelper._
   import driver.api._
+
+  implicit val getPointResult = GetResult(r => Point(r.nextDouble(), r.nextDouble()))
 
   override def getAll: Future[Seq[Segment]] = {
     db.run(segments.result)
@@ -36,12 +40,13 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
     db.run(segments.filter(_.id === id).delete.map(_ => ()))
   }
 
-  override def create(id: UUID, segmentForm: SegmentCreateForm): Future[Segment] = {
+  override def create(id: UUID, segmentForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
     val segment = Segment(
       id = id,
       name = segmentForm.name,
       description = segmentForm.description,
-      polyline = segmentForm.polyline)
+      polyline = segmentForm.polyline,
+      createdBy = userId)
 
     db.run((segments += segment).map(_ => segment))
   }

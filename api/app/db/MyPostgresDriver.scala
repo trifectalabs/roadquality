@@ -1,6 +1,10 @@
 package db
 
+import java.util.UUID
+import java.sql.JDBCType
 import com.github.tminglei.slickpg._
+import slick.jdbc.{PositionedResult, PositionedParameters, SetParameter}
+
 
 trait MyPostgresDriver extends ExPostgresDriver
                           with PgArraySupport
@@ -17,6 +21,8 @@ trait MyPostgresDriver extends ExPostgresDriver
   override val api = new API with ArrayImplicits
                              with DateTimeImplicits
                              with PostGISImplicits
+                             with PostGISPlainImplicits
+                             with UUIDPlainImplicits
                              with PlayJsonImplicits
                              with NetImplicits
                              with LTreeImplicits
@@ -29,3 +35,10 @@ trait MyPostgresDriver extends ExPostgresDriver
 }
 
 object MyPostgresDriver extends MyPostgresDriver
+
+trait UUIDPlainImplicits {
+  implicit class PgPositionedResult(val r: PositionedResult) {
+    def nextUUID: UUID = UUID.fromString(r.nextString)
+    def nextUUIDOption: Option[UUID] = r.nextStringOption().map(UUID.fromString)
+  }
+}

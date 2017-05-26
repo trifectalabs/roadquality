@@ -16,7 +16,6 @@ class MapRoutes @Inject() (routingService: RoutingService, authLoggingAction: Au
 
   def get(start_lat: Double, start_lng: Double, end_lat: Double, end_lng: Double) = AuthLoggingAction.async  {
     routingService.generateRoute(start_lat, start_lng, end_lat, end_lng).map { r =>
-        println(s"Polyline: $r")
         Ok(Json.toJson(r))
     }
   }

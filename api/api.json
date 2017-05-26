@@ -98,6 +98,11 @@
         {
           "name": "polyline",
           "type" : "string"
+        },
+        {
+          "name": "created_by",
+          "description": "The user who created the segment",
+          "type" : "uuid"
         }
       ]
     },
@@ -171,12 +176,12 @@
         }
       ]
     },
-    "rating": {
-      "description": "Ratings for ways",
+    "segmentRating": {
+      "description": "A rating that is supplied with the segment",
       "fields": [
         {
-          "name": "wayId",
-          "type" : "long"
+          "name": "id",
+          "type" : "uuid"
         },
         {
           "name": "segmentId",
@@ -214,39 +219,6 @@
           "name": "deletedAt",
           "type" : "date-time-iso8601",
           "required": false
-        }
-      ]
-    },
-    "ratingSummary": {
-      "description": "Summary of ratings for ways",
-      "fields": [
-        {
-          "name": "wayId",
-          "type" : "uuid"
-        },
-        {
-          "name": "streetName",
-          "type" : "string"
-        },
-        {
-          "name": "trafficRating",
-          "type" : "double"
-        },
-        {
-          "name": "surfaceRating",
-          "type" : "double"
-        },
-        {
-          "name": "surface",
-          "type" : "surfaceType"
-        },
-        {
-          "name": "pathType",
-          "type" : "pathType"
-        },
-        {
-          "name": "lastUpdatedAt",
-          "type" : "date-time-iso8601"
         }
       ]
     },
@@ -449,21 +421,20 @@
         }
       ]
     },
-    "rating": {
+    "segmentRating": {
       "operations": [
         {
           "method": "GET",
           "parameters": [
-            { "name": "wayId", "type": "long", "required": true }
+            { "name": "id", "type": "uuid", "required": true }
           ],
           "responses": {
-            "200": { "type": "rating" }
+            "200": { "type": "segmentRating" }
           }
         },
         { "method": "DELETE",
           "parameters": [
-            { "name": "userId", "type": "uuid", "required": true },
-            { "name": "wayId", "type": "long", "required": true }
+            { "name": "id", "type": "uuid", "required": true }
           ],
           "responses": {
             "202": { "type": "boolean" },

@@ -13,7 +13,7 @@ let icon = L.icon({
 // SETUP MAP
 app.ports.up.subscribe(function() {
   myMap = L.map("MainView", {
-      center: [43.48,-80.51],
+      center: [43.652684, -79.397991],
       zoom: 13,
       zoomControl: false
   });

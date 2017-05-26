@@ -27,6 +27,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 	}
 
 	override def insert(
+    id: UUID,
 		firstName: String,
 		lastName: String,
 		email: String,
@@ -34,7 +35,6 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 		sex: _root_.scala.Option[String],
 		stravaToken: String
 	): Future[User] = {
-		val id = UUID.randomUUID()
 		val user = User(
 			id = id,
 			firstName = firstName,
@@ -69,7 +69,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 		isExistingUser.flatMap { isEu =>
 			isEu match {
 				case Some(eu) => update(eu)
-				case None => insert(firstName, lastName, email, birthdate, sex, stravaToken)
+				case None => insert(UUID.randomUUID(), firstName, lastName, email, birthdate, sex, stravaToken)
 			}
 		}
 	}

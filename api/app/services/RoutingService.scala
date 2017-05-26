@@ -5,8 +5,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
-import db.dao.MapsDao
-
+import db.dao.MapDao
+import scala.concurrent.{ExecutionContext, Future}
 
 trait RoutingService {
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute]
@@ -14,11 +14,10 @@ trait RoutingService {
   def snapPoint(point: Point): Future[Point]
 }
 
-
-class RoutingServiceImpl @Inject()(mapsDao: MapsDao)(implicit ec: ExecutionContext) extends RoutingService {
+class RoutingServiceImpl @Inject()(mapDao: MapDao)(implicit ec: ExecutionContext) extends RoutingService {
 
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute] = {
-    mapsDao.route(
+    mapDao.route(
       Point(startLat, startLng),
       Point(endLat, endLng)
     )
@@ -27,16 +26,15 @@ class RoutingServiceImpl @Inject()(mapsDao: MapsDao)(implicit ec: ExecutionConte
   def generateRoute(points: Seq[Point]): Future[MapRoute] = {
     Future.sequence {
       (points.init zip points.tail).map { case (p1, p2) =>
-        mapsDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
+        mapDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
       }
     } map { b =>
       val pl = Polyline.encode(b.flatten.toList)
-      println(pl)
       MapRoute(polyline = pl, distance = 0) }
   }
 
   def snapPoint(point: Point): Future[Point] = {
-    mapsDao.snapPoint(point)
+    mapDao.snapPoint(point)
   }
 
 }

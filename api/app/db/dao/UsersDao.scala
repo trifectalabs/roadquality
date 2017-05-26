@@ -12,6 +12,7 @@ trait UsersDao {
   def findByEmail(email: String): Future[Option[User]]
   def update(user: User): Future[User]
   def insert(
+    id: UUID,
     firstName: String,
     lastName: String,
     email: String,
