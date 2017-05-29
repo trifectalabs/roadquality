@@ -27,6 +27,7 @@ class MapRoutes @Inject() (routingService: RoutingService, authLoggingAction: Au
   def post() = AuthLoggingAction.async(parse.json[Seq[Point]]) { implicit request =>
     val points = request.body
     routingService.generateRoute(points).map { r =>
+      println(r)
       Ok(Json.toJson(r))
     }
   }

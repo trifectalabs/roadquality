@@ -27,29 +27,24 @@ END;;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION shortest_distance_route(start_lon double precision, start_lat double precision, end_lon double precision, end_lat double precision)
-RETURNS TABLE (x double precision, y double precision) AS $$
+RETURNS TABLE (seq integer, path geometry, distance double precision) AS $$
 BEGIN
   RETURN QUERY
   WITH start_road      AS (SELECT * from closest_road_to_point(start_lon, start_lat)),
        end_road        AS (SELECT * from closest_road_to_point(end_lon, end_lat)),
        start_point     AS (SELECT ST_GeometryFromText('POINT('||start_lon||' '||start_lat||')',4326)),
        end_point       AS (SELECT ST_GeometryFromText('POINT('||end_lon||' '||end_lat||')',4326)),
-       route           AS (SELECT * from pgr_trsp('SELECT gid::integer as id, source::int4, target::int4, cost::float8 FROM ways',
+        route           AS (SELECT r.seq, r.cost, ways.the_geom from pgr_trsp('SELECT gid::integer as id, source::int4, target::int4, length_m::float8 as cost FROM ways',
                           (SELECT id from start_road)::integer,
                           (SELECT ST_LineLocatePoint((SELECT road from start_road), (SELECT * FROM start_point))),
                           (SELECT id from end_road)::integer,
                           (SELECT ST_LineLocatePoint((SELECT road from end_road), (SELECT * FROM end_point))),
-                          false, false) AS r INNER JOIN ways on ways.gid = r.id2
-                          where r.seq <> 1 and r.id2 <> ((SELECT id from end_road)::integer)),
-       corrected_start AS (SELECT ST_SetPoint((SELECT ST_MakeLine(result.the_geom) FROM route AS result), 0,
-                          (ST_LineInterpolatePoint(
-                          (SELECT the_geom from ways where gid = (SELECT id from start_road)),
-                          (SELECT ST_LineLocatePoint((SELECT road from start_road), (SELECT * FROM start_point))))))),
-       corrected_path  AS (SELECT ST_SetPoint((SELECT * FROM corrected_start), -1, (ST_LineInterpolatePoint(
-                          (SELECT the_geom from ways where gid = (SELECT id from end_road)),
-                          (SELECT ST_LineLocatePoint((SELECT road from end_road), (SELECT * FROM end_point))))))),
-       result          AS (SELECT ST_X((ST_dumppoints((SELECT * FROM corrected_path))).geom), ST_Y((ST_dumppoints((SELECT * FROM corrected_path))).geom))
-  SELECT * from result;;
+                          false, false) AS r INNER JOIN ways on ways.gid = r.id2)
+  SELECT
+    route.seq as seq,
+    the_geom as path,
+    cost as distance
+  FROM route;;
 END;;
 $$ LANGUAGE plpgsql;
 
