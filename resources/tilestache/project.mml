@@ -36,8 +36,8 @@ _parts:
     srs: "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
   osm2pgsql: &osm2pgsql
     type: postgis
-    dbname: raw_maps
-    host: localhost
+    dbname: maps
+    host: 172.17.0.1
     user: docker
     password: docker
     project: osm-bright-imposm
@@ -48,7 +48,7 @@ _parts:
   roadquality: &roadquality
     type: postgis
     dbname: maps
-    host: localhost
+    host: 172.17.0.1
     user: docker
     password: docker
     project: osm-bright-imposm
@@ -64,7 +64,7 @@ Layer:
     <<: *mercurial_projection
     status: 'on'
     Datasource:
-      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/simplified-land-polygons-complete-3857/simplified_land_polygons.shp"
+      file: "/usr/local/src/MapBox/CustomPositron/shp/simplified-land-polygons-complete-3857/simplified_land_polygons.shp"
       type: shape
   - id: land-high
     class: shp
@@ -72,7 +72,7 @@ Layer:
     <<: *mercurial_projection
     status: 'on'
     Datasource:
-      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/land-polygons-split-3857/land_polygons.shp"
+      file: "/usr/local/src/MapBox/CustomPositron/shp/land-polygons-split-3857/land_polygons.shp"
       type: shape
   - id: landuse_gen0
     geometry: multipolygon
@@ -344,7 +344,7 @@ Layer:
     <<: *mercurial_projection
     Datasource:
       extent: "-20037508.34 -20037508.34 20037508.34 20037508.34"
-      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/ne_10m_populated_places/ne_10m_populated_places_simple.shp"
+      file: "/usr/local/src/MapBox/CustomPositron/shp/ne_10m_populated_places/ne_10m_populated_places_simple.shp"
       type: shape
   - id: place
     geometry: point
