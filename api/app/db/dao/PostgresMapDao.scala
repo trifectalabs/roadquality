@@ -101,9 +101,12 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
         polyline      AS (SELECT ST_LineFromEncodedPolyline(${segment_polyline})),
         intersections AS (SELECT the_geom as intersection FROM ways_vertices_pgr
           WHERE ST_DWithin(the_geom, (SELECT * FROM polyline), 5, false))
-      SELECT ((ST_Dump(ST_Split(
-        (SELECT * FROM polyline),
-        (ST_Snap(ST_Union(intersection),(SELECT * FROM polyline), 0.001))))).geom) FROM intersections;
+      SELECT st_astext(
+        ST_Split(
+          (SELECT * FROM polyline),
+          (SELECT st_collect(array_agg(intersection::geometry)) FROM intersections)
+        )
+      );
     """.as[Geometry]
     db.run(sql)
   }
