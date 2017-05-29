@@ -47,20 +47,14 @@ class PostgresMiniSegmentsDao @Inject() (protected val dbConfigProvider: Databas
   }
 
   override def overlappingMiniSegmentsFromPolyline(polyline: String): Future[Seq[MiniSegmentToSegment]] = {
-    // Retrieve all MiniSegments that are overlapped by the polyline by 90% or more
-    val prtSql = s"""
-      WITH
-        polyline_bound AS (SELECT st_buffer(st_linefromencodedpolyline(${polyline}),0.0001,'endcap=round join=round')),
-      SELECT *
-      FROM mini_segments_to_segments
-      WHERE (st_length(st_intersection(mini_segment_polyline, (SELECT * FROM polyline_bound)))/(st_length(mini_segment_polyline))) > 0.9
-      LIMIT 1; """
+    // Retrieve biggest MiniSegment that overlaps the polyline by 95% or more
     val sql = sql"""
       WITH
-        polyline_bound AS (SELECT st_buffer(st_linefromencodedpolyline(${polyline}),0.0001,'endcap=round join=round'))
+        polyline_bound AS (SELECT st_buffer(st_linefromencodedpolyline(${polyline}),0.00001,'endcap=round join=round'))
       SELECT *
       FROM mini_segments_to_segments
-      WHERE (st_length(st_intersection(mini_segment_polyline, (SELECT * FROM polyline_bound)))/(st_length(mini_segment_polyline))) > 0.9
+      WHERE (st_length(st_intersection(mini_segment_polyline, (SELECT * FROM polyline_bound)))/(st_length(mini_segment_polyline))) > 0.95
+      ORDER BY ST_Length(mini_segment_polyline) DESC
       LIMIT 1;
     """.as[MiniSegmentToSegment]
       db.run(sql)

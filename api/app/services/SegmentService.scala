@@ -66,7 +66,9 @@ class SegmentServiceImpl @Inject()
             Future.sequence(existingMiniSegments.map { existingMiniSegment =>
               if (!previouslySavedMiniSegments.map(s => s.miniSegmentId).contains(existingMiniSegment.miniSegmentId)) {
                 (miniSegmentsDao.insert(existingMiniSegment))
-              } else Future()
+              } else {
+                Future()
+              }
             })
           }
         }
@@ -83,18 +85,21 @@ class SegmentServiceImpl @Inject()
 
   def newOverlappingMiniSegments(polyline: String, segmentId: UUID): Future[Seq[MiniSegmentToSegment]] = {
     mapDao.intersectionsSplitsFromSegment(polyline).flatMap { intersectionSplits =>
-      Future.sequence(intersectionSplits.map { intersectionSplit =>
-        miniSegmentsDao.overlappingMiniSegmentsFromPolyline(geomToPolyline(intersectionSplit)).map { existingMiniSegments =>
-          existingMiniSegments match {
-            case Nil => MiniSegmentToSegment(UUID.randomUUID(), intersectionSplit, segmentId)
-            case Seq(existingMiniSegment) => existingMiniSegment.copy(segmentId = segmentId)
-            case Seq(existingMiniSegment, _*) =>
-              Logger.debug(s"Multiple mini segments found to be overlapping for intersection split. MiniSegmentIds: ${existingMiniSegments.map(s => s.miniSegmentId)}")
-              existingMiniSegment.copy(segmentId = segmentId)
+      Future.sequence {
+        intersectionSplits.map { intersectionSplit =>
+          miniSegmentsDao.overlappingMiniSegmentsFromPolyline(geomToPolyline(intersectionSplit)).map { existingMiniSegments =>
+            existingMiniSegments match {
+              case Nil => Seq(MiniSegmentToSegment(UUID.randomUUID(), intersectionSplit, segmentId))
+              case Seq(existingMiniSegment) => Seq(existingMiniSegment.copy(segmentId = segmentId))
+              case existingMiniSegments =>
+                // This happens in situations where there are tiny intersections splits
+                Logger.debug(s"Multiple mini segments found to be overlapping for intersection split. MiniSegmentIds: ${existingMiniSegments.map(s => s.miniSegmentId)}")
+                existingMiniSegments.map(e => e.copy(segmentId = segmentId))
+            }
           }
         }
-      })
-    }
+      }
+    } map (d => d.flatten)
   }
 
   def handleEndpointOfSegment(miniSegmentSplit: MiniSegmentSplit, segmentId: UUID): Future[Option[MiniSegmentToSegment]] = {
