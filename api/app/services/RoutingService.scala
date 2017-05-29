@@ -26,11 +26,11 @@ class RoutingServiceImpl @Inject()(mapDao: MapDao)(implicit ec: ExecutionContext
   def generateRoute(points: Seq[Point]): Future[MapRoute] = {
     Future.sequence {
       (points.init zip points.tail).map { case (p1, p2) =>
-        mapDao.route(p1, p2).map(r => Polyline.decode(r.polyline))
+        mapDao.route(p1, p2)
       }
-    } map { b =>
-      val pl = Polyline.encode(b.flatten.toList)
-      MapRoute(polyline = pl, distance = 0) }
+    } map { b: Seq[MapRoute] =>
+      val pl = Polyline.encode(b.flatMap(p => Polyline.decode(p.polyline)).toList)
+    MapRoute(polyline = pl, distance = b.map(_.distance).sum ) }
   }
 
   def snapPoint(point: Point): Future[Point] = {

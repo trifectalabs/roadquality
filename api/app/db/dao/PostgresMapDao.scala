@@ -85,7 +85,7 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
       }
 
       val pl = Polyline.encode(fixedPoints)
-      val distance = mapRouteResultList.map { mR => mR.distance }.foldLeft(0d) { (d1, d2) => d1 + d2 }
+      val distance = mapRouteResultList.toList.map(_.distance).sum
       MapRoute(pl, distance)
     }
   }
