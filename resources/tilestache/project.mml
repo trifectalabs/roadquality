@@ -1,0 +1,453 @@
+name: RoadQuality
+description: ''
+format: png
+interactivity: false
+maxzoom: 18
+minzoom: 0
+srs: "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0
+  +units=m +nadgrids=@null +wktext +no_defs +over"
+
+Stylesheet:
+  - palette.mss
+  - base.mss
+  - roads.mss
+  - labels.mss
+
+attribution: Data © OpenStreetMap (and) contributors, ODbL
+
+bounds:
+  - -180
+  - -85.0511
+  - 180
+  - 85.0511
+
+center:
+  - 0
+  - 20
+  - 4
+
+_parts:
+  mercurial_projection: &mercurial_projection
+    srs: "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0.0
+      +k=1.0 +units=m +nadgrids=@null +wktext +no_defs +over"
+    srs-name: '900913'
+  wgs4326_projection: &wgs4326_projection
+    srs-name: WGS84
+    srs: "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+  osm2pgsql: &osm2pgsql
+    type: postgis
+    dbname: raw_maps
+    host: localhost
+    user: docker
+    password: docker
+    project: osm-bright-imposm
+    geometry_field: way
+    extent: "-20037508,-20037508,20037508,20037508"
+    srs-name: WGS84
+    srs: "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+  roadquality: &roadquality
+    type: postgis
+    dbname: maps
+    host: localhost
+    user: docker
+    password: docker
+    project: osm-bright-imposm
+    geometry_field: polyline
+    extent: "-20037508,-20037508,20037508,20037508"
+    srs-name: WGS84
+    srs: "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+Layer:
+  - id: land-low
+    class: shp
+    geometry: polygon
+    <<: *mercurial_projection
+    status: 'on'
+    Datasource:
+      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/simplified-land-polygons-complete-3857/simplified_land_polygons.shp"
+      type: shape
+  - id: land-high
+    class: shp
+    geometry: polygon
+    <<: *mercurial_projection
+    status: 'on'
+    Datasource:
+      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/land-polygons-split-3857/land_polygons.shp"
+      type: shape
+  - id: landuse_gen0
+    geometry: multipolygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, way_area AS area, COALESCE(landuse, leisure, "natural", highway, amenity, tourism) AS type
+          FROM planet_osm_polygon
+          WHERE way_area > 100000
+          ORDER BY way_area DESC
+        ) AS data
+  - id: landuse_gen1
+    geometry: multipolygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, way_area AS area, COALESCE(landuse, leisure, "natural", highway, amenity, tourism) AS type
+          FROM planet_osm_polygon
+          WHERE way_area > 10000
+          ORDER BY way_area DESC
+        ) AS data
+  - id: landuse
+    geometry: polygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, way_area AS area, COALESCE(landuse, leisure, "natural", highway, amenity, tourism) AS type
+          FROM planet_osm_polygon
+          ORDER BY way_area DESC
+        ) AS data
+  - id: waterway_low
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, waterway AS type
+          FROM planet_osm_line
+          WHERE waterway IN ('river', 'canal')
+        ) AS data
+  - id: waterway_med
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, waterway AS type
+          FROM planet_osm_line
+          WHERE waterway IN ('river', 'canal', 'stream')
+        ) AS data
+  - id: waterway_high
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, waterway AS type
+          FROM planet_osm_line
+          WHERE waterway IN ('river', 'canal', 'stream', 'ditch', 'drain')
+        ) AS data
+  - id: water_gen0
+    geometry: polygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, "natural" AS type, way_area AS area
+          FROM planet_osm_polygon
+          WHERE ("natural" IN ('water', 'pond')
+            OR waterway IN ('basin', 'canal', 'mill_pond', 'pond', 'riverbank', 'stream'))
+            AND way_area > 10000
+        ) AS data
+  - id: water_gen1
+    geometry: polygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, "natural" AS type, way_area AS area
+          FROM planet_osm_polygon
+          WHERE ("natural" IN ('water', 'pond')
+            OR waterway IN ('basin', 'canal', 'mill_pond', 'pond', 'riverbank', 'stream'))
+            AND way_area > 1000
+        ) AS data
+  - id: water
+    geometry: polygon
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, way_area AS area
+          FROM planet_osm_polygon
+          WHERE "natural" IN ('water', 'pond')
+            OR waterway IN ('basin', 'canal', 'mill_pond', 'pond', 'riverbank', 'stream')
+        ) AS data
+  - id: landuse_overlays
+    geometry: polygon
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, way_area AS area, COALESCE(leisure) AS type
+          FROM planet_osm_polygon
+          WHERE leisure = 'nature_reserve'
+          ORDER BY way_area DESC
+        ) AS data
+  - id: admin
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, admin_level
+          FROM planet_osm_line
+          WHERE boundary = 'administrative'
+            AND admin_level IN ('2','3','4')
+        ) AS data
+  - id: buildings
+    geometry: polygon
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, "building" AS type
+          FROM planet_osm_polygon
+          WHERE building NOT IN ('', '0','false', 'no')
+          ORDER BY ST_YMin(ST_Envelope(way)) DESC
+        ) AS data
+  - id: aeroway
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, aeroway AS type
+          FROM planet_osm_line
+          WHERE aeroway IN ('apron', 'runway', 'taxiway')
+        ) AS data
+  - id: tunnel
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, COALESCE(highway, railway) AS type, 0 AS bridge, access, render, layer, 1 as tunnel,
+          CASE
+            WHEN highway IN ('motorway', 'trunk') THEN 'motorway'
+            WHEN highway IN ('primary', 'secondary')THEN 'mainroad'
+            WHEN highway IN ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary','tertiary_link', 'residential', 'unclassified', 'road', 'living_street') THEN 'minorroad'
+            WHEN highway IN ('service', 'track') THEN 'service'
+            WHEN highway IN ('path', 'cycleway', 'footway', 'pedestrian', 'steps', 'bridleway') THEN 'noauto'
+            WHEN railway IN ('light_rail', 'subway', 'narrow_gauge', 'rail', 'tram') THEN 'railway'
+           ELSE 'other' END AS stylegroup
+        , '#BABABA' AS rating_colour FROM (
+            SELECT *, '1_outline' AS render FROM planet_osm_line
+          WHERE tunnel NOT IN ('', '0', 'no')
+            UNION ALL
+            SELECT *, '2_line' AS render FROM planet_osm_line
+            WHERE tunnel NOT IN ('', '0', 'no')
+            UNION ALL
+            SELECT *, '3_inline' AS render FROM planet_osm_line
+            WHERE tunnel NOT IN ('', '0', 'no')
+          ) AS tunnels
+          ORDER BY layer ASC, render ASC
+        ) AS data
+  - id: turning_circle_case
+    geometry: point
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, '#BABABA' AS rating_colour
+          FROM planet_osm_point
+          WHERE highway = 'turning_circle'
+        ) AS data
+  - id: roads_high
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, COALESCE(highway, railway) AS type, 0 AS tunnel, 0 AS bridge, access, 'fill' AS render,
+          CASE
+            WHEN highway IN ('motorway', 'trunk') THEN 'motorway'
+            WHEN highway IN ('primary', 'secondary') THEN 'mainroad'
+            WHEN highway IN ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary', 'tertiary_link', 'residential', 'unclassified', 'road', 'living_street') THEN 'minorroad'
+            WHEN highway IN ('service', 'track') THEN 'service'
+         WHEN highway IN ('path', 'cycleway', 'footway', 'pedestrian', 'steps', 'bridleway') THEN 'noauto'
+            WHEN railway IN ('light_rail', 'subway', 'narrow_gauge', 'rail', 'tram') THEN 'railway'
+            ELSE 'other' END AS stylegroup
+        , '#BABABA' AS rating_colour  FROM planet_osm_line
+          WHERE (highway IS NOT NULL OR railway IS NOT NULL)
+            AND (tunnel IS NULL OR tunnel = 'no')
+            AND (bridge IS NULL OR bridge = 'no')
+          ORDER BY z_order
+        ) AS data
+  - id: roads_med
+    geometry: linestring
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, highway AS type
+          FROM planet_osm_roads
+          WHERE highway IN ('motorway', 'trunk','primary', 'secondary', 'motorway_link', 'trunk_link')
+        ) AS data
+  - id: roads_low
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, highway AS type, bridge, tunnel
+            FROM planet_osm_roads
+            WHERE highway IN ('motorway', 'trunk')
+        ) AS data
+  - id: turning_circle_fill
+    geometry: point
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, '#BABABA' AS rating_colour
+          FROM planet_osm_point
+          WHERE highway = 'turning_circle'
+        ) AS data
+  - id: bridge
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, COALESCE(highway, railway) AS type, 1 AS bridge, access, render, layer, 0 as tunnel,
+          CASE
+            WHEN highway IN ('motorway', 'trunk') THEN 'motorway'
+            WHEN highway IN ('primary', 'secondary')THEN 'mainroad'
+            WHEN highway IN ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary','tertiary_link', 'residential', 'unclassified', 'road', 'living_street') THEN 'minorroad'
+            WHEN highway IN ('service', 'track') THEN 'service'
+            WHEN highway IN ('path', 'cycleway', 'footway', 'pedestrian', 'steps', 'bridleway') THEN 'noauto'
+            WHEN railway IN ('light_rail', 'subway', 'narrow_gauge', 'rail', 'tram') THEN 'railway'
+           ELSE 'other' END AS stylegroup
+        ,  '#BABABA' as rating_colour  FROM (
+            SELECT *, '1_outline' AS render FROM planet_osm_line
+            WHERE bridge NOT IN ('', '0', 'no')
+            UNION ALL
+            SELECT *, '2_line' AS render FROM planet_osm_line
+            WHERE bridge NOT IN ('', '0', 'no')
+            UNION ALL
+         SELECT *, '3_inline' AS render FROM planet_osm_line
+            WHERE bridge NOT IN ('', '0', 'no')
+          ) AS bridges
+          ORDER BY layer ASC, render ASC
+        ) AS data
+  - id: ne_places
+    geometry: point
+    <<: *mercurial_projection
+    Datasource:
+      extent: "-20037508.34 -20037508.34 20037508.34 20037508.34"
+      file: "/home/christopher/git/roadquality/resources/tilestache/osm-bright/shp/ne_10m_populated_places/ne_10m_populated_places_simple.shp"
+      type: shape
+  - id: place
+    geometry: point
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, place AS type, name, z_order, population
+          FROM planet_osm_point
+          WHERE place in ('country', 'state', 'city', 'town', 'village', 'hamlet', 'suburb', 'neighbourhood', 'locality')
+          ORDER BY population DESC NULLS LAST
+        ) AS data
+  - id: area_label
+    geometry: point
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT COALESCE(landuse, leisure, "natural", highway, amenity, tourism) AS type,
+            name, way_area AS area,
+            ST_PointOnSurface(way) AS way
+          FROM planet_osm_polygon
+          WHERE name IS NOT NULL
+            AND way && !bbox!
+            AND ST_IsValid(way)
+
+          UNION ALL
+
+          SELECT 'building' AS type, name, way_area AS area,
+            ST_PointOnSurface(way) AS way
+          FROM planet_osm_polygon
+          WHERE name IS NOT NULL
+            AND building NOT IN ('', 'no', '0', 'false')
+            AND way && !bbox!
+            AND ST_IsValid(way)
+          ORDER BY area DESC
+        ) AS data
+  - id: motorway_label
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, highway AS type, name, ref, oneway, CHAR_LENGTH(ref) AS reflen
+            FROM planet_osm_line
+            WHERE highway IN ('motorway', 'trunk')
+              AND (name IS NOT NULL OR ref IS NOT NULL)
+        ) AS data
+  - id: mainroad_label
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, highway AS type, name, oneway
+          FROM planet_osm_line
+          WHERE (name IS NOT NULL OR oneway IN ('yes', 'true', '1', '-1'))
+            AND highway IN ('primary', 'secondary', 'tertiary')
+        ) AS data
+  - id: minorroad_label
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, highway AS type, name, oneway
+          FROM planet_osm_line
+          WHERE (name IS NOT NULL OR oneway IN ('yes', 'true', '1', '-1'))
+            AND highway IN ('residential', 'unclassified', 'road', 'living_street', 'unknown')
+        ) AS data
+  - id: waterway_label
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, waterway AS type, name
+          FROM planet_osm_line
+          WHERE waterway IN ('canal', 'river', 'stream')
+            AND name IS NOT NULL
+        ) AS data
+  - id: train_stations
+    geometry: point
+    <<: *wgs4326_projection
+    Datasource:
+      <<: *osm2pgsql
+      table: |-
+        ( SELECT way, railway AS type, name, z_order
+          FROM planet_osm_point
+          WHERE railway = 'station'
+          ORDER BY z_order NULLS LAST
+        ) AS DATA
+  - id: mini_segments
+    geometry: linestring
+    <<: *wgs4326_projection
+    status: 'on'
+    Datasource:
+      <<: *roadquality
+      table: |-
+        ( SELECT polyline, 'secondary' as type, 0 as bridge, 0 as tunnel, 'mainroad' as stylegroup, 'fill' AS render, ratingColour(surface_rating) AS rating_colour FROM mini_segments) AS data
