@@ -16,6 +16,9 @@ import com.vividsolutions.jts.geom.Geometry
 import play.api.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
+import models.TileCacheExpiration
+import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, SegmentRating, Segment }
+import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao, TileCacheExpirationsDao }
 
 
 trait SegmentService {
@@ -25,7 +28,7 @@ trait SegmentService {
 }
 
 class SegmentServiceImpl @Inject()
-  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao)
+  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, tileCacheExpirationsDao: TileCacheExpirationsDao)
   (implicit ec: ExecutionContext) extends SegmentService {
   implicit def latLng2Point(latLng: LatLng): Point = Point(lat = latLng.lat, lng = latLng.lng)
 
@@ -78,7 +81,12 @@ class SegmentServiceImpl @Inject()
             UUID.randomUUID(), segmentId, userId, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
             segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
           )
-        )
+        ).flatMap { r =>
+          ratingsDao.getBoundsFromRatings(r.createdAt).map { bounds =>
+            println(bounds)
+            tileCacheExpirationsDao.insert(TileCacheExpiration(bounds, DateTime.now(), None))
+          }
+        }
         Future.sequence(Seq(miniSegmentsFuture, ratingsFuture)).map( p => segment)
     }) flatMap identity
   }

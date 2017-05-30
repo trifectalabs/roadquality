@@ -2,6 +2,7 @@ package db
 
 import java.util.UUID
 
+import models.TileCacheExpiration
 import com.trifectalabs.roadquality.v0.models._
 import models.{MiniSegment, MiniSegmentToSegment}
 import org.joda.time.DateTime
@@ -81,5 +82,15 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
   }
 
   val miniSegmentsToSegments = TableQuery[MiniSegmentsToSegments]
+
+  class TileCacheExpirations(tag: Tag) extends Table[TileCacheExpiration](tag, "tile_cache_expirations") {
+    def bounds = column[String]("bounds")
+    def createdAt = column[DateTime]("created_at")
+    def processedAt = column[Option[DateTime]]("processed_at")
+
+    override def * = (bounds, createdAt, processedAt) <> (TileCacheExpiration.tupled, TileCacheExpiration.unapply)
+  }
+
+  val tileCacheExpirations = TableQuery[TileCacheExpirations]
 
 }

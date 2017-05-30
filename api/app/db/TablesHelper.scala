@@ -1,9 +1,13 @@
 package db
 
 import java.util.UUID
+import org.joda.time.DateTime
+import java.sql.Timestamp
 import com.trifectalabs.roadquality.v0.models._
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory, Point => JTSPoint}
 import MyPostgresDriver.api._
+import slick.jdbc.SetParameter
+import slick.jdbc.PositionedParameters
 
 object TablesHelper {
 

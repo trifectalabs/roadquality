@@ -3,6 +3,7 @@
 FROM ubuntu
 MAINTAINER Christopher Poenaru <kiambogo@gmail.com>
 
+ADD tilestacheseed.py /tilestacheseed.py
 ADD cache_expiry.py /cache_expiry.py
 
 RUN apt-get update && apt-get install -y vim wget curl unzip
@@ -11,12 +12,11 @@ RUN apt-get update && apt-get install -y vim wget curl unzip
 RUN apt-get install -y python-pip
 RUN apt-get install -y autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libgdal1-dev mapnik-utils python-mapnik libmapnik-dev
 # Install reqs for Tilestache
-RUN pip install -U Pillow==2.6.1 modestmaps simplejson werkzeug uuid mapnik shapely
+RUN pip install -U Pillow==2.6.1 modestmaps simplejson werkzeug uuid mapnik shapely psycopg2
 
 # Install Tilestache
-RUN curl -o tilestache.tar.gz http://tilestache.org/download/TileStache-1.49.8.tar.gz
-RUN tar xzf tilestache.tar.gz && cd TileStache-1.49.8 && python setup.py install && cd ../
-RUN rm tilestache.tar.gz
+RUN wget https://github.com/TileStache/TileStache/archive/v1.51.3.zip
+RUN unzip v1.51.3.zip && cd TileStache-1.51.3 && python setup.py install && cd ../
 
 # Install Carto
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && apt-get install -y nodejs
@@ -42,7 +42,7 @@ RUN cd /usr/local/src/MapBox/CustomPositron && carto project.mml > mapnik.xml
 
 # Write start script to start the expiration service and tilestache together
 RUN echo """#!/bin/bash \n \
-          python cache_expiry.py & \
+          python /cache_expiry.py & \
           tilestache-server.py -i 0.0.0.0 -c /tilestache.cfg""" >> /start.sh
 RUN chmod +x /start.sh
 
