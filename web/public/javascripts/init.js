@@ -18,7 +18,7 @@ app.ports.up.subscribe(function() {
       zoomControl: false
   });
 
-  L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+  L.tileLayer("http://localhost:8080/roadquality/{z}/{x}/{y}.png", {
     attribution: "&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
   }).addTo(myMap);
 
