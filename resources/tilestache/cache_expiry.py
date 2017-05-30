@@ -23,7 +23,7 @@ while (True):
         timestamp = row[1]
     if bound is not None:
         print 'Rendering tiles for bounding box ' + str(bound)
-        cmd = 'python tilestacheseed.py -c /tilestache.cfg --ignore-cached -b ' + str(bound) + ' -l roadquality -e png 14 15 16 17'
+        cmd = 'python /tilestacheseed.py -c /tilestache.cfg --ignore-cached -b ' + str(bound) + ' -l roadquality -e png 13 14 15 16 17'
         FNULL = open(os.devnull, 'w')
         subprocess.call(cmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT, close_fds=True)
         cur.execute("UPDATE tile_cache_expirations SET processed_at = now() where created_at = (%s)", [timestamp])
