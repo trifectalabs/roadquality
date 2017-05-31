@@ -1,0 +1,44 @@
+service_name: roadquality-api
+team_name: trifectalab
+port: 9000
+healthcheck_url: /info
+logs:
+  - file: /var/log/messages
+    group_name: roadquality-api-syslog
+    datetime_format: '%Y-%m-%d %H:%M:%S'
+  - file: /var/log/roadquality-api/application.log
+    group_name: redistribution-api-application
+    datetime_format: '%Y-%m-%d %H:%M:%S'
+  - file: /var/log/roadquality-api/requests.log
+    group_name: roadquality-api-requests
+    datetime_format: '%Y-%m-%d %H:%M:%S'
+environments:
+  - name: roadquality-app
+    aws_region: us-east-1
+    aws_profile: default
+    deploy_arn: arn:aws:iam::149114439547:role/trifecta-codedeploy
+    deployment_bucket: roadquality-deploys
+    deployment_application_id: roadquality-api-RoadqualityApiApplicationStack-1ABZQ6WXR1IV
+    stacks:
+      - stack_name: production
+        stack_type: production
+        stack_template: NovaGeneralStack_NoDNS
+        stack_template_version: '1.0'
+        stack_deploy_config: OneAtATime
+        deployment_options:
+          - --log-driver: syslog
+          - --net: host
+        deployment_volumes:
+          - /var/log/roadquality-api: /opt/docker/logs
+        deployment_variables:
+          - APPLICATION_SECRET: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.app.secret get)"
+          - MAPS_DB_PASSWORD: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.maps.db.password get)"
+          - MAPS_DB_URL: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.maps.db.url get)"
+        deployment_group: roadquality-api-ProductionDeploymentGroup-1ILX4DBI4UOQ8
+        InstanceSecurityGroups: sg-eb2f1c95
+        ElbSecurityGroups: sg-a52a19db
+        MaxInstances: 2
+        MinInstances: 1
+        VpcSubnetIds: subnet-6cbe3424,subnet-67cf1b3d
+        InstanceType: t2.small
+        FallbackKeyName: admin

@@ -56,6 +56,6 @@ lazy val dockerSettings: Seq[Setting[_]] = Seq(
   version in Docker := version.value
 )
 
-addCommandAlias("buildWeb", "web/docker:publish")
-addCommandAlias("buildApi", "api/docker:publish")
+addCommandAlias("buildWeb", "web/docker:publishLocal")
+addCommandAlias("buildApi", "api/docker:publishLocal")
 
