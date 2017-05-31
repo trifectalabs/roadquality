@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
   .aggregate(web, api)
 
 lazy val web = project
-  .settings(name:= "roadquality_web")
+  .settings(name:= "roadquality-web")
   .dependsOn(api)
   .enablePlugins(PlayScala)
   .settings(commonSettings: _*)
@@ -48,7 +48,6 @@ lazy val commonSettings = Seq(
 
 lazy val dockerSettings: Seq[Setting[_]] = Seq(
   dockerRepository := Some("kiambogo"),
-  packageName in Docker := s"roadquality_${name.value}",
   maintainer in Docker := "Christopher Poenaru <kiambogo@gmail.com>",
   dockerBaseImage := "openjdk",
   dockerExposedPorts := Seq(9000),
