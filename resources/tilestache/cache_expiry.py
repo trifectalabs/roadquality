@@ -6,7 +6,7 @@ import sys
 import time
 
 try:
-    conn = psycopg2.connect("dbname='maps' user='docker' host='172.17.0.1' password='docker'")
+    conn = psycopg2.connect("dbname='maps' user='trifecta' host='"+os.environ['MAPS_DB_HOST']+"' password='"+os.environ['MAPS_DB_PASSWORD']+"'")
     print "Connected to database"
 except Exception,e:
     print e
