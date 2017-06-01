@@ -1,5 +1,6 @@
 GET        /                controllers.Assets.at(path="/public", file="html/index.html")
 GET        /login           controllers.Login.oauth
 GET        /callback        util.OAuth2.callback(code: Option[String], state: Option[String])
+GET        /isTokenValid    controllers.Login.isTokenValid
 
 GET        /assets/*file    controllers.Assets.at(path="/public", file)
