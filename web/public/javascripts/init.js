@@ -23,6 +23,7 @@ app.ports.up.subscribe(function() {
   }).addTo(myMap);
 
   L.control.zoom({position: "bottomright"}).addTo(myMap);
+  createBounds();
 
   function onMapClick(e) {
     var marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true, icon: icon}).addTo(e.target);
@@ -62,3 +63,20 @@ app.ports.clearRoute.subscribe(function() {
   }
   polyline.remove();
 });
+
+// ROUTING BOUNDS
+function createBounds() {
+  var pointA = new L.LatLng(43.753963, -79.632868);
+  var pointB = new L.LatLng(43.561912, -79.632868);
+  var pointC = new L.LatLng(43.561912, -79.194903);
+  var pointD = new L.LatLng(43.753963, -79.194903);
+  var pointList = [pointA, pointB, pointC, pointD, pointA];
+
+  var firstpolyline = new L.Polyline(pointList, {
+      color: 'red',
+      weight: 3,
+      opacity: 0.5,
+      smoothFactor: 1
+  });
+  firstpolyline.addTo(myMap);
+}
