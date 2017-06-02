@@ -12,7 +12,7 @@ lazy val web = project
   .settings(commonSettings: _*) .settings(dockerSettings: _*)
 
 lazy val api = project
-  .settings(name:= "roadquality_api")
+  .settings(name:= "roadquality-api")
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings(
