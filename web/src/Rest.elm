@@ -1,7 +1,8 @@
 module Rest exposing (..)
 
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (decode, required)
+import Date exposing (Date)
+import Json.Decode as Decode exposing (Decoder, andThen)
+import Json.Decode.Pipeline exposing (decode, required, optional)
 import Json.Encode as Encode exposing (encode, Value)
 import Types
     exposing
@@ -11,7 +12,36 @@ import Types
         , CreateSegmentForm
         , SurfaceType(..)
         , PathType(..)
+        , User
         )
+
+
+decodeDate : Decoder Date
+decodeDate =
+    Decode.string
+        |> andThen
+            (\val ->
+                case Date.fromString val of
+                    Err err ->
+                        Decode.fail err
+
+                    Ok date ->
+                        Decode.succeed date
+            )
+
+
+decodeUser : Decoder User
+decodeUser =
+    decode User
+        |> required "id" Decode.string
+        |> required "firstName" Decode.string
+        |> required "lastName" Decode.string
+        |> required "email" Decode.string
+        |> optional "birthdate" (Decode.nullable decodeDate) Nothing
+        |> optional "sex" (Decode.nullable Decode.string) Nothing
+        |> required "stravaToken" Decode.string
+        |> required "createdAt" decodeDate
+        |> required "updatedAt" decodeDate
 
 
 decodeSegment : Decoder Segment

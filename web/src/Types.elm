@@ -1,5 +1,6 @@
 module Types exposing (..)
 
+import Date exposing (Date)
 import Dict exposing (Dict)
 
 
@@ -10,6 +11,8 @@ type alias Model =
     , page : UrlRoute
     , host : String
     , menu : RatingsInterfaceState
+    , user : Maybe User
+    , token : Maybe String
     }
 
 
@@ -17,6 +20,19 @@ type UrlRoute
     = LoginPage
     | MainPage
     | AccountPage
+
+
+type alias User =
+    { id : String
+    , firstName : String
+    , lastName : String
+    , email : String
+    , birthdate : Maybe Date
+    , sex : Maybe String
+    , stravaToken : String
+    , createdAt : Date
+    , updatedAt : Date
+    }
 
 
 type alias RatingsInterfaceState =

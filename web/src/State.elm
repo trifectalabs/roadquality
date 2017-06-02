@@ -3,7 +3,7 @@ port module State exposing (..)
 import Dict
 import Http
 import Json.Encode as Encode
-import Navigation
+import Navigation exposing (modifyUrl)
 import Polyline
 import Rest
     exposing
@@ -12,6 +12,7 @@ import Rest
         , decodeRoute
         , decodeSegment
         , encodeCreateSegmentForm
+        , decodeUser
         )
 import Types
     exposing
@@ -22,28 +23,76 @@ import Types
         , UrlRoute(..)
         , PathType(..)
         , SurfaceType(..)
+        , User
         )
-import UrlParser exposing (Parser, s)
+import UrlParser exposing (Parser, s, (<?>))
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
-init location =
+init loc =
     let
+        location =
+            fixLocationQuery loc
+
         host =
             if location.host == "localhost:9000" then
                 "http://localhost:9001"
             else
                 "https://api.roadquality.org"
+
+        initial =
+            initModel host
+
+        model =
+            parseUrl initial location
+
+        cmd =
+            case model.token of
+                Nothing ->
+                    getAuth ()
+
+                Just token ->
+                    let
+                        req =
+                            Http.request
+                                { method = "GET"
+                                , headers =
+                                    [ Http.header "Authorization" <|
+                                        String.concat [ "Bearer ", token ]
+                                    ]
+                                , url = String.concat [ model.host, "/users" ]
+                                , body = Http.emptyBody
+                                , expect = Http.expectJson decodeUser
+                                , timeout = Nothing
+                                , withCredentials = False
+                                }
+
+                        newUrl =
+                            String.concat
+                                [ location.origin
+                                , location.hash
+                                ]
+                    in
+                        Cmd.batch
+                            [ modifyUrl newUrl
+                            , storeAuth token
+                            , Http.send UserAuth req
+                            ]
     in
-        ( { anchors = Dict.empty
-          , anchorOrder = []
-          , route = Nothing
-          , page = MainPage
-          , host = host
-          , menu = initMenu
-          }
-        , up True
-        )
+        ( model, cmd )
+
+
+initModel : String -> Model
+initModel host =
+    { anchors = Dict.empty
+    , anchorOrder = []
+    , route = Nothing
+    , page = MainPage
+    , host = host
+    , menu = initMenu
+    , user = Nothing
+    , token = Nothing
+    }
 
 
 initMenu : Types.RatingsInterfaceState
@@ -60,6 +109,8 @@ initMenu =
 
 type Msg
     = UrlChange Navigation.Location
+    | CheckAuth (Maybe String)
+    | UserAuth (Result Http.Error User)
     | PlaceAnchorPoint ( Int, Float, Float )
     | SetAnchorPoint Int (Result Http.Error Point)
     | ReceiveRoute (Result Http.Error Route)
@@ -83,9 +134,35 @@ route =
         ]
 
 
+{-| https://github.com/evancz/url-parser/issues/27
+-}
+fixLocationQuery : Navigation.Location -> Navigation.Location
+fixLocationQuery location =
+    let
+        hash =
+            String.split "?" location.hash
+                |> List.head
+                |> Maybe.withDefault ""
+
+        search =
+            String.split "?" location.hash
+                |> List.drop 1
+                |> String.join "?"
+                |> String.append "?"
+    in
+        { location | hash = hash, search = search }
+
+
 parseUrl : Model -> Navigation.Location -> Model
 parseUrl model location =
-    model
+    let
+        token =
+            location
+                |> UrlParser.parseHash
+                    (s "dashboard" <?> UrlParser.stringParam "token")
+                |> Maybe.withDefault Nothing
+    in
+        { model | token = token }
 
 
 toUrl : UrlRoute -> String
@@ -107,9 +184,48 @@ update msg model =
         UrlChange location ->
             let
                 newModel =
-                    parseUrl model location
+                    parseUrl model <| fixLocationQuery location
             in
                 ( newModel, Cmd.none )
+
+        CheckAuth token ->
+            let
+                headers =
+                    token
+                        |> Maybe.map
+                            (\t ->
+                                [ Http.header "Authorization" <|
+                                    String.concat [ "Bearer ", t ]
+                                ]
+                            )
+                        |> Maybe.withDefault []
+
+                req =
+                    Http.request
+                        { method = "GET"
+                        , headers = headers
+                        , url = String.concat [ model.host, "/users" ]
+                        , body = Http.emptyBody
+                        , expect = Http.expectJson decodeUser
+                        , timeout = Nothing
+                        , withCredentials = False
+                        }
+            in
+                ( model, Http.send UserAuth req )
+
+        UserAuth (Err error) ->
+            let
+                newModel =
+                    { model | page = LoginPage }
+            in
+                ( newModel, Cmd.none )
+
+        UserAuth (Ok user) ->
+            let
+                newModel =
+                    { model | page = MainPage, user = Just user }
+            in
+                ( newModel, up True )
 
         PlaceAnchorPoint ( pointId, lat, lng ) ->
             let
@@ -342,6 +458,15 @@ update msg model =
             ( model, Cmd.none )
 
 
+port storeAuth : String -> Cmd msg
+
+
+port getAuth : () -> Cmd msg
+
+
+port checkAuth : (Maybe String -> msg) -> Sub msg
+
+
 port up : Bool -> Cmd msg
 
 
@@ -361,4 +486,5 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ setAnchor PlaceAnchorPoint
+        , checkAuth CheckAuth
         ]

@@ -10,6 +10,17 @@ let icon = L.icon({
   iconAnchor: [5, 5]
 });
 
+// STORE AUTH
+app.ports.storeAuth.subscribe(function(token) {
+    localStorage.setItem("rq-token", token);
+});
+
+// CHECK AUTH
+app.ports.getAuth.subscribe(function() {
+    let token = localStorage.getItem("rq-token");
+    app.ports.checkAuth.send(token);
+});
+
 // SETUP MAP
 app.ports.up.subscribe(function() {
   myMap = L.map("MainView", {
