@@ -25,8 +25,8 @@ class JwtUtil @Inject() (configuration: Configuration) {
     }
   }
 
-	def createToken(user: User): String = {
-    Jwt.encode(stringify(toJson(user)), secret, JwtAlgorithm.HS256)
+	def createToken(user: User, durationSec: Long = 2629746000l): String = {
+    Jwt.encode(JwtClaim({stringify(toJson(user))}).issuedNow.expiresIn(durationSec), secret, JwtAlgorithm.HS256)
 	}
 
 }
