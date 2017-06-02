@@ -16,7 +16,7 @@ import db.Tables._
 @Singleton
 class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
 extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
-	import driver.api._
+	import profile.api._
 
 	override def getById(id: UUID): Future[User] = {
 		db.run(users.filter(_.id === id).result.head)

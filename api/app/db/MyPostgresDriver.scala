@@ -6,7 +6,7 @@ import com.github.tminglei.slickpg._
 import slick.jdbc.{PositionedResult, PositionedParameters, SetParameter}
 
 
-trait MyPostgresDriver extends ExPostgresDriver
+trait MyPostgresDriver extends ExPostgresProfile
                           with PgArraySupport
                           with PgDateSupportJoda
                           with PgPlayJsonSupport

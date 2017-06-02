@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends SegmentsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
   import _root_.db.TablesHelper._
-  import driver.api._
+  import profile.api._
 
   implicit val getPointResult = GetResult(r => Point(r.nextDouble(), r.nextDouble()))
 

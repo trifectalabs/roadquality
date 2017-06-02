@@ -70,7 +70,7 @@ class SegmentServiceImpl @Inject()
               if (!previouslySavedMiniSegments.map(s => s.miniSegmentId).contains(existingMiniSegment.miniSegmentId)) {
                 (miniSegmentsDao.insert(existingMiniSegment))
               } else {
-                Future()
+                Future(())
               }
             })
           }

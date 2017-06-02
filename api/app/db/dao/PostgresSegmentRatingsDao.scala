@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends SegmentRatingsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
   import _root_.db.TablesHelper._
-  import driver.api._
+  import profile.api._
 
   override def getAll(): Future[Seq[SegmentRating]] = {
     db.run(segmentRatings.result)

@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends MapDao with HasDatabaseConfigProvider[MyPostgresDriver] {
-  import driver.api._
+  import profile.api._
 
   implicit val getRouteResult = GetResult(r => MapRoute(r.nextString(), r.nextDouble()))
   implicit val getPointResult = GetResult(r => Point(r.nextDouble(), r.nextDouble()))

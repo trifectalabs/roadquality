@@ -9,8 +9,7 @@ lazy val web = project
   .settings(name:= "roadquality-web")
   .dependsOn(api)
   .enablePlugins(PlayScala)
-  .settings(commonSettings: _*)
-  .settings(dockerSettings: _*)
+  .settings(commonSettings: _*) .settings(dockerSettings: _*)
 
 lazy val api = project
   .settings(name:= "roadquality_api")
@@ -31,13 +30,13 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "com.vividsolutions"      % "jts"                    % "1.13",
     "com.github.trifectalabs" %% "polyline-scala"        % "1.2.0",
-    "com.typesafe.play"       %% "play-slick"            % "2.0.2",
-    "com.typesafe.play"       %% "play-slick-evolutions" % "2.0.2",
-    "org.postgresql"          % "postgresql"             % "9.4.1212",
-    "com.github.tminglei"     %% "slick-pg"              % "0.14.6",
-    "com.github.tminglei"     %% "slick-pg_joda-time"    % "0.14.6",
-    "com.github.tminglei"     %% "slick-pg_play-json"    % "0.14.6",
-    "com.github.tminglei"     %% "slick-pg_jts"          % "0.14.6",
+    "com.typesafe.play"       %% "play-slick"            % "2.1.0",
+    "com.typesafe.play"       %% "play-slick-evolutions" % "2.1.0",
+    "org.postgresql"          % "postgresql"             % "42.1.1",
+    "com.github.tminglei"     %% "slick-pg"              % "0.15.0",
+    "com.github.tminglei"     %% "slick-pg_joda-time"    % "0.15.0",
+    "com.github.tminglei"     %% "slick-pg_play-json"    % "0.15.0",
+    "com.github.tminglei"     %% "slick-pg_jts"          % "0.15.0",
     "com.pauldijou"           %% "jwt-core"              % "0.12.1",
     "org.scalatestplus.play"  %% "scalatestplus-play"    % "2.0.0" % "test",
     specs2,
