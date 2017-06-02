@@ -211,7 +211,7 @@ update msg model =
                         , withCredentials = False
                         }
             in
-                ( model, Http.send UserAuth req )
+                ( { model | token = token }, Http.send UserAuth req )
 
         UserAuth (Err error) ->
             let
@@ -238,10 +238,20 @@ update msg model =
                     else
                         { oldMenu | drawingSegment = True }
 
+                headers =
+                    model.token
+                        |> Maybe.map
+                            (\t ->
+                                [ Http.header "Authorization" <|
+                                    String.concat [ "Bearer ", t ]
+                                ]
+                            )
+                        |> Maybe.withDefault []
+
                 req =
                     Http.request
                         { method = "GET"
-                        , headers = []
+                        , headers = headers
                         , url =
                             String.concat
                                 [ model.host
@@ -277,10 +287,20 @@ update msg model =
                         |> List.map encodePoint
                         |> Encode.list
 
+                headers =
+                    model.token
+                        |> Maybe.map
+                            (\t ->
+                                [ Http.header "Authorization" <|
+                                    String.concat [ "Bearer ", t ]
+                                ]
+                            )
+                        |> Maybe.withDefault []
+
                 req =
                     Http.request
                         { method = "POST"
-                        , headers = []
+                        , headers = headers
                         , url = String.concat [ model.host, "/mapRoutes" ]
                         , body = Http.jsonBody points
                         , expect = Http.expectJson decodeRoute
@@ -432,10 +452,20 @@ update msg model =
                         , pathType = model.menu.pathType
                         }
 
+                headers =
+                    model.token
+                        |> Maybe.map
+                            (\t ->
+                                [ Http.header "Authorization" <|
+                                    String.concat [ "Bearer ", t ]
+                                ]
+                            )
+                        |> Maybe.withDefault []
+
                 req =
                     Http.request
                         { method = "POST"
-                        , headers = []
+                        , headers = headers
                         , url = String.concat [ model.host, "/segments" ]
                         , body = Http.jsonBody body
                         , expect = Http.expectJson decodeSegment
