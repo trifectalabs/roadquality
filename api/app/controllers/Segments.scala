@@ -37,9 +37,10 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
 
   def post() = AuthLoggingAction.async(parse.json[SegmentCreateForm]) { implicit request =>
     val segForm = request.body
+    val userId = request.queryString("userId").head
+
     FormValidator.validateSegmentCreateForm(segForm) match {
-      // TODO fix the user uuid
-      case Nil => segmentService.createSegment(segForm, UUID.fromString("e34f4f39-edcb-4d65-9969-264db37681eb")).map(s => Created(Json.toJson(s)))
+      case Nil => segmentService.createSegment(segForm, UUID.fromString(userId)).map(s => Created(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
 	}
