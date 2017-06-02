@@ -21,7 +21,11 @@ class AuthLoggingAction @Inject() (jwt: JwtUtil)(implicit ec: ExecutionContext) 
       userOpt match {
         case Some(user) =>
           logger.info(s"User ID: ${user.id}, URI: ${request.path}, Method: ${request.method}, Params: ${request.queryString}, Body: ${request.body.toString}")
-          block(request)
+          block {
+            new WrappedRequest[A](request) {
+              override def queryString = request.queryString + ("userId" -> Seq(user.id.toString))
+            }
+          }
         case None =>
           val message = tokenOpt match {
             case Some(token) =>

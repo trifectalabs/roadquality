@@ -392,12 +392,9 @@
     "user": {
       "operations": [
         { "method": "GET",
-          "parameters": [
-            { "name": "userId", "type": "uuid", "required": false },
-            { "name": "userEmail", "type": "string", "required": false }
-          ],
           "responses": {
-            "200": { "type": "[user]" }
+            "200": { "type": "[user]" },
+            "401": { "type": "string" }
           }
         },
         { "method": "PUT",

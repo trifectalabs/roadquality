@@ -16,15 +16,12 @@ import scala.concurrent.{ ExecutionContext, Future }
 class Users @Inject() (usersDao: UsersDao, authLoggingAction: AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
   import authLoggingAction._
 
-  def get(userId: Option[UUID], userEmail: Option[String]) = AuthLoggingAction.async {
-    (userId, userEmail) match {
-      case (Some(id), None) => usersDao.getById(id).map(s => Ok(Json.toJson(s)))
-      case (None, Some(email)) => usersDao.findByEmail(email).map(s => Ok(Json.toJson(s)))
-      case (None, None) => Future(BadRequest("User ID or email must be specified"))
-      case (Some(_), Some(_)) => Future(BadRequest("User ID and email cannot both be specified"))
-      case _ => Future(BadRequest)
+  def get = AuthLoggingAction.async { request =>
+    request.queryString("userId") match {
+      case Seq(id) => usersDao.getById(UUID.fromString(id)).map(s => Ok(Json.toJson(s)))
+      case Nil => Future(Unauthorized)
     }
-	}
+  }
 
   def delete(user_id: _root_.java.util.UUID) = AuthLoggingAction.async { implicit request =>
     usersDao.softDelete(user_id).map(s => Ok(Json.toJson(s)))
