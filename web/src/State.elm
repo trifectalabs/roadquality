@@ -70,6 +70,7 @@ init loc =
                         newUrl =
                             String.concat
                                 [ location.origin
+                                , location.pathname
                                 , location.hash
                                 ]
                     in
