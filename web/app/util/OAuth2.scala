@@ -40,7 +40,10 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
 						userData.sex,
 						userData.stravaToken).map { user =>
 							val jwtToken = jwt.createToken(user)
-							Redirect(s"/app/#dashboard?token=$jwtToken")
+              if (user.role == UserRole.Admin)
+                Redirect(s"/app/#dashboard?token=$jwtToken")
+              else
+                Redirect("/")
 						}
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
