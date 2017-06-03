@@ -1,7 +1,7 @@
 service_name: roadquality-web
 team_name: trifectalab
 port: 9000
-healthcheck_url: /
+healthcheck_url: /app
 logs:
   - file: /var/log/messages
     group_name: roadquality-web-syslog
