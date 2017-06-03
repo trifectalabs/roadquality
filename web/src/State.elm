@@ -46,8 +46,14 @@ init loc =
         model =
             parseUrl initial location
 
+        token =
+            location
+                |> UrlParser.parseHash
+                    (s "dashboard" <?> UrlParser.stringParam "token")
+                |> Maybe.withDefault Nothing
+
         cmd =
-            case model.token of
+            case token of
                 Nothing ->
                     getAuth ()
 
@@ -80,7 +86,7 @@ init loc =
                             , Http.send UserAuth req
                             ]
     in
-        ( model, cmd )
+        ( { model | token = token }, cmd )
 
 
 initModel : String -> Model
@@ -156,14 +162,7 @@ fixLocationQuery location =
 
 parseUrl : Model -> Navigation.Location -> Model
 parseUrl model location =
-    let
-        token =
-            location
-                |> UrlParser.parseHash
-                    (s "dashboard" <?> UrlParser.stringParam "token")
-                |> Maybe.withDefault Nothing
-    in
-        { model | token = token }
+    model
 
 
 toUrl : UrlRoute -> String
