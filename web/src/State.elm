@@ -436,16 +436,16 @@ update msg model =
 
         SaveSegment ->
             let
-                points =
-                    List.filterMap
-                        (\id -> Dict.get id model.anchors)
-                        model.anchorOrder
+                polyline =
+                    model.route
+                        |> Maybe.map .polyline
+                        |> Maybe.withDefault ""
 
                 body =
                     encodeCreateSegmentForm
                         { name = model.menu.name
                         , description = model.menu.description
-                        , points = points
+                        , polyline = polyline
                         , surfaceRating = model.menu.surfaceRating
                         , trafficRating = model.menu.trafficRating
                         , surface = model.menu.surface

@@ -87,7 +87,7 @@ encodeCreateSegmentForm form =
     Encode.object
         [ ( "name", Encode.string form.name )
         , ( "description", Encode.string form.description )
-        , ( "points", Encode.list <| List.map encodePoint form.points )
+        , ( "polyline", Encode.string form.polyline )
         , ( "surfaceRating", Encode.int form.surfaceRating )
         , ( "trafficRating", Encode.int form.trafficRating )
         , ( "surface", Encode.string <| surfaceTypeToString form.surface )

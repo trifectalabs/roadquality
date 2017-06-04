@@ -84,7 +84,7 @@ type alias Segment =
 type alias CreateSegmentForm =
     { name : String
     , description : String
-    , points : List Point
+    , polyline : String
     , surfaceRating : Int
     , trafficRating : Int
     , surface : SurfaceType
