@@ -1,6 +1,3 @@
-let node = document.getElementById("elm-content");
-let app = Elm.App.embed(node);
-
 let myMap;
 let markers = {};
 let polyline;
@@ -10,40 +7,46 @@ let icon = L.icon({
   iconAnchor: [5, 5]
 });
 
-// STORE AUTH
-app.ports.storeAuth.subscribe(function(token) {
-    localStorage.setItem("rq-token", token);
+// STORE SESSION
+app.ports.storeSession.subscribe(function(session) {
+    localStorage.session = session;
 });
 
-// CHECK AUTH
-app.ports.getAuth.subscribe(function() {
-    let token = localStorage.getItem("rq-token");
-    app.ports.checkAuth.send(token);
-});
+// SESSION CHANGE
+window.addEventListener("storage", function(event) {
+    if (event.storageArea === localStorage && event.key === "session") {
+        app.ports.onSessionChange.send(event.newValue);
+    }
+}, false);
 
 // SETUP MAP
-app.ports.up.subscribe(function() {
-  myMap = L.map("MainView", {
-      center: [43.652684, -79.397991],
-      zoom: 13,
-      zoomControl: false
-  });
+app.ports.up.subscribe(function(authed) {
+    // TODO: there must be a better way :(
+    setTimeout(function() {
+        myMap = L.map("MainView", {
+            center: [43.652684, -79.397991],
+            zoom: 13,
+            zoomControl: false
+        });
 
-  L.tileLayer("https://tiles.roadquality.org/roadquality/{z}/{x}/{y}.png", {
-    attribution: "&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
-  }).addTo(myMap);
+        L.tileLayer("https://tiles.roadquality.org/roadquality/{z}/{x}/{y}.png", {
+            attribution: "&copy; <a href='https://trifectalabs.com'>Trifecta Labs</a> & <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
+        }).addTo(myMap);
 
-  L.control.zoom({position: "bottomright"}).addTo(myMap);
-  createBounds();
+        L.control.zoom({position: "bottomright"}).addTo(myMap);
+        createBounds();
 
-  function onMapClick(e) {
-    var marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true, icon: icon}).addTo(e.target);
-    app.ports.setAnchor.send([marker._leaflet_id, e.latlng.lat, e.latlng.lng]);
-    marker.on("dragend", onMarkerDrop);
-    markers[marker._leaflet_id] = marker;
-  }
+        function onMapClick(e) {
+            var marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true, icon: icon}).addTo(e.target);
+            app.ports.setAnchor.send([marker._leaflet_id, e.latlng.lat, e.latlng.lng]);
+            marker.on("dragend", onMarkerDrop);
+            markers[marker._leaflet_id] = marker;
+        }
 
-  myMap.on("click", onMapClick);
+        if (authed) {
+            myMap.on("click", onMapClick);
+        }
+    }, 100);
 });
 
 function onMarkerDrop(e) {

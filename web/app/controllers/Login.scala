@@ -19,8 +19,4 @@ class Login @Inject() (oauth2: OAuth2, authLoggingAction: AuthLoggingAction)(imp
     val redirectUrl = oauth2.getAuthorizationUrl(randomState)
     Redirect(redirectUrl).withSession("oauth-state" -> randomState)
   }
-
-  def isTokenValid() = AuthLoggingAction.async {
-    Future(Ok("true"))
-  }
 }

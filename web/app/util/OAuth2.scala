@@ -10,10 +10,12 @@ import scala.util.Try
 
 import play.api.mvc._
 import play.api.libs.ws._
+import play.api.libs.json._
 import play.api.http.{MimeTypes, HeaderNames}
 import play.api.Configuration
 
 import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
+import com.trifectalabs.roadquality.v0.models.json._
 import db.dao.UsersDao
 
 class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JwtUtil) extends Controller {
@@ -37,14 +39,14 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
             userData.lastName,
             userData.email,
             None,
-						userData.sex,
-						userData.stravaToken).map { user =>
-							val jwtToken = jwt.createToken(user)
+			userData.sex,
+			userData.stravaToken).map { user =>
+			  val jwtToken = jwt.createToken(user)
               if (user.role == UserRole.Admin)
-                Redirect(s"/app/#dashboard?token=$jwtToken")
+                Redirect(s"/app?token=$jwtToken")
               else
                 Redirect("/")
-						}
+			}
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
         }

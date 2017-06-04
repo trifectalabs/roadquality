@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,600,700">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Lato, Arial, Sans-serif;
+        }
+
+        #Content {
+            min-height: calc(100vh - 120px);
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .frameLogoFont {
+            font-family: Lato;
+            font-size: 24px;
+            font-weight: 900;
+            text-decoration: none;
+            color: rgb(80, 80, 80);
+            text-transform: lowercase;
+        }
+
+        .frameNavBar {
+            border-bottom: 1px solid rgb(225, 225, 225);
+        }
+
+        .frameNavBar  .frameBrand {
+            display: inline-block;
+            padding: 15px 15px 15px 40px;
+            margin: 0;
+        }
+
+        .frameNavBar  ul.frameNav {
+            list-style: none;
+            float: right;
+            padding: 0 25px 0 0;
+            margin: 0;
+        }
+
+        .frameNavBar  ul.frameNav > .frameNavItem {
+            display: inline-block;
+            padding: 20px 15px;
+            font-size: 16px;
+        }
+
+        .frameNavBar  ul.frameNav > .frameNavItem.frameActive > .frameNavLink {
+            text-decoration: none;
+            color: rgb(22, 146, 72);
+        }
+
+        .frameNavBar  ul.frameNav > .frameNavItem > .frameNavLink {
+            text-decoration: none;
+            color: rgb(80, 80, 80);
+        }
+
+        .frameNavBar  ul.frameNav > .frameNavItem > .frameNavLink:hover {
+            color: rgb(22, 146, 72);
+        }
+
+        footer {
+            border-top: 1px solid rgb(225, 225, 225);
+        }
+
+        footer  .frameLogoFont {
+            display: inline-block;
+            padding: 15px 15px 15px 40px;
+        }
+
+        footer  .frameAttribution > a {
+            text-decoration: none;
+            color: rgb(22, 146, 72);
+        }
+
+        footer  .frameAttribution > a:hover {
+            color: rgb(127, 217, 55);
+        }
+
+        .errorNotFound  h1 {
+            text-align: center;
+        }
+
+        .errorNotFound  h1 > a {
+            text-decoration: none;
+            color: rgb(22, 146, 72);
+        }
+
+        .errorNotFound  h1 > a:hover {
+            color: rgb(127, 217, 55);
+        }
+
+        .errorNotFound  img {
+            width: 100%;
+        }
+
+        .errorServerError  h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="framePageFrame">
+        <nav class="frameNavBar">
+            <div>
+                <a class="frameBrand frameLogoFont" href="#/">Road Quality</a>
+            </div>
+        </nav>
+        <div id="Content" class="errorNotFound">
+            <h1>Looks like you're lost. Time to head <a href="/app/#/">home</a>.</h1>
+            <div>
+                <img src="/assets/img/error.jpg" alt="cyclist lost in the snow">
+            </div>
+        </div>
+        <footer>
+            <div>
+                <a class="frameLogoFont" href="#/">Road Quality</a>
+                <span class="frameAttribution">© 2017 A project from <a href="https://trifectalabs.com">Trifecta Labs</a>. Code &amp; design licensed under <a href="https://github.com/trifectalabs/roadquality/blob/master/LICENSE">MIT</a>.</span>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
