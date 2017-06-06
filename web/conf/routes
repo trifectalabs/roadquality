@@ -1,7 +1,8 @@
-GET        /app             controllers.Assets.at(path="/public", file="html/index.html")
-GET        /app/            controllers.Assets.at(path="/public", file="html/index.html")
+GET        /app             controllers.Main.app(token: Option[String])
+GET        /app/            controllers.Main.app(token: Option[String])
 GET        /login           controllers.Login.oauth
 GET        /callback        util.OAuth2.callback(code: Option[String], state: Option[String])
-GET        /isTokenValid    controllers.Login.isTokenValid
 
 GET        /assets/*file    controllers.Assets.at(path="/public", file)
+
+GET        /*path           controllers.Main.notFound(path)

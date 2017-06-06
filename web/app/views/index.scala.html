@@ -1,0 +1,29 @@
+@(param: String)
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,600,700" />
+    <link rel="stylesheet" href="/assets/stylesheets/main.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@@1.0.3/dist/leaflet.css" />
+
+    <style>/* Loading spinner courtesy of loader.io */
+    .sk-three-bounce { margin: 0 10px 0 0 !important; float: left !important; padding: 20px 15px !important; } .sk-three-bounce .sk-child { width: 14px; height: 14px; background-color: #333; border-radius: 100%; display: inline-block; -webkit-animation: sk-three-bounce 1.4s ease-in-out 0s infinite both; animation: sk-three-bounce 1.4s ease-in-out 0s infinite both; } .sk-three-bounce .sk-bounce1 { -webkit-animation-delay: 0.28s; animation-delay: 0.28s; } .sk-three-bounce .sk-bounce2 { -webkit-animation-delay: 0.44s; animation-delay: 0.44s; } .sk-three-bounce .sk-bounce3 { -webkit-animation-delay: 0.6s; animation-delay: 0.6s; } @@-webkit-keyframes sk-three-bounce { 0%, 80%, 100% { -webkit-transform: scale(0); transform: scale(0); } 40% { -webkit-transform: scale(1); transform: scale(1); } } @@keyframes sk-three-bounce { 0%, 80%, 100% { -webkit-transform: scale(0); transform: scale(0); } 40% { -webkit-transform: scale(1); transform: scale(1); } }
+    </style>
+
+    <script type="text/javascript" src="/assets/javascripts/main.js"></script>
+    <script src="https://unpkg.com/leaflet@@1.0.3/dist/leaflet.js"></script>
+</head>
+<body>
+    <script>
+        @if(param != "") {
+            localStorage.session = "@param";
+        }
+        let app = Elm.Main.fullscreen(localStorage.session || null);
+    </script>
+    <script type="text/javascript" src="/assets/javascripts/init.js"></script>
+</body>
+</html>

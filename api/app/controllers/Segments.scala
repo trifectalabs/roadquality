@@ -19,12 +19,12 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
   import authLoggingAction._
   implicit def formErrorFormat = Json.writes[FormError]
 
-  def get(segment_id: Option[UUID]) = AuthLoggingAction.async {
+  def get(segment_id: Option[UUID]) = Action.async {
     segment_id.map(id => segmentsDao.getById(id).map(s => Ok(Json.toJson(Seq(s)))))
       .getOrElse(segmentsDao.getAll.map(s => Ok(Json.toJson(s))))
   }
 
-  def getBoundingbox(xmin: Option[Double], ymin: Option[Double], xmax: Option[Double], ymax: Option[Double]) = AuthLoggingAction.async {
+  def getBoundingbox(xmin: Option[Double], ymin: Option[Double], xmax: Option[Double], ymax: Option[Double]) = Action.async {
     (for {
       x_min <- xmin
       y_min <- ymin
