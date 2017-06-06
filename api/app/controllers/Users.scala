@@ -9,26 +9,22 @@ import com.trifectalabs.roadquality.v0.Bindables
 import db.dao.UsersDao
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
-import util.actions.AuthLoggingAction
+import util.actions.Authenticated
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class Users @Inject() (usersDao: UsersDao, authLoggingAction: AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
-  import authLoggingAction._
+class Users @Inject() (usersDao: UsersDao)(implicit ec: ExecutionContext) extends Controller {
 
-  def get = AuthLoggingAction.async { request =>
-    request.queryString("userId") match {
-      case Seq(id) => usersDao.getById(UUID.fromString(id)).map(s => Ok(Json.toJson(s)))
-      case Nil => Future(Unauthorized)
-    }
+  def get = Authenticated.async { req =>
+    Future(Ok(Json.toJson(req.user)))
   }
 
-  def delete(user_id: _root_.java.util.UUID) = AuthLoggingAction.async { implicit request =>
-    usersDao.softDelete(user_id).map(s => Ok(Json.toJson(s)))
+  def delete(user_id: _root_.java.util.UUID) = Authenticated.async { req =>
+    usersDao.softDelete(req.user.id).map(s => Ok(Json.toJson(s)))
 	}
 
-  def put(userId: _root_.java.util.UUID) = AuthLoggingAction.async(parse.json[UserUpdateForm]) { implicit request =>
-    val userUpdateForm = request.body
+  def put(userId: _root_.java.util.UUID) = Authenticated.async(parse.json[UserUpdateForm]) { req =>
+    val userUpdateForm = req.body
     usersDao.getById(userId).flatMap { existingUser =>
       val updatedUser = existingUser.copy(
         sex = if (!userUpdateForm.sex.isDefined) existingUser.sex else Some(userUpdateForm.sex.get),

@@ -31,9 +31,7 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
 
   override def getByBoundingBox(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Future[Seq[Segment]] = {
    // @&& - intersection
-   // Once the release of slick-pg 0.15.0 is out, we can use lineFromEncodedPolyline(s.polyline)
-   //db.run(segments.filter(s => lineFromEncodedPolyline(s.polyline) @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326))).result)
-   db.run(segments.result)
+   db.run(segments.filter(s => lineFromEncodedPolyline(s.polyline) @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326))).result)
   }
 
   override def delete(id: UUID): Future[Unit] = {

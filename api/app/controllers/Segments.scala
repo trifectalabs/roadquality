@@ -10,13 +10,12 @@ import com.trifectalabs.roadquality.v0.models.json._
 import db.dao.SegmentsDao
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
-import util.actions.AuthLoggingAction
+import util.actions.Authenticated
 import services.SegmentService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentService, authLoggingAction:AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
-  import authLoggingAction._
+class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentService)(implicit ec: ExecutionContext) extends Controller {
   implicit def formErrorFormat = Json.writes[FormError]
 
   def get(segment_id: Option[UUID]) = Action.async {
@@ -35,18 +34,17 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
       }).getOrElse(Future(BadRequest))
 	}
 
-  def post() = AuthLoggingAction.async(parse.json[SegmentCreateForm]) { implicit request =>
-    val segForm = request.body
-    val userId = request.queryString("userId").head
+  def post() = Authenticated.async(parse.json[SegmentCreateForm]) { req =>
+    val segForm = req.body
 
     FormValidator.validateSegmentCreateForm(segForm) match {
-      case Nil => segmentService.createSegment(segForm, UUID.fromString(userId)).map(s => Created(Json.toJson(s)))
+      case Nil => segmentService.createSegment(segForm, req.user.id).map(s => Created(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
 	}
 
-  def put(segmentId: UUID) = AuthLoggingAction.async(parse.json[SegmentUpdateForm]) { implicit request =>
-    val segmentUpdateForm = request.body
+  def put(segmentId: UUID) = Authenticated.async(parse.json[SegmentUpdateForm]) { req =>
+    val segmentUpdateForm = req.body
     FormValidator.validateSegmentUpdateForm(segmentUpdateForm) match {
       case Nil =>
         segmentsDao.getById(segmentId).flatMap { existingSegment =>

@@ -2,7 +2,6 @@ package util.actions
 
 import javax.inject.Inject
 
-import org.slf4j.LoggerFactory
 import play.api.mvc._
 import play.api.mvc.Results._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -54,7 +53,11 @@ object Authenticated extends ActionBuilder[AuthenticatedRequest] {
 
       case Some(user) => {
         try {
-          block(new AuthenticatedRequest(user, request))
+          block {
+            val r = new AuthenticatedRequest(user, request)
+            r.requireAdmin
+            r
+          }
         } catch {
           case e: UnauthenticatedException => Future(Unauthorized(e.msg))
           case e: UnauthorizedException => Future(Forbidden(e.msg))

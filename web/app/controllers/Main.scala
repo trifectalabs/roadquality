@@ -10,12 +10,11 @@ import scala.concurrent.{ ExecutionContext, Future }
 import db.dao.UsersDao
 import com.trifectalabs.roadquality.v0.models.json._
 
-import util.actions.AuthLoggingAction
+import util.actions.Authenticated
 import util.OAuth2
 import util.JwtUtil
 
-class Main @Inject() (jwtUtil: JwtUtil, authLoggingAction: AuthLoggingAction)(implicit ec: ExecutionContext) extends Controller {
-  import authLoggingAction._
+class Main @Inject() (jwtUtil: JwtUtil)(implicit ec: ExecutionContext) extends Controller {
 
   def app(tokenOpt: Option[String]) = Action { request =>
     tokenOpt flatMap { token =>
