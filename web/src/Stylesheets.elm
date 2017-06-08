@@ -16,6 +16,7 @@ fileStructure =
         [ ( "../../stylesheets/main.css"
           , Css.File.compile
                 [ generalCss
+                , globalCss
                 , frameCss
                 , loginCss
                 , errorCss
@@ -29,6 +30,11 @@ fileStructure =
 main : CssCompilerProgram
 main =
     Css.File.compiler files fileStructure
+
+
+globalNamespace : Namespace String class id msg
+globalNamespace =
+    withNamespace "global"
 
 
 mapNamespace : Namespace String class id msg
@@ -58,7 +64,7 @@ accountNamespace =
 
 type CssIds
     = MainView
-    | TrifectaAffiliate
+    | AddRatingButton
     | SaveRatingControl
     | NameInput
     | DescriptionInput
@@ -69,12 +75,18 @@ type CssIds
     | Content
 
 
-type
-    CssClasses
-    -- Map Menu Classes
-    = DrawingSegment
-    | MenuInput
-    | DropInput
+type CssClasses
+    = PrimaryButton
+    | SecondaryButton
+    | Active
+    | Disabled
+      -- Map Menu Classes
+    | SurfaceRatingMenu
+    | TrafficRatingMenu
+    | SurfaceTypeMenu
+    | PathTypeMenu
+    | SegmentNameInput
+    | SegmentDescriptionInput
       -- Page Frame Classes
     | PageFrame
     | NavBar
@@ -82,7 +94,6 @@ type
     | Nav
     | NavItem
     | NavLink
-    | Active
     | LogoFont
     | Attribution
       -- Auth Form Classes
@@ -98,12 +109,184 @@ type
     | GoToAccount
 
 
+rgbElectricBlue : Color
+rgbElectricBlue =
+    rgb 2 75 141
+
+
+rgbPacificBlue : Color
+rgbPacificBlue =
+    rgb 33 157 198
+
+
+rgbLightBlue : Color
+rgbLightBlue =
+    rgb 152 210 235
+
+
+rgbBlack : Color
+rgbBlack =
+    rgb 34 34 34
+
+
+rgbDarkGray : Color
+rgbDarkGray =
+    rgb 102 102 102
+
+
+rgbGray : Color
+rgbGray =
+    rgb 170 170 170
+
+
+rgbLightGray : Color
+rgbLightGray =
+    rgb 204 204 204
+
+
+rgbWhite : Color
+rgbWhite =
+    rgb 255 255 255
+
+
+rgbOne : Color
+rgbOne =
+    rgb 110 32 32
+
+
+rgbTwo : Color
+rgbTwo =
+    rgb 227 59 59
+
+
+rgbThree : Color
+rgbThree =
+    rgb 255 166 0
+
+
+rgbFour : Color
+rgbFour =
+    rgb 255 250 94
+
+
+rgbFive : Color
+rgbFive =
+    rgb 48 219 60
+
+
+lighter : Color -> Color
+lighter { red, green, blue } =
+    rgb
+        (min 255 <| red + 20)
+        (min 255 <| green + 20)
+        (min 255 <| blue + 20)
+
+
+darker : Color -> Color
+darker { red, green, blue } =
+    rgb
+        (max 0 <| red - 20)
+        (max 0 <| green - 20)
+        (max 0 <| blue - 20)
+
+
+addAlpha : Float -> Color -> Color
+addAlpha alpha { red, green, blue } =
+    rgba red green blue alpha
+
+
 generalCss : Stylesheet
 generalCss =
     stylesheet
         [ body
             [ margin zero
             , fontFamilies [ "Lato", "Arial", "Sans-serif" ]
+            ]
+        , class "fa"
+            [ withClass "fa-times"
+                [ fontSize (px 24)
+                , position absolute
+                , top (px 15)
+                , left (px 15)
+                , width (px 22)
+                , lineHeight (px 21)
+                , padding (px 5)
+                , textAlign center
+                , cursor pointer
+                , hover
+                    [ borderRadius (pct 50)
+                    , backgroundColor <| addAlpha 0.5 rgbWhite
+                    , color rgbDarkGray
+                    ]
+                ]
+            , withClass "fa-arrow-right"
+                [ position absolute
+                , top (px 15)
+                , right (px 15)
+                , borderRadius (pct 50)
+                , fontSize (px 20)
+                , lineHeight (px 21)
+                , width (px 21)
+                , padding (px 5)
+                , textAlign center
+                ]
+            , withClass "fa-check"
+                [ position absolute
+                , top (px 15)
+                , right (px 15)
+                , borderRadius (pct 50)
+                , fontSize (px 20)
+                , lineHeight (px 21)
+                , width (px 21)
+                , padding (px 5)
+                , textAlign center
+                ]
+            , withClass "fa-arrow-left"
+                [ position absolute
+                , top (px 15)
+                , right (px 50)
+                , borderRadius (pct 50)
+                , fontSize (px 20)
+                , lineHeight (px 21)
+                , width (px 21)
+                , padding (px 5)
+                , textAlign center
+                , cursor pointer
+                , hover
+                    [ borderRadius (pct 50)
+                    , backgroundColor <| addAlpha 0.5 rgbWhite
+                    , color rgbDarkGray
+                    ]
+                ]
+            ]
+        ]
+
+
+globalCss : Stylesheet
+globalCss =
+    (stylesheet << namespace globalNamespace.name)
+        [ class PrimaryButton
+            [ padding2 (px 10) (px 20)
+            , border zero
+            , borderRadius (px 3)
+            , backgroundColor rgbElectricBlue
+            , color rgbWhite
+            , boxShadow4 zero (px 1) (px 2) rgbDarkGray
+            , cursor pointer
+            , hover
+                [ backgroundColor <| lighter rgbElectricBlue ]
+            ]
+        , class SecondaryButton
+            [ padding2 (px 10) (px 20)
+            , border3 (px 1) solid rgbGray
+            , borderRadius (px 3)
+            , backgroundColor rgbWhite
+            , color rgbGray
+            , cursor pointer
+            , hover
+                [ borderColor <| darker rgbGray
+                , color <| darker rgbGray
+                ]
             ]
         ]
 
@@ -266,108 +449,209 @@ mapCss =
             , width (vw 100)
             , zIndex (int 0)
             ]
-        , id TrifectaAffiliate
-            [ position fixed
-            , bottom (px -5)
-            , property "left" "calc(50% - 75px)"
-            , width (px 150)
-            , textAlign center
-            , children
-                [ a
-                    [ textDecoration none
-                    , children
-                        [ img
-                            [ height (px 35)
-                            ]
-                        , span
-                            [ height (px 24)
-                            , fontWeight (int 700)
-                            , verticalAlign top
-                            , lineHeight (px 35)
-                            , marginLeft (px 5)
-                            , color (rgb 0 0 0)
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        , id SaveRatingControl
+        , id AddRatingButton
             [ position absolute
             , top (px 10)
             , left (px 10)
-            , width (px 375)
-            , height (px 50)
+            ]
+        , id SaveRatingControl
+            [ position absolute
+            , top zero
+            , width (px 400)
+            , height (pct 100)
             , backgroundColor (rgb 255 255 255)
-            , zIndex (int 1)
-            , borderRadius (px 2)
-            , boxShadow4 zero (px 2) (px 4) (rgba 0 0 0 0.2)
-            , boxSizing borderBox
-            , textAlign center
-            , property "transition" "height 1s"
-            , withClass DrawingSegment
-                [ height (px 275)
-                , overflow hidden
-                ]
+            , boxShadow4 (px 1) zero (px 5) rgbDarkGray
             , children
                 [ div
-                    [ height (px 20)
-                    , borderBottom3 (px 1) solid (rgb 200 200 200)
-                    , padding (px 15)
-                    , backgroundColor (rgb 255 255 255)
-                    ]
-                , button
-                    [ marginTop (px 10)
-                    , borderRadius (px 2)
-                    , padding2 (px 5) (px 10)
-                    , marginRight (px 10)
-                    , fontSize (px 16)
-                    , border3 (px 1) solid (rgb 200 200 200)
-                    , backgroundColor (rgb 255 255 255)
-                    , focus [ outline none ]
-                    , hover [ backgroundColor (rgb 235 235 235) ]
-                    , active [ backgroundColor (rgb 215 215 215) ]
-                    ]
-                , label
-                    [ display inlineBlock
-                    , width (px 91)
-                    , textAlign right
-                    , padding4 (px 15) (px 10) zero zero
-                    , verticalAlign top
-                    ]
-                , textarea
-                    [ resize none
-                    , withClass MenuInput
-                        [ padding (px 5)
-                        , height (px 75)
+                    [ firstChild
+                        [ backgroundColor rgbLightBlue
+                        , color rgbWhite
+                        , padding (px 15)
                         ]
                     ]
-                , class MenuInput
-                    [ height (px 30)
-                    , fontSize (px 16)
-                    , width (px 200)
-                    , display inlineBlock
-                    , marginTop (px 10)
-                    , padding2 zero (px 5)
-                    , borderRadius (px 2)
-                    , border3 (px 1) solid (rgb 200 200 200)
-                    , focus [ outline none ]
+                ]
+            , descendants
+                [ h2
+                    [ width (pct 100)
+                    , textAlign center
+                    , marginTop (px 5)
+                    , fontSize (px 18)
+                    , fontWeight (int 400)
                     ]
-                , class DropInput
-                    [ backgroundColor (hex "fafafa")
-                    , backgroundImage (url "/assets/img/down.png")
-                    , backgroundRepeat noRepeat
-                    , backgroundPosition2 (pct 90) (pct 50)
+                , h3
+                    [ width (pct 100)
+                    , textAlign center
+                    , marginTop (px 35)
+                    , fontSize (px 18)
+                    , fontWeight (int 400)
+                    ]
+                , class Disabled
+                    [ backgroundColor rgbLightGray
+                    , color rgbGray
+                    , cursor pointer
+                    ]
+                , class SurfaceRatingMenu
+                    [ width (px 300)
+                    , margin4 (px 40) auto (px 20) auto
                     , children
-                        [ select
-                            [ width (pct 100)
-                            , border zero
-                            , boxShadow none
-                            , backgroundColor transparent
-                            , backgroundImage <| url ""
-                            , property "-webkit-appearance" "none"
-                            , padding2 (px 5) (px 8)
+                        [ div
+                            [ property "display" "inline-flex"
+                            , width (px 46)
+                            , height (px 46)
+                            , borderRadius (px 3)
+                            , alignItems center
+                            , justifyContent center
+                            , margin2 zero (px 5)
+                            , cursor pointer
+                            , border3 (px 2) solid transparent
+                            , withClass Active [ border3 (px 2) solid rgbWhite ]
+                            , nthChild "1"
+                                [ backgroundColor rgbOne
+                                , hover [ backgroundColor <| darker rgbOne ]
+                                ]
+                            , nthChild "2"
+                                [ backgroundColor rgbTwo
+                                , hover [ backgroundColor <| darker rgbTwo ]
+                                ]
+                            , nthChild "3"
+                                [ backgroundColor rgbThree
+                                , hover [ backgroundColor <| darker rgbThree ]
+                                ]
+                            , nthChild "4"
+                                [ backgroundColor rgbFour
+                                , hover [ backgroundColor <| darker rgbFour ]
+                                ]
+                            , nthChild "5"
+                                [ backgroundColor rgbFive
+                                , hover [ backgroundColor <| darker rgbFive ]
+                                ]
+                            ]
+                        ]
+                    ]
+                , class TrafficRatingMenu
+                    [ width (px 300)
+                    , margin4 (px 40) auto (px 20) auto
+                    , children
+                        [ div
+                            [ property "display" "inline-flex"
+                            , width (px 46)
+                            , height (px 46)
+                            , borderRadius (px 3)
+                            , alignItems center
+                            , justifyContent center
+                            , margin2 zero (px 5)
+                            , cursor pointer
+                            , border3 (px 2) solid transparent
+                            , withClass Active [ border3 (px 2) solid rgbWhite ]
+                            , nthChild "1"
+                                [ backgroundColor rgbOne
+                                , hover [ backgroundColor <| darker rgbOne ]
+                                ]
+                            , nthChild "2"
+                                [ backgroundColor rgbTwo
+                                , hover [ backgroundColor <| darker rgbTwo ]
+                                ]
+                            , nthChild "3"
+                                [ backgroundColor rgbThree
+                                , hover [ backgroundColor <| darker rgbThree ]
+                                ]
+                            , nthChild "4"
+                                [ backgroundColor rgbFour
+                                , hover [ backgroundColor <| darker rgbFour ]
+                                ]
+                            , nthChild "5"
+                                [ backgroundColor rgbFive
+                                , hover [ backgroundColor <| darker rgbFive ]
+                                ]
+                            ]
+                        ]
+                    ]
+                , class SurfaceTypeMenu
+                    [ width (px 300)
+                    , margin2 zero auto
+                    , children
+                        [ h4
+                            [ textAlign center
                             , fontSize (px 16)
-                            , focus [ outline none ]
+                            , fontWeight (int 400)
+                            , margin zero
+                            ]
+                        , div
+                            [ property "display" "inline-flex"
+                            , width (px 126)
+                            , height (px 40)
+                            , borderRadius (px 3)
+                            , alignItems center
+                            , justifyContent center
+                            , margin (px 10)
+                            , cursor pointer
+                            , border3 (px 2) solid transparent
+                            , backgroundColor rgbElectricBlue
+                            , withClass Active [ border3 (px 2) solid rgbWhite ]
+                            , hover
+                                [ backgroundColor <| lighter rgbElectricBlue ]
+                            ]
+                        ]
+                    ]
+                , class PathTypeMenu
+                    [ width (px 300)
+                    , margin2 zero auto
+                    , children
+                        [ h4
+                            [ textAlign center
+                            , fontSize (px 16)
+                            , fontWeight (int 400)
+                            , margin4 (px 10) zero zero zero
+                            ]
+                        , div
+                            [ property "display" "inline-flex"
+                            , width (px 126)
+                            , height (px 40)
+                            , borderRadius (px 3)
+                            , alignItems center
+                            , justifyContent center
+                            , margin (px 10)
+                            , cursor pointer
+                            , border3 (px 2) solid transparent
+                            , backgroundColor rgbElectricBlue
+                            , withClass Active [ border3 (px 2) solid rgbWhite ]
+                            , hover
+                                [ backgroundColor <| lighter rgbElectricBlue ]
+                            ]
+                        ]
+                    ]
+                , class SegmentNameInput
+                    [ marginBottom (px 10)
+                    , children
+                        [ span
+                            [ display inlineBlock
+                            , marginRight (px 10)
+                            , verticalAlign middle
+                            ]
+                        , input
+                            [ padding (px 5)
+                            , borderRadius (px 3)
+                            , border3 (px 1) solid rgbGray
+                            , focus [ borderColor rgbDarkGray ]
+                            , width (px 306)
+                            ]
+                        ]
+                    ]
+                , class SegmentDescriptionInput
+                    [ children
+                        [ span
+                            [ display inlineBlock
+                            , marginBottom (px 2)
+                            ]
+                        , textarea
+                            [ width (pct 100)
+                            , height (px 100)
+                            , boxSizing borderBox
+                            , resize none
+                            , padding (px 5)
+                            , borderRadius (px 3)
+                            , border3 (px 1) solid rgbGray
+                            , focus [ borderColor rgbDarkGray ]
                             ]
                         ]
                     ]

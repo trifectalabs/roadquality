@@ -7,3 +7,4 @@ web/public/javascripts/main.js
 web/public/stylesheets/main.css
 .ensime
 .ensime_cache/
+.vscode/
