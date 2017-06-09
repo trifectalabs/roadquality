@@ -8,6 +8,7 @@ import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.MyPostgresDriver
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
+import models.Exceptions._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,6 +28,8 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
     println(strSql)
     val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});""".as[MapRouteResult]
     db.run(sql).map { mapRouteResultList =>
+      if (mapRouteResultList.size == 0)
+        throw new NoRouteFoundException
       val sortedResultList: List[List[LatLng]] = mapRouteResultList.toList.sortBy(m => m.seq).map(d => lineString2Pts(d.geom))
 
       val startPointOnLine = closest(
