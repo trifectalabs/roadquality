@@ -21,87 +21,71 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
   implicit val mapRouteResult = GetResult(r => MapRouteResult(r.nextInt(), r.nextGeometry(), r.nextDouble()))
 
   case class MapRouteResult(seq: Integer, geom: Geometry, distance: Double)
-  case class MapPolyline(points: List[LatLng], distance: Double)
-
-  val MAX_SEGMENT_LENGTH = 3000
 
   override def route(startPoint: Point, endPoint: Point): Future[MapRoute] = {
     val strSql = s"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});"""
     println(strSql)
     val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});""".as[MapRouteResult]
     db.run(sql).map { mapRouteResultList =>
-      val sortedResultList: List[MapPolyline] = mapRouteResultList.toList
-        .sortBy(m => m.seq)
-        .map(d => MapPolyline(lineString2Pts(d.geom), d.distance))
+      val sortedResultList: List[List[LatLng]] = mapRouteResultList.toList.sortBy(m => m.seq).map(d => lineString2Pts(d.geom))
 
       val startPointOnLine = closest(
-        sortedResultList.head.points.map(l => new Coordinate(l.lng, l.lat)),
+        sortedResultList.head.map(l => new Coordinate(l.lng, l.lat)),
         new Coordinate(startPoint.lng, startPoint.lat)).getOrElse(new Coordinate(0,0))
       val endPointOnLine = closest(
-        sortedResultList.last.points.map(l => new Coordinate(l.lng, l.lat)),
+        sortedResultList.last.map(l => new Coordinate(l.lng, l.lat)),
         new Coordinate(endPoint.lng, endPoint.lat)).getOrElse(new Coordinate(0,0))
 
       // Handle base case - routing on same edge
-      val fixedPoints: List[MapPolyline] = if (sortedResultList.size == 1) {
+      val fixedPoints = if (sortedResultList.size == 1) {
         val edge = sortedResultList.head
-        val alignedEdge = if (edge.points.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)) >
-            edge.points.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x))) { edge.copy(points = edge.points.reverse) } else edge
-        alignedEdge.points.size match {
-          case 2 => List(sortedResultList.head.copy(points = List(LatLng(startPoint.lat,startPoint.lng), LatLng(endPoint.lat, endPoint.lng))))
+        val alignedEdge = if (edge.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)) >
+            edge.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x))) { edge.reverse } else edge
+        alignedEdge.size match {
+          case 2 => List(LatLng(startPoint.lat,startPoint.lng), LatLng(endPoint.lat, endPoint.lng))
           case size => {
-            val startTrimmed = alignedEdge.copy(points = alignedEdge.points
-              .splitAt(alignedEdge.points.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)))._2
-              .updated(0, LatLng(startPoint.lat, startPoint.lng)))
-            val endTrimmed = startTrimmed.copy(points = startTrimmed.points.splitAt(startTrimmed.points.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x)) + 1)._1)
-            List(endTrimmed.copy(points = endTrimmed.points.updated(endTrimmed.points.size-1, LatLng(endPoint.lat, endPoint.lng))))
+            val startTrimmed = alignedEdge
+              .splitAt(alignedEdge.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)))._2
+              .updated(0, LatLng(startPoint.lat, startPoint.lng))
+            val endTrimmed = startTrimmed.splitAt(startTrimmed.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x)) + 1)._1
+            endTrimmed.updated(endTrimmed.size-1, LatLng(endPoint.lat, endPoint.lng))
           }
         }
       } else {
-        val fixedStart: List[MapPolyline] = {
-            val ordered: MapPolyline = if (sortedResultList.head.points.head == sortedResultList(1).points.head
-             || sortedResultList.head.points.head == sortedResultList(1).points.last) {
-              sortedResultList.head.copy(points = sortedResultList.head.points.reverse)
+        val fixedStart: List[List[LatLng]] = {
+            val ordered = if (sortedResultList.head.head == sortedResultList(1).head
+             || sortedResultList.head.head == sortedResultList(1).last) {
+              sortedResultList.head.reverse
             } else sortedResultList.head
-            val updatedStart: MapPolyline = ordered.points.size match {
-              case 2 => ordered.copy(points = List(LatLng(startPoint.lat, startPoint.lng), ordered.points.last))
-              case size => ordered.copy(points = ordered.points
-                .splitAt(ordered.points.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)))._2
-                .updated(0, LatLng(startPoint.lat, startPoint.lng)))
+            val updatedStart = ordered.size match {
+              case 2 => List(LatLng(startPoint.lat, startPoint.lng), ordered.last)
+              case size => ordered
+                .splitAt(ordered.indexWhere(_ == LatLng(startPointOnLine.y,startPointOnLine.x)))._2
+                .updated(0, LatLng(startPoint.lat, startPoint.lng))
             }
             updatedStart +: sortedResultList.tail
           }
 
-        val fixedMiddle: List[MapPolyline] = fixedStart.tail.init.foldLeft((List[MapPolyline](fixedStart.head), false)) { (acc, edge) =>
-          // Accumulator is the list of adjusted MapPolylines. Also has a 'stop' flag used to stop processing
-          // edges if we hit the max segment length
-          if (acc._1.map(_.distance).sum + edge.distance >= MAX_SEGMENT_LENGTH || acc._2 == true) {
-            (acc._1, true)
-          }
-          else {
-            (acc._1 :+ (if (acc._1.last.points.last != edge.points.head) { edge.copy(points = edge.points.reverse) } else edge), false)
-          }
-        }._1
-
-        val fixedEnd: List[MapPolyline] = {
-          if (fixedMiddle.last != fixedStart.init.last) { fixedMiddle }
-          else {
-            val pts = sortedResultList.last
-            val ordered = if (fixedMiddle.last.points.last != pts.points.head) { pts.copy(points = pts.points.reverse) } else pts
-            ordered.points.size match {
-              case 1 => fixedMiddle :+ MapPolyline(List(LatLng(endPoint.lat, endPoint.lng)), 0)
-              case 2 => fixedMiddle :+ MapPolyline(List(ordered.points.head, LatLng(endPoint.lat, endPoint.lng)), ordered.distance)
-              case size => {
-                val trimmed = ordered.copy(points = ordered.points.splitAt(ordered.points.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x)) + 1)._1)
-                fixedMiddle :+ trimmed.copy(points = trimmed.points.updated(trimmed.points.size-1, LatLng(endPoint.lat, endPoint.lng)))
-              }
+        val fixedMiddle: List[List[LatLng]] = fixedStart.tail.init.foldLeft(List[List[LatLng]](fixedStart.head)) { (acc, edge) =>
+          acc :+ (if (acc.last.last != edge.head) { edge.reverse } else edge)
+        }
+        val fixedEnd: List[List[LatLng]] = {
+          val pts = sortedResultList.last
+          val ordered = if (fixedMiddle.last.last != pts.head) { pts.reverse } else pts
+          ordered.size match {
+            case 1 => fixedMiddle :+ List(LatLng(endPoint.lat, endPoint.lng))
+            case 2 => fixedMiddle :+ List(ordered.head, LatLng(endPoint.lat, endPoint.lng))
+            case size => {
+              val trimmed = ordered.splitAt(ordered.indexWhere(_ == LatLng(endPointOnLine.y,endPointOnLine.x)) + 1)._1
+              fixedMiddle :+ trimmed.updated(trimmed.size-1, LatLng(endPoint.lat, endPoint.lng))
             }
           }
         }
-        fixedEnd
+        fixedEnd.flatten
       }
 
-      val pl = Polyline.encode(fixedPoints.flatMap(_.points))
-      val distance = fixedPoints.map(_.distance).sum
+      val pl = Polyline.encode(fixedPoints)
+      val distance = mapRouteResultList.toList.map(_.distance).sum
       MapRoute(pl, distance)
     }
   }
