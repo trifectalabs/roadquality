@@ -38,12 +38,13 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
     db.run(segments.filter(_.id === id).delete.map(_ => ()))
   }
 
-  override def create(id: UUID, segmentForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
+  override def create(id: UUID, name: Option[String], description: Option[String],
+    polyline: String, userId: UUID): Future[Segment] = {
     val segment = Segment(
       id = id,
-      name = segmentForm.name,
-      description = segmentForm.description,
-      polyline = segmentForm.polyline,
+      name = name,
+      description = description,
+      polyline = polyline,
       createdBy = userId)
 
     db.run((segments += segment).map(_ => segment))

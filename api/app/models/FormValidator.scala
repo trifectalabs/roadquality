@@ -5,10 +5,12 @@ import com.trifectalabs.polyline.Polyline
 
 object FormValidator {
   def validateSegmentCreateForm(segForm: SegmentCreateForm): Seq[FormError] = {
-    { Polyline.decode(segForm.polyline).map { p =>
-        if (p.lat > 180 || p.lat < -180 || p.lng > 180 || p.lng < -180) Some(FormError(s"$p out of bounds"))
-        else None
-      } :+
+  { segForm.polylines.flatMap { polyline =>
+      Polyline.decode(polyline).map { p =>
+          if (p.lat > 180 || p.lat < -180 || p.lng > 180 || p.lng < -180) Some(FormError(s"$p out of bounds"))
+          else None
+      }
+    } :+
       (if (segForm.surfaceRating > 5 || segForm.surfaceRating < 0) Some(FormError(s"Surface Rating > 5 or < 0")) else None) :+
       (if (segForm.trafficRating > 5 || segForm.trafficRating < 0) Some(FormError(s"Traffic Rating > 5 or < 0")) else None)
     }.flatten

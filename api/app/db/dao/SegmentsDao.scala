@@ -11,6 +11,6 @@ trait SegmentsDao {
   def getById(id: UUID): Future[Segment]
   def getByBoundingBox(tr: Double, tl: Double, br: Double, bl: Double): Future[Seq[Segment]]
   def delete(id: UUID): Future[Unit]
-  def create(id:UUID, segmentForm: SegmentCreateForm, userId: UUID): Future[Segment]
+  def create(id: UUID, name: Option[String], description: Option[String], polyline: String, userId: UUID): Future[Segment]
   def update(segment: Segment): Future[Segment]
 }

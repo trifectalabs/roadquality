@@ -120,8 +120,8 @@
           "required": false
         },
         {
-          "name": "polyline",
-          "type" : "string"
+          "name": "polylines",
+          "type" : "[string]"
         },
         {
           "name": "surfaceRating",

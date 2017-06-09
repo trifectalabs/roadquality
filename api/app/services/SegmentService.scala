@@ -34,19 +34,21 @@ class SegmentServiceImpl @Inject()
 
   def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
     val segmentId = UUID.randomUUID()
-    val segmentPoints: Seq[Point] = Polyline.decode(segmentCreateForm.polyline).map(latLng2Point)
+    val polyline = joinPolylines(segmentCreateForm.polylines)
+    val segmentPoints: Seq[Point] = Polyline.decode(polyline).map(latLng2Point)
 
     val startSplitsFutOpt: Future[Option[MiniSegmentSplit]] =
 			miniSegmentsDao.miniSegmentSplitsFromPoint(segmentPoints.head, segmentPoints.tail.head)
     val endSplitsFutOpt: Future[Option[MiniSegmentSplit]] =
 			miniSegmentsDao.miniSegmentSplitsFromPoint(segmentPoints.last, segmentPoints.init.last)
-    val newOverlapMiniSegmentsFut = newOverlappingMiniSegments(segmentCreateForm.polyline, segmentId)
+    val newOverlapMiniSegmentsFut = newOverlappingMiniSegments(polyline, segmentId)
 
     (for {
       startSplitsOpt <- startSplitsFutOpt
       endSplitsOpt <- endSplitsFutOpt
 			existingMiniSegments <- newOverlapMiniSegmentsFut
-      segment <- segmentsDao.create(segmentId, segmentCreateForm, userId)
+      segment <- segmentsDao.create(segmentId, segmentCreateForm.name,
+        segmentCreateForm.description, polyline, userId)
       } yield {
         val savedMiniSegments: Future[Seq[MiniSegmentToSegment]] = {
           (startSplitsOpt, endSplitsOpt) match {
@@ -126,6 +128,14 @@ class SegmentServiceImpl @Inject()
         miniSegmentsDao.insert(newMiniSegment).map(p => Some(p))
       } else {
         Future(None)
+      }
+    }
+  }
+
+  def joinPolylines(polylines: Seq[String]): String = {
+    Polyline.encode {
+      polylines.foldLeft(List[LatLng]()) { (acc, polyline) =>
+        acc ++ Polyline.decode(polyline)
       }
     }
   }
