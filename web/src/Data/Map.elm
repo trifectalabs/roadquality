@@ -82,10 +82,8 @@ type alias Segment =
     { id : String
     , name : String
     , description : String
-    , start : Point
-    , end : Point
     , polyline : String
-    , rating : Float
+    , createdBy : String
     }
 
 
@@ -95,16 +93,14 @@ decodeSegment =
         |> required "id" Decode.string
         |> required "name" Decode.string
         |> required "description" Decode.string
-        |> required "start" decodePoint
-        |> required "end" decodePoint
         |> required "polyline" Decode.string
-        |> required "rating" Decode.float
+        |> required "created_by" Decode.string
 
 
 type alias CreateSegmentForm =
     { name : String
     , description : String
-    , polyline : String
+    , polylines : List String
     , surfaceRating : Int
     , trafficRating : Int
     , surface : SurfaceType
@@ -117,7 +113,7 @@ encodeCreateSegmentForm form =
     Encode.object
         [ "name" => Encode.string form.name
         , "description" => Encode.string form.description
-        , "polyline" => Encode.string form.polyline
+        , "polylines" => (Encode.list <| List.map Encode.string form.polylines)
         , "surfaceRating" => Encode.int form.surfaceRating
         , "trafficRating" => Encode.int form.trafficRating
         , "surface" => (Encode.string <| surfaceTypeToString form.surface)

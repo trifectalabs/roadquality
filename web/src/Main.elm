@@ -106,7 +106,7 @@ decodeUserFromJson json =
 initialPage : Maybe Route -> Page
 initialPage route =
     case route of
-        Just (Route.Home) ->
+        Just Route.Home ->
             Blank
 
         _ ->
@@ -233,9 +233,9 @@ setRoute maybeRoute model =
     in
         case maybeRoute of
             Nothing ->
-                { model | pageState = Loaded NotFound } => Cmd.none
+                { model | pageState = Loaded NotFound } => Ports.down ()
 
-            Just (Route.Login) ->
+            Just Route.Login ->
                 case model.session.user of
                     Just _ ->
                         let
@@ -251,9 +251,9 @@ setRoute maybeRoute model =
                             newModel => cmd
 
                     _ ->
-                        { model | pageState = Loaded (Login Login.initModel) } => Cmd.none
+                        { model | pageState = Loaded (Login Login.initModel) } => Ports.down ()
 
-            Just (Route.Logout) ->
+            Just Route.Logout ->
                 let
                     session =
                         model.session
@@ -264,7 +264,7 @@ setRoute maybeRoute model =
                             , Route.modifyUrl Route.Home
                             ]
 
-            Just (Route.Register) ->
+            Just Route.Register ->
                 case model.session.user of
                     Just _ ->
                         let
@@ -280,18 +280,18 @@ setRoute maybeRoute model =
                             newModel => cmd
 
                     _ ->
-                        { model | pageState = Loaded (Register Register.initModel) } => Cmd.none
+                        { model | pageState = Loaded (Register Register.initModel) } => Ports.down ()
 
-            Just (Route.Home) ->
+            Just Route.Home ->
                 transition HomeLoaded (Home.init model.session)
 
-            Just (Route.Account) ->
+            Just Route.Account ->
                 case model.session.user of
                     Just _ ->
-                        { model | pageState = Loaded (Account Account.initModel) } => Cmd.none
+                        { model | pageState = Loaded (Account Account.initModel) } => Ports.down ()
 
                     _ ->
-                        { model | pageState = Loaded (Login Login.initModel) } => Cmd.none
+                        { model | pageState = Loaded (Login Login.initModel) } => Ports.down ()
 
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )
@@ -330,7 +330,7 @@ updatePage page msg model =
 
             ( HomeLoaded (Ok subModel), _ ) ->
                 { model | pageState = Loaded (Home subModel) }
-                    => Ports.up (session.user /= Nothing)
+                    => Ports.up ()
 
             ( HomeLoaded (Err error), _ ) ->
                 { model | pageState = Loaded (Errored error) } => Cmd.none

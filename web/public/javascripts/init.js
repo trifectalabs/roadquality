@@ -1,10 +1,16 @@
 let myMap;
+let markerCount = 0;
 let markers = {};
-let polyline;
+let polylines = {};
 let icon = L.icon({
   iconUrl: '/assets/img/marker.png',
   iconSize: [10, 10],
   iconAnchor: [5, 5]
+});
+let startIcon = L.icon({
+  iconUrl: '/assets/img/start-marker.png',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8]
 });
 
 // STORE SESSION
@@ -23,6 +29,10 @@ window.addEventListener("storage", function(event) {
 app.ports.up.subscribe(function(authed) {
     // TODO: there must be a better way :(
     setTimeout(function() {
+        if (myMap) {
+            return;
+        }
+
         myMap = L.map("MainView", {
             center: [43.652684, -79.397991],
             zoom: 13,
@@ -34,24 +44,70 @@ app.ports.up.subscribe(function(authed) {
         }).addTo(myMap);
 
         L.control.zoom({position: "bottomright"}).addTo(myMap);
+
         createBounds();
-
-        function onMapClick(e) {
-            var marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable: true, icon: icon}).addTo(e.target);
-            app.ports.setAnchor.send([marker._leaflet_id, e.latlng.lat, e.latlng.lng]);
-            marker.on("dragend", onMarkerDrop);
-            markers[marker._leaflet_id] = marker;
-        }
-
-        if (authed) {
-            myMap.on("click", onMapClick);
-        }
     }, 100);
 });
 
+app.ports.routeCreate.subscribe(function() {
+    myMap.on("click", onMapClick);
+});
+
 function onMarkerDrop(e) {
-  app.ports.setAnchor.send([e.target._leaflet_id, e.target._latlng.lat, e.target._latlng.lng]);
+    app.ports.moveAnchor.send([e.target._leaflet_id, e.target._latlng.lat, e.target._latlng.lng]);
 }
+
+function markerPopup(marker) {
+    return "<span style='cursor: pointer' onClick='removeMarker(" + marker + ")'>Delete Point</span>";
+}
+
+function onMarkerRightClick(e) {
+    e.target.openPopup();
+}
+
+function removeMarker(marker) {
+    markers[marker].remove();
+    markerCount--;
+    app.ports.removeAnchor.send(marker);
+}
+
+function onMapClick(e) {
+    let maxDistX = window.innerWidth / 2;
+    let posX = Math.abs(e.originalEvent.x - maxDistX);
+    let panX = 0.6 * posX / maxDistX + 0.25;
+    let maxDistY = window.innerHeight / 2;
+    let posY = Math.abs(e.originalEvent.y - maxDistY);
+    let panY = 0.6 * posY / maxDistY + 0.25;
+    let panDuration = Math.max(panX, panY);
+
+    let marker;
+    if (markerCount == 0) {
+        marker = L.marker(
+            [e.latlng.lat, e.latlng.lng],
+            { draggable: true, icon: startIcon }
+        ).addTo(e.target);
+    } else {
+        marker = L.marker(
+            [e.latlng.lat, e.latlng.lng],
+            { draggable: true, icon: icon }
+        ).addTo(e.target);
+        marker.bindPopup(markerPopup(marker._leaflet_id));
+    }
+    marker.on("dragend", onMarkerDrop);
+    marker.on("contextmenu", onMarkerRightClick);
+    markers[marker._leaflet_id] = marker;
+    markerCount++;
+    myMap.panTo(e.latlng, {duration: panDuration});
+    app.ports.setAnchor.send([marker._leaflet_id, e.latlng.lat, e.latlng.lng]);
+}
+
+// DROP MAP
+app.ports.down.subscribe(function() {
+    if (myMap) {
+        myMap.remove();
+        myMap = null;
+    }
+});
 
 // SNAP ANCHOR
 app.ports.snapAnchor.subscribe(function(values) {
@@ -63,19 +119,25 @@ app.ports.snapAnchor.subscribe(function(values) {
 
 // PLOT ROUTE
 app.ports.displayRoute.subscribe(function(line) {
-    if (polyline) {
-        polyline.remove();
-    }
-    polyline = L.polyline(line, {color: 'red'});
+    polyline = L.polyline(line[1], {color: 'black', opacity: 0.5, weight: 5});
     polyline.addTo(myMap);
+    polylines[line[0]] = polyline;
+});
+
+app.ports.removeRoute.subscribe(function(route) {
+    polylines[route].remove();
 });
 
 // CLEAR ROUTE
 app.ports.clearRoute.subscribe(function() {
-  for (let key in markers) {
-    markers[key].remove();
-  }
-  polyline.remove();
+    myMap.removeEventListener("click", onMapClick);
+    for (let key in markers) {
+        markers[key].remove();
+    }
+    markerCount = 0;
+    for (let key in polylines) {
+        polylines[key].remove();
+    }
 });
 
 // ROUTING BOUNDS
