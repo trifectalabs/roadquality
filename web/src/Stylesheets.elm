@@ -81,6 +81,11 @@ type CssClasses
     | Active
     | Disabled
       -- Map Menu Classes
+    | ProgressBar
+    | NeedAnchorsControl
+    | AddRatingsControl
+    | AddTagsControl
+    | AddNameControl
     | SurfaceRatingMenu
     | TrafficRatingMenu
     | SurfaceTypeMenu
@@ -208,9 +213,9 @@ generalCss =
                 , position absolute
                 , top (px 15)
                 , left (px 15)
-                , width (px 22)
+                , width (px 23)
                 , lineHeight (px 21)
-                , padding (px 5)
+                , padding4 (px 5) (px 5) (px 7) (px 5)
                 , textAlign center
                 , cursor pointer
                 , hover
@@ -226,9 +231,10 @@ generalCss =
                 , borderRadius (pct 50)
                 , fontSize (px 20)
                 , lineHeight (px 21)
-                , width (px 21)
-                , padding (px 5)
+                , width (px 33)
+                , padding4 (px 5) (px 5) (px 7) (px 7)
                 , textAlign center
+                , boxSizing borderBox
                 ]
             , withClass "fa-check"
                 [ position absolute
@@ -236,21 +242,22 @@ generalCss =
                 , right (px 15)
                 , borderRadius (pct 50)
                 , fontSize (px 20)
-                , lineHeight (px 21)
-                , width (px 21)
+                , lineHeight (px 23)
+                , width (px 23)
                 , padding (px 5)
                 , textAlign center
                 ]
             , withClass "fa-arrow-left"
                 [ position absolute
                 , top (px 15)
-                , right (px 50)
+                , left (px 15)
                 , borderRadius (pct 50)
                 , fontSize (px 20)
                 , lineHeight (px 21)
-                , width (px 21)
-                , padding (px 5)
+                , width (px 33)
+                , padding4 (px 5) (px 7) (px 7) (px 5)
                 , textAlign center
+                , boxSizing borderBox
                 , cursor pointer
                 , hover
                     [ borderRadius (pct 50)
@@ -461,35 +468,59 @@ mapCss =
             , height (pct 100)
             , backgroundColor (rgb 255 255 255)
             , boxShadow4 (px 1) zero (px 5) rgbDarkGray
+            , overflow hidden
             , children
                 [ div
-                    [ firstChild
-                        [ backgroundColor rgbLightBlue
-                        , color rgbWhite
-                        , padding (px 15)
-                        ]
-                    ]
+                    [ backgroundColor rgbLightBlue ]
                 ]
             , descendants
                 [ h2
                     [ width (pct 100)
                     , textAlign center
-                    , marginTop (px 5)
+                    , marginBottom zero
                     , fontSize (px 18)
                     , fontWeight (int 400)
                     ]
-                , h3
-                    [ width (pct 100)
-                    , textAlign center
-                    , marginTop (px 35)
-                    , fontSize (px 18)
-                    , fontWeight (int 400)
+                , class ProgressBar
+                    [ border3 (px 1) solid rgbBlack
+                    , height (px 25)
+                    , width (px 200)
+                    , position absolute
+                    , top (px 18)
+                    , property "left" "calc(50% - 100px)"
+                    , children
+                        [ div
+                            [ height (pct 100)
+                            , width (px 33.3)
+                            , backgroundColor rgbElectricBlue
+                            ]
+                        ]
                     ]
                 , class Disabled
                     [ backgroundColor rgbLightGray
                     , color rgbGray
                     , cursor pointer
                     ]
+                , class NeedAnchorsControl
+                    [ padding3 (px 45) (px 15) (px 15)
+                    , boxSizing borderBox
+                    , children
+                        [ h3
+                            [ width (pct 100)
+                            , textAlign center
+                            , fontWeight (int 400)
+                            ]
+                        ]
+                    ]
+                , class AddRatingsControl
+                    [ padding3 (px 45) (px 15) (px 15)
+                    , boxSizing borderBox
+                    ]
+
+                -- , class AddTagsControl
+                --     [ height (px 375) ]
+                , class AddNameControl
+                    [ padding3 (px 45) (px 25) (px 25) ]
                 , class SurfaceRatingMenu
                     [ width (px 300)
                     , margin4 (px 40) auto (px 20) auto
@@ -501,27 +532,27 @@ mapCss =
                             , borderRadius (px 3)
                             , alignItems center
                             , justifyContent center
-                            , margin2 zero (px 5)
+                            , margin2 (px 10) (px 5)
                             , cursor pointer
                             , border3 (px 2) solid transparent
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , nthChild "1"
+                            , nthChild "2"
                                 [ backgroundColor rgbOne
                                 , hover [ backgroundColor <| darker rgbOne ]
                                 ]
-                            , nthChild "2"
+                            , nthChild "3"
                                 [ backgroundColor rgbTwo
                                 , hover [ backgroundColor <| darker rgbTwo ]
                                 ]
-                            , nthChild "3"
+                            , nthChild "4"
                                 [ backgroundColor rgbThree
                                 , hover [ backgroundColor <| darker rgbThree ]
                                 ]
-                            , nthChild "4"
+                            , nthChild "5"
                                 [ backgroundColor rgbFour
                                 , hover [ backgroundColor <| darker rgbFour ]
                                 ]
-                            , nthChild "5"
+                            , nthChild "6"
                                 [ backgroundColor rgbFive
                                 , hover [ backgroundColor <| darker rgbFive ]
                                 ]
@@ -530,7 +561,7 @@ mapCss =
                     ]
                 , class TrafficRatingMenu
                     [ width (px 300)
-                    , margin4 (px 40) auto (px 20) auto
+                    , margin2 zero auto
                     , children
                         [ div
                             [ property "display" "inline-flex"
@@ -539,89 +570,84 @@ mapCss =
                             , borderRadius (px 3)
                             , alignItems center
                             , justifyContent center
-                            , margin2 zero (px 5)
+                            , margin2 (px 10) (px 5)
                             , cursor pointer
                             , border3 (px 2) solid transparent
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , nthChild "1"
+                            , nthChild "2"
                                 [ backgroundColor rgbOne
                                 , hover [ backgroundColor <| darker rgbOne ]
                                 ]
-                            , nthChild "2"
+                            , nthChild "3"
                                 [ backgroundColor rgbTwo
                                 , hover [ backgroundColor <| darker rgbTwo ]
                                 ]
-                            , nthChild "3"
+                            , nthChild "4"
                                 [ backgroundColor rgbThree
                                 , hover [ backgroundColor <| darker rgbThree ]
                                 ]
-                            , nthChild "4"
+                            , nthChild "5"
                                 [ backgroundColor rgbFour
                                 , hover [ backgroundColor <| darker rgbFour ]
                                 ]
-                            , nthChild "5"
+                            , nthChild "6"
                                 [ backgroundColor rgbFive
                                 , hover [ backgroundColor <| darker rgbFive ]
                                 ]
                             ]
                         ]
                     ]
-                , class SurfaceTypeMenu
-                    [ width (px 300)
-                    , margin2 zero auto
-                    , children
-                        [ h4
-                            [ textAlign center
-                            , fontSize (px 16)
-                            , fontWeight (int 400)
-                            , margin zero
-                            ]
-                        , div
-                            [ property "display" "inline-flex"
-                            , width (px 126)
-                            , height (px 40)
-                            , borderRadius (px 3)
-                            , alignItems center
-                            , justifyContent center
-                            , margin (px 10)
-                            , cursor pointer
-                            , border3 (px 2) solid transparent
-                            , backgroundColor rgbElectricBlue
-                            , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , hover
-                                [ backgroundColor <| lighter rgbElectricBlue ]
-                            ]
-                        ]
-                    ]
-                , class PathTypeMenu
-                    [ width (px 300)
-                    , margin2 zero auto
-                    , children
-                        [ h4
-                            [ textAlign center
-                            , fontSize (px 16)
-                            , fontWeight (int 400)
-                            , margin4 (px 10) zero zero zero
-                            ]
-                        , div
-                            [ property "display" "inline-flex"
-                            , width (px 126)
-                            , height (px 40)
-                            , borderRadius (px 3)
-                            , alignItems center
-                            , justifyContent center
-                            , margin (px 10)
-                            , cursor pointer
-                            , border3 (px 2) solid transparent
-                            , backgroundColor rgbElectricBlue
-                            , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , hover
-                                [ backgroundColor <| lighter rgbElectricBlue ]
-                            ]
-                        ]
-                    ]
+
+                -- , class SurfaceTypeMenu
+                --     [ width (px 300)
+                --     , margin3 (px 50) auto zero
+                --     , children
+                --         [ div
+                --             [ property "display" "inline-flex"
+                --             , width (px 126)
+                --             , height (px 35)
+                --             , borderRadius (px 3)
+                --             , alignItems center
+                --             , justifyContent center
+                --             , margin (px 10)
+                --             , cursor pointer
+                --             , border3 (px 2) solid transparent
+                --             , backgroundColor rgbElectricBlue
+                --             , withClass Active [ border3 (px 2) solid rgbWhite ]
+                --             , hover
+                --                 [ backgroundColor <| lighter rgbElectricBlue ]
+                --             ]
+                --         ]
+                --     ]
+                -- , class PathTypeMenu
+                --     [ width (px 300)
+                --     , margin2 zero auto
+                --     , children
+                --         [ h4
+                --             [ textAlign center
+                --             , fontSize (px 16)
+                --             , fontWeight (int 400)
+                --             , margin4 (px 10) zero zero zero
+                --             ]
+                --         , div
+                --             [ property "display" "inline-flex"
+                --             , width (px 126)
+                --             , height (px 40)
+                --             , borderRadius (px 3)
+                --             , alignItems center
+                --             , justifyContent center
+                --             , margin (px 10)
+                --             , cursor pointer
+                --             , border3 (px 2) solid transparent
+                --             , backgroundColor rgbElectricBlue
+                --             , withClass Active [ border3 (px 2) solid rgbWhite ]
+                --             , hover
+                --                 [ backgroundColor <| lighter rgbElectricBlue ]
+                --             ]
+                --         ]
+                --     ]
                 , class SegmentNameInput
-                    [ marginBottom (px 10)
+                    [ margin3 (px 25) zero (px 10)
                     , children
                         [ span
                             [ display inlineBlock
@@ -633,7 +659,7 @@ mapCss =
                             , borderRadius (px 3)
                             , border3 (px 1) solid rgbGray
                             , focus [ borderColor rgbDarkGray ]
-                            , width (px 306)
+                            , width (px 286)
                             ]
                         ]
                     ]

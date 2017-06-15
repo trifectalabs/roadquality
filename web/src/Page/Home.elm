@@ -15,13 +15,12 @@ import Views.Page as Page
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Polyline
 import Html exposing (..)
-import Html.Attributes as Attr exposing (href, type_, value, target, placeholder, step, for, selected, src)
 import Html.Events exposing (onClick, onInput)
 import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClasses(..))
 import Html.CssHelpers exposing (Namespace)
-import Animation exposing (px)
 import Util exposing ((=>), pair)
 import Route
+import Page.Home.RatingsMenu as Menu
 
 
 -- MODEL --
@@ -29,7 +28,7 @@ import Route
 
 type alias Model =
     { errors : List String
-    , menu : Menu
+    , menu : Menu.Model
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
@@ -39,34 +38,6 @@ type alias Model =
 cycleRouteKey : String -> String -> String
 cycleRouteKey first second =
     first ++ "_" ++ second
-
-
-type MenuStep
-    = NotStarted
-    | NoAnchorsPlaced
-    | OneAnchorPlaced
-    | AddSurfaceRating
-    | AddTrafficRating
-    | AddTags
-    | AddName
-
-
-type alias Menu =
-    { step : MenuStep
-    , style : Animation.State
-    , name : String
-    , description : String
-    , surfaceRating : Maybe Int
-    , trafficRating : Maybe Int
-    , surface : Maybe SurfaceType
-    , pathType : Maybe PathType
-    }
-
-
-type alias Styles =
-    { open : List Animation.Property
-    , closed : List Animation.Property
-    }
 
 
 init : Session -> Task PageLoadError Model
@@ -90,32 +61,10 @@ init session =
 initModel : List Segment -> Model
 initModel segments =
     { errors = []
-    , menu = initMenu
+    , menu = Menu.initModel
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , segments = segments
-    }
-
-
-initMenu : Menu
-initMenu =
-    { step = NotStarted
-    , style = Animation.style styles.closed
-    , name = ""
-    , description = ""
-    , surfaceRating = Nothing
-    , trafficRating = Nothing
-    , surface = Just Asphalt
-    , pathType = Just Shared
-    }
-
-
-styles : Styles
-styles =
-    { open =
-        [ Animation.left (px 0.0) ]
-    , closed =
-        [ Animation.left (px -400.0) ]
     }
 
 
@@ -139,10 +88,10 @@ view session model =
         , div
             [ id AddRatingButton
             , g.class [ PrimaryButton ]
-            , onClick ShowMenu
+            , onClick <| MenuMsg Menu.ShowMenu
             ]
             [ text "Add Rating" ]
-        , ratingsInterface session model.menu <| List.length model.anchors.order
+        , Menu.view model.menu |> Html.map MenuMsg
         , accountView session
         ]
 
@@ -161,258 +110,13 @@ accountView session =
                 [ img [ UserPhoto.src user.photo, class [ GoToAccount ] ] [] ]
 
 
-ratingsInterface : Session -> Menu -> Int -> Html Msg
-ratingsInterface session menu anchorCount =
-    div (Animation.render menu.style ++ [ id SaveRatingControl ]) <|
-        case menu.step of
-            NotStarted ->
-                []
-
-            NoAnchorsPlaced ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , h3 [] [ text "Start by placing points on the map" ]
-                    ]
-                ]
-
-            OneAnchorPlaced ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , h3 [] [ text "Place more points to select a road" ]
-                    ]
-                ]
-
-            AddSurfaceRating ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , span
-                        [ g.class [ PrimaryButton ]
-                        , Attr.class "fa fa-arrow-right"
-                        , case menu.surfaceRating of
-                            Nothing ->
-                                class [ Disabled ]
-
-                            Just _ ->
-                                onClick <| SetMenuStep AddTrafficRating
-                        ]
-                        []
-                    , h2 [] [ text "Surface Rating" ]
-                    , div
-                        [ class [ SurfaceRatingMenu ] ]
-                        [ div
-                            [ onClick <| ChangeSurfaceRating <| Just 1
-                            , classList
-                                [ ( Active, menu.surfaceRating == Just 1 ) ]
-                            ]
-                            [ text "1" ]
-                        , div
-                            [ onClick <| ChangeSurfaceRating <| Just 2
-                            , classList
-                                [ ( Active, menu.surfaceRating == Just 2 ) ]
-                            ]
-                            [ text "2" ]
-                        , div
-                            [ onClick <| ChangeSurfaceRating <| Just 3
-                            , classList
-                                [ ( Active, menu.surfaceRating == Just 3 ) ]
-                            ]
-                            [ text "3" ]
-                        , div
-                            [ onClick <| ChangeSurfaceRating <| Just 4
-                            , classList
-                                [ ( Active, menu.surfaceRating == Just 4 ) ]
-                            ]
-                            [ text "4" ]
-                        , div
-                            [ onClick <| ChangeSurfaceRating <| Just 5
-                            , classList
-                                [ ( Active, menu.surfaceRating == Just 5 ) ]
-                            ]
-                            [ text "5" ]
-                        ]
-                    ]
-
-                -- TODO: Add info about surface ratings
-                ]
-
-            AddTrafficRating ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , div
-                        [ Attr.class "fa fa-arrow-left"
-                        , onClick <| SetMenuStep AddSurfaceRating
-                        ]
-                        []
-                    , span
-                        [ g.class [ PrimaryButton ]
-                        , Attr.class "fa fa-arrow-right"
-                        , case menu.trafficRating of
-                            Nothing ->
-                                class [ Disabled ]
-
-                            Just _ ->
-                                onClick <| SetMenuStep AddTags
-                        ]
-                        []
-                    , h2 [] [ text "Traffic Rating" ]
-                    , div
-                        [ class [ TrafficRatingMenu ] ]
-                        [ div
-                            [ onClick <| ChangeTrafficRating <| Just 1
-                            , classList
-                                [ ( Active, menu.trafficRating == Just 1 ) ]
-                            ]
-                            [ text "1" ]
-                        , div
-                            [ onClick <| ChangeTrafficRating <| Just 2
-                            , classList
-                                [ ( Active, menu.trafficRating == Just 2 ) ]
-                            ]
-                            [ text "2" ]
-                        , div
-                            [ onClick <| ChangeTrafficRating <| Just 3
-                            , classList
-                                [ ( Active, menu.trafficRating == Just 3 ) ]
-                            ]
-                            [ text "3" ]
-                        , div
-                            [ onClick <| ChangeTrafficRating <| Just 4
-                            , classList
-                                [ ( Active, menu.trafficRating == Just 4 ) ]
-                            ]
-                            [ text "4" ]
-                        , div
-                            [ onClick <| ChangeTrafficRating <| Just 5
-                            , classList
-                                [ ( Active, menu.trafficRating == Just 5 ) ]
-                            ]
-                            [ text "5" ]
-                        ]
-                    ]
-
-                -- TODO: Add info about traffic ratings
-                ]
-
-            AddTags ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , div
-                        [ Attr.class "fa fa-arrow-left"
-                        , onClick <| SetMenuStep AddTrafficRating
-                        ]
-                        []
-                    , span
-                        [ g.class [ PrimaryButton ]
-                        , Attr.class "fa fa-arrow-right"
-                        , onClick <| SetMenuStep AddName
-                        ]
-                        []
-                    , h2 [] [ text "Road Info" ]
-                    , div
-                        [ class [ SurfaceTypeMenu ] ]
-                        [ h4 [] [ text "Surface Type" ]
-                        , div
-                            [ onClick <| ChangeSurfaceType <| Just Asphalt
-                            , classList
-                                [ ( Active, menu.surface == Just Asphalt ) ]
-                            ]
-                            [ text "Asphalt" ]
-                        , div
-                            [ onClick <| ChangeSurfaceType <| Just Gravel
-                            , classList
-                                [ ( Active, menu.surface == Just Gravel ) ]
-                            ]
-                            [ text "Gravel" ]
-                        , div
-                            [ onClick <| ChangeSurfaceType <| Just Dirt
-                            , classList
-                                [ ( Active, menu.surface == Just Dirt ) ]
-                            ]
-                            [ text "Dirt" ]
-                        , div
-                            [ onClick <| ChangeSurfaceType Nothing
-                            , classList
-                                [ ( Active, menu.surface == Nothing ) ]
-                            ]
-                            [ text "Unknown" ]
-                        ]
-                    , div
-                        [ class [ PathTypeMenu ] ]
-                        [ h4 [] [ text "Path Type" ]
-                        , div
-                            [ onClick <| ChangePathType <| Just Shared
-                            , classList
-                                [ ( Active, menu.pathType == Just Shared ) ]
-                            ]
-                            [ text "Shared Road" ]
-                        , div
-                            [ onClick <| ChangePathType <| Just DedicatedLane
-                            , classList
-                                [ ( Active, menu.pathType == Just DedicatedLane ) ]
-                            ]
-                            [ text "Bike Lane" ]
-                        , div
-                            [ onClick <| ChangePathType <| Just BikePath
-                            , classList
-                                [ ( Active, menu.pathType == Just BikePath ) ]
-                            ]
-                            [ text "Bike Path" ]
-                        , div
-                            [ onClick <| ChangePathType Nothing
-                            , classList
-                                [ ( Active, menu.pathType == Nothing ) ]
-                            ]
-                            [ text "Unknown" ]
-                        ]
-                    ]
-                ]
-
-            AddName ->
-                [ div []
-                    [ span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-                    , div
-                        [ Attr.class "fa fa-arrow-left"
-                        , onClick <| SetMenuStep AddTags
-                        ]
-                        []
-                    , span
-                        [ g.class [ PrimaryButton ]
-                        , Attr.class "fa fa-check"
-                        , onClick SaveSegment
-                        ]
-                        []
-                    , h2 [] [ text "Make Segment (Optional)" ]
-                    , div
-                        [ class [ SegmentNameInput ] ]
-                        [ span [] [ text "Name" ]
-                        , input
-                            [ type_ "text", onInput ChangeName, value menu.name ]
-                            []
-                        ]
-                    , div
-                        [ class [ SegmentDescriptionInput ] ]
-                        [ span [] [ text "Description" ]
-                        , textarea
-                            [ onInput ChangeDescription
-                            , value menu.description
-                            ]
-                            []
-                        ]
-                    ]
-                ]
-
-
-
--- SUBSCRIPTIONS --
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Ports.removeAnchor RemoveAnchorPoint
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
-        , Animation.subscription AnimateMenu [ model.menu.style ]
+        , Menu.subscriptions model.menu |> Sub.map MenuMsg
         ]
 
 
@@ -426,17 +130,7 @@ type Msg
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
     | ReceiveRoute String Int (Result Http.Error CycleRoute)
-    | ClearAnchors
-    | SetMenuStep MenuStep
-    | ShowMenu
-    | AnimateMenu Animation.Msg
-    | ChangeName String
-    | ChangeDescription String
-    | ChangeSurfaceRating (Maybe Int)
-    | ChangeTrafficRating (Maybe Int)
-    | ChangePathType (Maybe PathType)
-    | ChangeSurfaceType (Maybe SurfaceType)
-    | SaveSegment
+    | MenuMsg Menu.Msg
     | ReceiveSegment (Result Http.Error Segment)
 
 
@@ -474,12 +168,7 @@ update session msg model =
                         List.length anchors.order
 
                     newMenu =
-                        if anchorCount == 0 then
-                            { menu | step = OneAnchorPlaced }
-                        else if anchorCount == 1 then
-                            { menu | step = AddSurfaceRating }
-                        else
-                            menu
+                        Menu.anchorCountUpdate (anchorCount + 1) menu
 
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
@@ -764,12 +453,7 @@ update session msg model =
                         OrdDict.remove pointId anchors
 
                     newMenu =
-                        if anchorCount - 1 == 0 then
-                            { menu | step = NoAnchorsPlaced }
-                        else if anchorCount - 1 == 1 then
-                            { menu | step = OneAnchorPlaced }
-                        else
-                            menu
+                        Menu.anchorCountUpdate (anchorCount - 1) menu
 
                     cmd =
                         Cmd.batch
@@ -818,140 +502,64 @@ update session msg model =
                         => Ports.displayRoute ( key, line )
                         => NoOp
 
-            ClearAnchors ->
-                { model
-                    | anchors = OrdDict.empty
-                    , cycleRoutes = OrdDict.empty
-                    , menu =
-                        { initMenu
-                            | style =
-                                Animation.interrupt
-                                    [ Animation.to styles.closed ]
-                                    menu.style
-                        }
-                }
-                    => Ports.clearRoute ()
-                    => NoOp
-
-            SetMenuStep step ->
+            MenuMsg subMsg ->
                 let
-                    newMenu =
-                        { menu | step = step }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
+                    ( ( menuModel, menuCmd ), msgFromMenu ) =
+                        Menu.update subMsg model.menu
 
-            ShowMenu ->
-                let
-                    newMenu =
-                        { menu
-                            | style =
-                                Animation.interrupt
-                                    [ Animation.to styles.open ]
-                                    menu.style
-                            , step = NoAnchorsPlaced
-                        }
-                in
-                    { model | menu = newMenu } => Ports.routeCreate () => NoOp
+                    ( newModel, mainCmd ) =
+                        case msgFromMenu of
+                            Menu.NoOp ->
+                                model => Cmd.none
 
-            AnimateMenu animMsg ->
-                let
-                    newMenu =
-                        { menu | style = Animation.update animMsg menu.style }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
+                            Menu.Error error ->
+                                [ error ]
+                                    |> Util.appendErrors model
+                                    => Cmd.none
 
-            ChangeName name ->
-                let
-                    newMenu =
-                        { menu | name = name }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            ChangeDescription description ->
-                let
-                    newMenu =
-                        { menu | description = description }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            ChangeSurfaceRating rating ->
-                let
-                    newMenu =
-                        { menu | surfaceRating = rating }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            ChangeTrafficRating rating ->
-                let
-                    newMenu =
-                        { menu | trafficRating = rating }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            ChangePathType pathType ->
-                let
-                    newMenu =
-                        { menu | pathType = pathType }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            ChangeSurfaceType surfaceType ->
-                let
-                    newMenu =
-                        { menu | surface = surfaceType }
-                in
-                    { model | menu = newMenu } => Cmd.none => NoOp
-
-            SaveSegment ->
-                case
-                    ( menu.surfaceRating
-                    , menu.trafficRating
-                    , menu.surface
-                    , menu.pathType
-                    )
-                of
-                    ( Just sRating, Just tRating, Just sType, Just pType ) ->
-                        let
-                            polylines =
-                                model.cycleRoutes
-                                    |> OrdDict.orderedValues
-                                    |> List.map .polyline
-
-                            createSegmentForm =
-                                { name = menu.name
-                                , description = menu.description
-                                , polylines = polylines
-                                , surfaceRating = sRating
-                                , trafficRating = tRating
-                                , surface = sType
-                                , pathType = pType
+                            Menu.Closed ->
+                                { model
+                                    | anchors = OrdDict.empty
+                                    , cycleRoutes = OrdDict.empty
                                 }
+                                    => Cmd.none
 
-                            req =
-                                saveSegment
-                                    apiUrl
-                                    maybeAuthToken
-                                    createSegmentForm
+                            Menu.Completed sRating tRating sType pType ->
+                                let
+                                    polylines =
+                                        model.cycleRoutes
+                                            |> OrdDict.orderedValues
+                                            |> List.map .polyline
 
-                            cmd =
-                                Cmd.batch
-                                    [ Http.send ReceiveSegment req
-                                    , Ports.clearRoute ()
-                                    ]
-                        in
-                            { model
-                                | anchors = OrdDict.empty
-                                , cycleRoutes = OrdDict.empty
-                                , menu = initMenu
-                            }
-                                => cmd
-                                => NoOp
+                                    createSegmentForm =
+                                        { name = menu.name
+                                        , description = menu.description
+                                        , polylines = polylines
+                                        , surfaceRating = sRating
+                                        , trafficRating = tRating
+                                        , surface = sType
+                                        , pathType = pType
+                                        }
 
-                    _ ->
-                        [ "There was a client error saving your segment. Sorry!" ]
-                            |> Util.appendErrors model
-                            => Cmd.none
-                            => NoOp
+                                    req =
+                                        saveSegment
+                                            apiUrl
+                                            maybeAuthToken
+                                            createSegmentForm
+                                in
+                                    { model
+                                        | anchors = OrdDict.empty
+                                        , cycleRoutes = OrdDict.empty
+                                    }
+                                        => Http.send ReceiveSegment req
+
+                    cmd =
+                        Cmd.batch
+                            [ mainCmd
+                            , Cmd.map MenuMsg menuCmd
+                            ]
+                in
+                    { newModel | menu = menuModel } => cmd => NoOp
 
             ReceiveSegment (Err error) ->
                 let

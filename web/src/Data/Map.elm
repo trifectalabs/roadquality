@@ -44,6 +44,7 @@ type SurfaceType
     = Gravel
     | Asphalt
     | Dirt
+    | UnknownSurface
 
 
 surfaceTypeToString : SurfaceType -> String
@@ -58,11 +59,15 @@ surfaceTypeToString surfaceType =
         Gravel ->
             "gravel"
 
+        UnknownSurface ->
+            "unknown"
+
 
 type PathType
     = Shared
     | DedicatedLane
     | BikePath
+    | UnknownPath
 
 
 pathTypeToString : PathType -> String
@@ -76,6 +81,9 @@ pathTypeToString pathType =
 
         Shared ->
             "shared"
+
+        UnknownPath ->
+            "unknown"
 
 
 type alias Segment =
