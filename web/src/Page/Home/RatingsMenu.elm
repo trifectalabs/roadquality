@@ -9,6 +9,7 @@ import Html.CssHelpers exposing (Namespace)
 import Animation exposing (px, percent)
 import Util exposing ((=>))
 import Ports
+import Views.Assets as Assets
 
 
 -- MODEL --
@@ -88,34 +89,40 @@ view model =
     -- TODO: Add info about ratings
     div
         (Animation.render model.style ++ [ id SaveRatingControl ])
-        (progressBar model ++ [ ratingsControl model ])
+        (toolBar model ++ [ ratingsControl model, ratingsInfo model.step ])
 
 
-progressBar : Model -> List (Html Msg)
-progressBar model =
+toolBar : Model -> List (Html Msg)
+toolBar model =
     let
         close =
-            span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
+            img
+                [ class [ CloseMenu ]
+                , Assets.src Assets.close
+                , onClick ClearAnchors
+                ]
+                []
 
         back step =
-            span
-                [ Attr.class "fa fa-arrow-left"
+            img
+                [ class [ BackMenu ]
+                , Assets.src Assets.backArrow
                 , onClick <| SetMenuStep True step
                 ]
                 []
 
         next click =
-            span
-                [ g.class [ PrimaryButton ]
-                , Attr.class "fa fa-arrow-right"
+            img
+                [ class [ NextMenu ]
+                , Assets.src Assets.nextArrow
                 , click
                 ]
                 []
 
         done =
-            span
-                [ g.class [ PrimaryButton ]
-                , Attr.class "fa fa-check"
+            img
+                [ class [ DoneMenu ]
+                , Assets.src Assets.done
                 , onClick SaveSegment
                 ]
                 []
@@ -197,58 +204,88 @@ addRatings model =
             [ h2 [] [ text "Surface Rating" ]
             , div
                 [ onClick <| ChangeSurfaceRating <| Just 1
-                , classList [ ( Active, model.surfaceRating == Just 1 ) ]
+                , classList
+                    [ ( SurfaceRatingOne, True )
+                    , ( Active, model.surfaceRating == Just 1 )
+                    ]
                 ]
-                [ text "1" ]
+                []
             , div
                 [ onClick <| ChangeSurfaceRating <| Just 2
-                , classList [ ( Active, model.surfaceRating == Just 2 ) ]
+                , classList
+                    [ ( SurfaceRatingTwo, True )
+                    , ( Active, model.surfaceRating == Just 2 )
+                    ]
                 ]
-                [ text "2" ]
+                []
             , div
                 [ onClick <| ChangeSurfaceRating <| Just 3
-                , classList [ ( Active, model.surfaceRating == Just 3 ) ]
+                , classList
+                    [ ( SurfaceRatingThree, True )
+                    , ( Active, model.surfaceRating == Just 3 )
+                    ]
                 ]
-                [ text "3" ]
+                []
             , div
                 [ onClick <| ChangeSurfaceRating <| Just 4
-                , classList [ ( Active, model.surfaceRating == Just 4 ) ]
+                , classList
+                    [ ( SurfaceRatingFour, True )
+                    , ( Active, model.surfaceRating == Just 4 )
+                    ]
                 ]
-                [ text "4" ]
+                []
             , div
                 [ onClick <| ChangeSurfaceRating <| Just 5
-                , classList [ ( Active, model.surfaceRating == Just 5 ) ]
+                , classList
+                    [ ( SurfaceRatingFive, True )
+                    , ( Active, model.surfaceRating == Just 5 )
+                    ]
                 ]
-                [ text "5" ]
+                []
             ]
         , div
             [ class [ TrafficRatingMenu ] ]
             [ h2 [] [ text "Traffic Rating" ]
             , div
                 [ onClick <| ChangeTrafficRating <| Just 1
-                , classList [ ( Active, model.trafficRating == Just 1 ) ]
+                , classList
+                    [ ( TrafficRatingOne, True )
+                    , ( Active, model.trafficRating == Just 1 )
+                    ]
                 ]
-                [ text "1" ]
+                []
             , div
                 [ onClick <| ChangeTrafficRating <| Just 2
-                , classList [ ( Active, model.trafficRating == Just 2 ) ]
+                , classList
+                    [ ( TrafficRatingTwo, True )
+                    , ( Active, model.trafficRating == Just 2 )
+                    ]
                 ]
-                [ text "2" ]
+                []
             , div
                 [ onClick <| ChangeTrafficRating <| Just 3
-                , classList [ ( Active, model.trafficRating == Just 3 ) ]
+                , classList
+                    [ ( TrafficRatingThree, True )
+                    , ( Active, model.trafficRating == Just 3 )
+                    ]
                 ]
-                [ text "3" ]
+                []
             , div
                 [ onClick <| ChangeTrafficRating <| Just 4
-                , classList [ ( Active, model.trafficRating == Just 4 ) ]
+                , classList
+                    [ ( TrafficRatingFour, True )
+                    , ( Active, model.trafficRating == Just 4 )
+                    ]
                 ]
-                [ text "4" ]
+                []
             , div
                 [ onClick <| ChangeTrafficRating <| Just 5
-                , classList [ ( Active, model.trafficRating == Just 5 ) ]
+                , classList
+                    [ ( TrafficRatingFive, True )
+                    , ( Active, model.trafficRating == Just 5 )
+                    ]
                 ]
-                [ text "5" ]
+                []
             ]
         ]
 
@@ -334,6 +371,75 @@ addName model =
                 []
             ]
         ]
+
+
+ratingsInfo : MenuStep -> Html Msg
+ratingsInfo step =
+    case step of
+        NeedAnchorsPlaced ->
+            span [] []
+
+        AddRatings ->
+            div [ class [ AddRatingsInfo ] ]
+                [ h2 [] [ text "Surface Rating Details" ]
+                , div
+                    []
+                    [ div [ class [ SurfaceRatingOne ] ] []
+                    , span [] [ text "For all intents and purposes this road doesn't exist" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ SurfaceRatingTwo ] ] []
+                    , span [] [ text "This road is in desperate need of some repairs" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ SurfaceRatingThree ] ] []
+                    , span [] [ text "This road can be a bit bumpy but its certainly rideable" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ SurfaceRatingFour ] ] []
+                    , span [] [ text "Its not perfect but this is a good road for riding" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ SurfaceRatingFive ] ] []
+                    , span [] [ text "If all roads were like this road you'd never leave the saddle" ]
+                    ]
+                , h2 [] [ text "Traffic Rating Details" ]
+                , div
+                    []
+                    [ div [ class [ TrafficRatingOne ] ] []
+                    , span [] [ text "Heavy motor traffic, avoid riding this road at all costs" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ TrafficRatingTwo ] ] []
+                    , span [] [ text "Lots of car traffic, you would only ride as a last resort" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ TrafficRatingThree ] ] []
+                    , span [] [ text "Some car traffic but this road is definitely rideable" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ TrafficRatingFour ] ] []
+                    , span [] [ text "Fairly light car traffic, this is a good road for riding" ]
+                    ]
+                , div
+                    []
+                    [ div [ class [ TrafficRatingFive ] ] []
+                    , span [] [ text "Virtually no car traffic, you could ride here for days" ]
+                    ]
+                ]
+
+        AddName ->
+            div [ class [ AddNameInfo ] ]
+                [ h2 [] [ text "Why make a segment?" ]
+                , h3 [] [ text "If you add a name and/or description this section of road will be saved to your segments for you to easily access again later for rating." ]
+                ]
 
 
 

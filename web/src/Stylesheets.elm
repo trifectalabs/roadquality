@@ -81,17 +81,33 @@ type CssClasses
     | Active
     | Disabled
       -- Map Menu Classes
+    | CloseMenu
+    | BackMenu
+    | NextMenu
+    | DoneMenu
     | ProgressBar
     | NeedAnchorsControl
     | AddRatingsControl
+    | AddRatingsInfo
     | AddTagsControl
     | AddNameControl
+    | AddNameInfo
     | SurfaceRatingMenu
     | TrafficRatingMenu
     | SurfaceTypeMenu
     | PathTypeMenu
     | SegmentNameInput
     | SegmentDescriptionInput
+    | SurfaceRatingOne
+    | SurfaceRatingTwo
+    | SurfaceRatingThree
+    | SurfaceRatingFour
+    | SurfaceRatingFive
+    | TrafficRatingOne
+    | TrafficRatingTwo
+    | TrafficRatingThree
+    | TrafficRatingFour
+    | TrafficRatingFive
       -- Page Frame Classes
     | PageFrame
     | NavBar
@@ -114,24 +130,24 @@ type CssClasses
     | GoToAccount
 
 
-rgbElectricBlue : Color
-rgbElectricBlue =
-    rgb 2 75 141
+rgbTrifectaBrightGreen : Color
+rgbTrifectaBrightGreen =
+    rgb 127 217 55
 
 
-rgbPacificBlue : Color
-rgbPacificBlue =
-    rgb 33 157 198
+rgbTrifectaGreen : Color
+rgbTrifectaGreen =
+    rgb 22 146 71
 
 
-rgbLightBlue : Color
-rgbLightBlue =
-    rgb 152 210 235
+rgbTrifectaLightGreen : Color
+rgbTrifectaLightGreen =
+    rgb 176 215 51
 
 
 rgbBlack : Color
 rgbBlack =
-    rgb 34 34 34
+    rgb 44 44 44
 
 
 rgbDarkGray : Color
@@ -154,29 +170,54 @@ rgbWhite =
     rgb 255 255 255
 
 
-rgbOne : Color
-rgbOne =
-    rgb 110 32 32
+rgbSurfaceOne : Color
+rgbSurfaceOne =
+    rgb 166 3 15
 
 
-rgbTwo : Color
-rgbTwo =
-    rgb 227 59 59
+rgbSurfaceTwo : Color
+rgbSurfaceTwo =
+    rgb 198 97 22
 
 
-rgbThree : Color
-rgbThree =
-    rgb 255 166 0
+rgbSurfaceThree : Color
+rgbSurfaceThree =
+    rgb 230 191 28
 
 
-rgbFour : Color
-rgbFour =
-    rgb 255 250 94
+rgbSurfaceFour : Color
+rgbSurfaceFour =
+    rgb 143 191 28
 
 
-rgbFive : Color
-rgbFive =
-    rgb 48 219 60
+rgbSurfaceFive : Color
+rgbSurfaceFive =
+    rgb 56 191 28
+
+
+rgbTrafficOne : Color
+rgbTrafficOne =
+    rgb 200 3 15
+
+
+rgbTrafficTwo : Color
+rgbTrafficTwo =
+    rgb 150 23 88
+
+
+rgbTrafficThree : Color
+rgbTrafficThree =
+    rgb 100 42 160
+
+
+rgbTrafficFour : Color
+rgbTrafficFour =
+    rgb 64 54 198
+
+
+rgbTrafficFive : Color
+rgbTrafficFive =
+    rgb 27 65 236
 
 
 lighter : Color -> Color
@@ -207,65 +248,6 @@ generalCss =
             [ margin zero
             , fontFamilies [ "Lato", "Arial", "Sans-serif" ]
             ]
-        , class "fa"
-            [ withClass "fa-times"
-                [ fontSize (px 24)
-                , position absolute
-                , top (px 15)
-                , left (px 15)
-                , width (px 23)
-                , lineHeight (px 21)
-                , padding4 (px 5) (px 5) (px 7) (px 5)
-                , textAlign center
-                , cursor pointer
-                , hover
-                    [ borderRadius (pct 50)
-                    , backgroundColor <| addAlpha 0.5 rgbWhite
-                    , color rgbDarkGray
-                    ]
-                ]
-            , withClass "fa-arrow-right"
-                [ position absolute
-                , top (px 15)
-                , right (px 15)
-                , borderRadius (pct 50)
-                , fontSize (px 20)
-                , lineHeight (px 21)
-                , width (px 33)
-                , padding4 (px 5) (px 5) (px 7) (px 7)
-                , textAlign center
-                , boxSizing borderBox
-                ]
-            , withClass "fa-check"
-                [ position absolute
-                , top (px 15)
-                , right (px 15)
-                , borderRadius (pct 50)
-                , fontSize (px 20)
-                , lineHeight (px 23)
-                , width (px 23)
-                , padding (px 5)
-                , textAlign center
-                ]
-            , withClass "fa-arrow-left"
-                [ position absolute
-                , top (px 15)
-                , left (px 15)
-                , borderRadius (pct 50)
-                , fontSize (px 20)
-                , lineHeight (px 21)
-                , width (px 33)
-                , padding4 (px 5) (px 7) (px 7) (px 5)
-                , textAlign center
-                , boxSizing borderBox
-                , cursor pointer
-                , hover
-                    [ borderRadius (pct 50)
-                    , backgroundColor <| addAlpha 0.5 rgbWhite
-                    , color rgbDarkGray
-                    ]
-                ]
-            ]
         ]
 
 
@@ -276,12 +258,12 @@ globalCss =
             [ padding2 (px 10) (px 20)
             , border zero
             , borderRadius (px 3)
-            , backgroundColor rgbElectricBlue
+            , backgroundColor rgbBlack
             , color rgbWhite
             , boxShadow4 zero (px 1) (px 2) rgbDarkGray
             , cursor pointer
             , hover
-                [ backgroundColor <| lighter rgbElectricBlue ]
+                [ backgroundColor <| lighter rgbBlack ]
             ]
         , class SecondaryButton
             [ padding2 (px 10) (px 20)
@@ -461,6 +443,16 @@ mapCss =
             , top (px 10)
             , left (px 10)
             ]
+        , class SurfaceRatingOne [ backgroundColor rgbSurfaceOne ]
+        , class SurfaceRatingTwo [ backgroundColor rgbSurfaceTwo ]
+        , class SurfaceRatingThree [ backgroundColor rgbSurfaceThree ]
+        , class SurfaceRatingFour [ backgroundColor rgbSurfaceFour ]
+        , class SurfaceRatingFive [ backgroundColor rgbSurfaceFive ]
+        , class TrafficRatingOne [ backgroundColor rgbTrafficOne ]
+        , class TrafficRatingTwo [ backgroundColor rgbTrafficTwo ]
+        , class TrafficRatingThree [ backgroundColor rgbTrafficThree ]
+        , class TrafficRatingFour [ backgroundColor rgbTrafficFour ]
+        , class TrafficRatingFive [ backgroundColor rgbTrafficFive ]
         , id SaveRatingControl
             [ position absolute
             , top zero
@@ -469,10 +461,6 @@ mapCss =
             , backgroundColor (rgb 255 255 255)
             , boxShadow4 (px 1) zero (px 5) rgbDarkGray
             , overflow hidden
-            , children
-                [ div
-                    [ backgroundColor rgbLightBlue ]
-                ]
             , descendants
                 [ h2
                     [ width (pct 100)
@@ -481,29 +469,86 @@ mapCss =
                     , fontSize (px 18)
                     , fontWeight (int 400)
                     ]
+                , class CloseMenu
+                    [ position absolute
+                    , top (px 15)
+                    , left (px 15)
+                    , width (px 23)
+                    , lineHeight (px 21)
+                    , padding (px 4)
+                    , textAlign center
+                    , cursor pointer
+                    , hover
+                        [ borderRadius (pct 50)
+                        , backgroundColor <| addAlpha 0.5 rgbWhite
+                        , color rgbDarkGray
+                        ]
+                    ]
+                , class BackMenu
+                    [ position absolute
+                    , top (px 15)
+                    , left (px 15)
+                    , width (px 23)
+                    , lineHeight (px 21)
+                    , padding (px 4)
+                    , textAlign center
+                    , cursor pointer
+                    , hover
+                        [ borderRadius (pct 50)
+                        , backgroundColor <| addAlpha 0.5 rgbWhite
+                        , color rgbDarkGray
+                        ]
+                    ]
+                , class NextMenu
+                    [ position absolute
+                    , top (px 15)
+                    , right (px 15)
+                    , width (px 23)
+                    , lineHeight (px 21)
+                    , padding (px 4)
+                    , textAlign center
+                    , cursor pointer
+                    , borderRadius (pct 50)
+                    , backgroundColor rgbGray
+                    , hover
+                        [ backgroundColor <| darker rgbGray ]
+                    ]
+                , class DoneMenu
+                    [ position absolute
+                    , top (px 15)
+                    , right (px 15)
+                    , width (px 23)
+                    , lineHeight (px 21)
+                    , padding4 (px 5) (px 4) (px 3) (px 4)
+                    , textAlign center
+                    , cursor pointer
+                    , borderRadius (pct 50)
+                    , backgroundColor rgbGray
+                    , hover
+                        [ backgroundColor <| darker rgbGray ]
+                    ]
                 , class ProgressBar
-                    [ border3 (px 1) solid rgbBlack
-                    , height (px 25)
+                    [ border3 (px 1) solid rgbWhite
+                    , height (px 15)
                     , width (px 200)
                     , position absolute
-                    , top (px 18)
+                    , top (px 22)
                     , property "left" "calc(50% - 100px)"
                     , children
                         [ div
                             [ height (pct 100)
                             , width (px 33.3)
-                            , backgroundColor rgbElectricBlue
+                            , backgroundColor rgbTrifectaBrightGreen
                             ]
                         ]
                     ]
                 , class Disabled
-                    [ backgroundColor rgbLightGray
-                    , color rgbGray
-                    , cursor pointer
-                    ]
+                    [ display none ]
                 , class NeedAnchorsControl
-                    [ padding3 (px 45) (px 15) (px 15)
+                    [ padding3 (px 45) (px 25) (px 15)
                     , boxSizing borderBox
+                    , backgroundColor rgbBlack
+                    , color rgbWhite
                     , children
                         [ h3
                             [ width (pct 100)
@@ -515,46 +560,81 @@ mapCss =
                 , class AddRatingsControl
                     [ padding3 (px 45) (px 15) (px 15)
                     , boxSizing borderBox
+                    , backgroundColor rgbBlack
+                    , color rgbWhite
+                    ]
+                , class AddRatingsInfo
+                    [ padding2 (px 30) (px 30)
+                    , children
+                        [ h2
+                            [ marginBottom (px 5) ]
+                        , div
+                            [ height (px 40)
+                            , children
+                                [ div
+                                    [ width (px 46)
+                                    , height (px 23)
+                                    , borderRadius (px 3)
+                                    , display inlineBlock
+                                    , verticalAlign top
+                                    , marginTop (px 7)
+                                    ]
+                                , span
+                                    [ display inlineBlock
+                                    , marginLeft (px 10)
+                                    , width (px 260)
+                                    , fontSize (px 14)
+                                    ]
+                                ]
+                            ]
+                        ]
                     ]
 
                 -- , class AddTagsControl
                 --     [ height (px 375) ]
                 , class AddNameControl
-                    [ padding3 (px 45) (px 25) (px 25) ]
+                    [ padding3 (px 45) (px 25) (px 25)
+                    , backgroundColor rgbBlack
+                    , color rgbWhite
+                    ]
+                , class AddNameInfo
+                    [ padding2 (px 30) (px 30)
+                    , children
+                        [ h3
+                            [ fontSize (px 16)
+                            , fontWeight (int 400)
+                            , textAlign center
+                            ]
+                        ]
+                    ]
                 , class SurfaceRatingMenu
                     [ width (px 300)
-                    , margin4 (px 40) auto (px 20) auto
+                    , margin4 (px 30) auto (px 20) auto
                     , children
                         [ div
                             [ property "display" "inline-flex"
                             , width (px 46)
-                            , height (px 46)
+                            , height (px 23)
                             , borderRadius (px 3)
                             , alignItems center
                             , justifyContent center
                             , margin2 (px 10) (px 5)
                             , cursor pointer
                             , border3 (px 2) solid transparent
+
+                            -- , boxShadow5 (px 2) (px 2) (px 3) (px -1) <| lighter rgbLightGray
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , nthChild "2"
-                                [ backgroundColor rgbOne
-                                , hover [ backgroundColor <| darker rgbOne ]
-                                ]
-                            , nthChild "3"
-                                [ backgroundColor rgbTwo
-                                , hover [ backgroundColor <| darker rgbTwo ]
-                                ]
-                            , nthChild "4"
-                                [ backgroundColor rgbThree
-                                , hover [ backgroundColor <| darker rgbThree ]
-                                ]
-                            , nthChild "5"
-                                [ backgroundColor rgbFour
-                                , hover [ backgroundColor <| darker rgbFour ]
-                                ]
-                            , nthChild "6"
-                                [ backgroundColor rgbFive
-                                , hover [ backgroundColor <| darker rgbFive ]
+                            , children
+                                [ class SurfaceRatingOne
+                                    [ hover [ backgroundColor <| darker rgbSurfaceOne ] ]
+                                , class SurfaceRatingTwo
+                                    [ hover [ backgroundColor <| darker rgbSurfaceTwo ] ]
+                                , class SurfaceRatingThree
+                                    [ hover [ backgroundColor <| darker rgbSurfaceThree ] ]
+                                , class SurfaceRatingFour
+                                    [ hover [ backgroundColor <| darker rgbSurfaceFour ] ]
+                                , class SurfaceRatingFive
+                                    [ hover [ backgroundColor <| darker rgbSurfaceFive ] ]
                                 ]
                             ]
                         ]
@@ -566,33 +646,27 @@ mapCss =
                         [ div
                             [ property "display" "inline-flex"
                             , width (px 46)
-                            , height (px 46)
+                            , height (px 23)
                             , borderRadius (px 3)
                             , alignItems center
                             , justifyContent center
                             , margin2 (px 10) (px 5)
                             , cursor pointer
                             , border3 (px 2) solid transparent
+
+                            -- , boxShadow5 (px 2) (px 2) (px 3) (px -1) <| lighter rgbLightGray
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , nthChild "2"
-                                [ backgroundColor rgbOne
-                                , hover [ backgroundColor <| darker rgbOne ]
-                                ]
-                            , nthChild "3"
-                                [ backgroundColor rgbTwo
-                                , hover [ backgroundColor <| darker rgbTwo ]
-                                ]
-                            , nthChild "4"
-                                [ backgroundColor rgbThree
-                                , hover [ backgroundColor <| darker rgbThree ]
-                                ]
-                            , nthChild "5"
-                                [ backgroundColor rgbFour
-                                , hover [ backgroundColor <| darker rgbFour ]
-                                ]
-                            , nthChild "6"
-                                [ backgroundColor rgbFive
-                                , hover [ backgroundColor <| darker rgbFive ]
+                            , children
+                                [ class TrafficRatingOne
+                                    [ hover [ backgroundColor <| darker rgbTrafficOne ] ]
+                                , class TrafficRatingTwo
+                                    [ hover [ backgroundColor <| darker rgbTrafficTwo ] ]
+                                , class TrafficRatingThree
+                                    [ hover [ backgroundColor <| darker rgbTrafficThree ] ]
+                                , class TrafficRatingFour
+                                    [ hover [ backgroundColor <| darker rgbTrafficFour ] ]
+                                , class TrafficRatingFive
+                                    [ hover [ backgroundColor <| darker rgbTrafficFive ] ]
                                 ]
                             ]
                         ]
@@ -653,13 +727,14 @@ mapCss =
                             [ display inlineBlock
                             , marginRight (px 10)
                             , verticalAlign middle
+                            , fontSize (px 14)
                             ]
                         , input
                             [ padding (px 5)
                             , borderRadius (px 3)
-                            , border3 (px 1) solid rgbGray
-                            , focus [ borderColor rgbDarkGray ]
-                            , width (px 286)
+                            , border3 (px 1) solid rgbLightGray
+                            , focus [ borderColor rgbGray ]
+                            , width (px 291)
                             ]
                         ]
                     ]
@@ -667,7 +742,8 @@ mapCss =
                     [ children
                         [ span
                             [ display inlineBlock
-                            , marginBottom (px 2)
+                            , marginBottom (px 5)
+                            , fontSize (px 14)
                             ]
                         , textarea
                             [ width (pct 100)
@@ -676,8 +752,8 @@ mapCss =
                             , resize none
                             , padding (px 5)
                             , borderRadius (px 3)
-                            , border3 (px 1) solid rgbGray
-                            , focus [ borderColor rgbDarkGray ]
+                            , border3 (px 1) solid rgbLightGray
+                            , focus [ borderColor rgbGray ]
                             ]
                         ]
                     ]
