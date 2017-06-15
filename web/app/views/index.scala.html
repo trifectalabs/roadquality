@@ -8,7 +8,7 @@
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,600,700" />
     <link rel="stylesheet" href="/assets/stylesheets/main.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@@1.0.3/dist/leaflet.css" />
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://opensource.keycdn.com/fontawesome/4.7.0/font-awesome.min.css" integrity="sha384-dNpIIXE8U05kAbPhy3G1cz+yZmTzA6CY8Vg/u2L9xRnHjJiAK76m2BIEaSEV+/aU" crossorigin="anonymous">
 
     <style>/* Loading spinner courtesy of loader.io */
@@ -16,9 +16,14 @@
     </style>
 
     <script type="text/javascript" src="/assets/javascripts/main.js"></script>
-    <script src="https://unpkg.com/leaflet@@1.0.3/dist/leaflet.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+    <style>
+      body { margin:0; padding:0; }
+      #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
 </head>
 <body>
+    <div id='map'></div>
     <script>
         @if(param != "") {
             localStorage.session = "@param";

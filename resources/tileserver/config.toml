@@ -1,0 +1,36 @@
+[service.mvt]
+viewer = false
+
+[datasource]
+type = "postgis"
+url = "postgresql://localhost/maps"
+
+[grid]
+predefined = "web_mercator"
+
+[[tileset]]
+name = "surface_quality"
+
+[[tileset.layer]]
+name = "mini_segments"
+table_name = "mini_segments"
+geometry_field = "polyline"
+geometry_type = "LINESTRING"
+buffer_size = 1
+simplify = true
+[[tileset.layer.query]]
+sql = """SELECT ST_Transform(polyline,3857) AS polyline,"id"::TEXT,"traffic_rating"::FLOAT8,"surface_rating"::FLOAT8,"surface","path_type","weight", (SELECT ratingColour(surface_rating))::text as colour FROM mini_segments"""
+[tileset.layer.style]
+  type = "line"
+  [tileset.layer.style.paint.line-color]
+    type = "identity"
+    property = "colour"
+
+[cache.file]
+base = "/tile-cache"
+
+[webserver]
+bind = "0.0.0.0"
+port = 8080
+threads = 4
+

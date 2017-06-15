@@ -33,20 +33,34 @@ app.ports.up.subscribe(function(authed) {
             return;
         }
 
-        myMap = L.map("MainView", {
-            center: [43.652684, -79.397991],
-            zoom: 13,
-            zoomControl: false
-        });
+			mapboxgl.accessToken = 'pk.eyJ1Ijoia2lhbWJvZ28iLCJhIjoiY2l2MWVqdWdpMDBiMDJ5bXB5aXdyY3JrdyJ9.oqpLQhZcd0yOzBKdSxyk2w';
 
-        L.tileLayer("https://tiles.roadquality.org/roadquality/{z}/{x}/{y}.png", {
-            attribution: "&copy; <a href='https://trifectalabs.com'>Trifecta Labs</a> & <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
-        }).addTo(myMap);
+			var myMap = new mapboxgl.Map({
+						container: 'map',
+						style: 'mapbox://styles/mapbox/light-v9',
+						center: [-79.412190, 43.667632],
+						zoom: 10
+			});
 
-        L.control.zoom({position: "bottomright"}).addTo(myMap);
-
-        createBounds();
-    }, 100);
+      map.on('load', function () {
+      	map.addLayer({
+      		"id": "surface_quality",
+      		"type": "line",
+      		"source": {
+      			type: 'vector',
+      			tiles: ['http://localhost:8080/maps/surface_quality/{z}/{x}/{y}.pbf']
+      		},
+					"source-layer": "mini_segments",
+					"paint": {
+						"line-color": {
+							"type": "identity",
+							"property": "colour"
+						},
+						"line-width": 1
+					}
+      	});
+      });
+    })
 });
 
 app.ports.routeCreate.subscribe(function() {
