@@ -19,16 +19,16 @@ port down : () -> Cmd msg
 port routeCreate : () -> Cmd msg
 
 
-port setAnchor : (( Int, Float, Float ) -> msg) -> Sub msg
+port setAnchor : (( String, Float, Float ) -> msg) -> Sub msg
 
 
-port moveAnchor : (( Int, Float, Float ) -> msg) -> Sub msg
+port moveAnchor : (( String, Float, Float ) -> msg) -> Sub msg
 
 
-port removeAnchor : (Int -> msg) -> Sub msg
+port removeAnchor : (String -> msg) -> Sub msg
 
 
-port snapAnchor : ( Int, Point ) -> Cmd msg
+port snapAnchor : ( String, Point ) -> Cmd msg
 
 
 port displayRoute : ( String, List ( Float, Float ) ) -> Cmd msg

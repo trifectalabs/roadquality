@@ -1,17 +1,16 @@
-let myMap;
+let map;
+let canvas;
 let markerCount = 0;
 let markers = {};
+let startMarker = "startMarker";
+let startMarkerUnused = false;
+let unusedMarkers = [];
+let routes = {};
+let unusedRoutes = [];
 let polylines = {};
-let icon = L.icon({
-  iconUrl: '/assets/img/marker.png',
-  iconSize: [10, 10],
-  iconAnchor: [5, 5]
-});
-let startIcon = L.icon({
-  iconUrl: '/assets/img/start-marker.png',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
-});
+let cursorOverPoint = null;
+let isDragging = false;
+let popup;
 
 // STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
@@ -29,97 +28,176 @@ window.addEventListener("storage", function(event) {
 app.ports.up.subscribe(function(authed) {
     // TODO: there must be a better way :(
     setTimeout(function() {
-        if (myMap) {
+        if (map) {
             return;
         }
 
-			mapboxgl.accessToken = 'pk.eyJ1Ijoia2lhbWJvZ28iLCJhIjoiY2l2MWVqdWdpMDBiMDJ5bXB5aXdyY3JrdyJ9.oqpLQhZcd0yOzBKdSxyk2w';
+        mapboxgl.accessToken = "pk.eyJ1Ijoia2lhbWJvZ28iLCJhIjoiY2l2MWVqdWdpMDBiMDJ5bXB5aXdyY3JrdyJ9.oqpLQhZcd0yOzBKdSxyk2w";
 
-			var myMap = new mapboxgl.Map({
-						container: 'map',
-						style: 'mapbox://styles/mapbox/light-v9',
-						center: [-79.412190, 43.667632],
-						zoom: 10
-			});
+        map = new mapboxgl.Map({
+            container: "MainView",
+            style: "mapbox://styles/mapbox/light-v9",
+            center: [-79.412190, 43.667632],
+            zoom: 10
+        });
 
-      map.on('load', function () {
-      	map.addLayer({
-      		"id": "surface_quality",
-      		"type": "line",
-      		"source": {
-      			type: 'vector',
-      			tiles: ['http://localhost:8080/maps/surface_quality/{z}/{x}/{y}.pbf']
-      		},
-					"source-layer": "mini_segments",
-					"paint": {
-						"line-color": {
-							"type": "identity",
-							"property": "colour"
-						},
-						"line-width": 1
-					}
-      	});
-      });
-    })
+        canvas = map.getCanvasContainer();
+        map.on("load", createBounds);
+    }, 100);
 });
 
 app.ports.routeCreate.subscribe(function() {
-    myMap.on("click", onMapClick);
+    map.on("mousedown", onMapMouseDown);
+    map.on("click", onMapClick);
+    map.on("contextmenu", onMapRightClick);
 });
 
-function onMarkerDrop(e) {
-    app.ports.moveAnchor.send([e.target._leaflet_id, e.target._latlng.lat, e.target._latlng.lng]);
+function onMapMouseDown(e) {
+    if (cursorOverPoint === null) return;
+    isDragging = true;
+    canvas.style.cursor = "grab";
+    map.on("mousemove", onMoveMarker);
+    map.once("mouseup", onDropMarker);
 }
 
-function markerPopup(marker) {
-    return "<span style='cursor: pointer' onClick='removeMarker(" + marker + ")'>Delete Point</span>";
+function onMoveMarker(e) {
+    if (!isDragging) return;
+    let coords = e.lngLat;
+    canvas.style.cursor = "grabbing";
+
+    markers[cursorOverPoint].features[0].geometry.coordinates = [coords.lng, coords.lat];
+    map.getSource(cursorOverPoint).setData(markers[cursorOverPoint]);
 }
 
-function onMarkerRightClick(e) {
-    e.target.openPopup();
-}
+function onDropMarker(e) {
+    if (!isDragging) return;
+    let coords = e.lngLat;
+    app.ports.moveAnchor.send([cursorOverPoint, coords.lat, coords.lng]);
 
-function removeMarker(marker) {
-    markers[marker].remove();
-    markerCount--;
-    app.ports.removeAnchor.send(marker);
+    canvas.style.cursor = '';
+    isDragging = false;
+
+    map.off("mousemove", onMoveMarker);
 }
 
 function onMapClick(e) {
+    if (cursorOverPoint !== null || isDragging) return;
+    let id;
+    if (unusedMarkers.length > 0 || startMarkerUnused) {
+        if (startMarkerUnused) {
+            id = startMarker;
+            startMarkerUnused = false;
+        } else {
+            id = unusedMarkers.pop();
+        }
+        markers[id].features = [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [e.lngLat.lng, e.lngLat.lat]
+            }
+        }];
+        map.getSource(id).setData(markers[id]);
+    } else {
+        if (markerCount === 0) {
+            id = startMarker;
+        } else {
+            id = Math.random().toString(36).substr(2, 10);
+        }
+        let markerSource = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [e.lngLat.lng, e.lngLat.lat]
+                }
+            }]
+        };
+        map.addSource(id, {
+            "type": "geojson",
+            "data": markerSource
+        });
+        markers[id] = markerSource;
+
+        if (markerCount === 0) {
+            map.addLayer({
+                "id": id,
+                "type": "circle",
+                "source": id,
+                "paint": {
+                    "circle-radius": 7,
+                    "circle-color": "#40B34F",
+                    "circle-stroke-color": "#FFFFFF",
+                    "circle-stroke-width": 2
+                }
+            });
+        } else {
+            map.addLayer({
+                "id": id,
+                "type": "circle",
+                "source": id,
+                "paint": {
+                    "circle-radius": 4,
+                    "circle-color": "#FFFFFF",
+                    "circle-stroke-width": 2
+                }
+            });
+        }
+    }
+
+    map.on("mouseenter", id, function() {
+        canvas.style.cursor = "move";
+        cursorOverPoint = id;
+        map.dragPan.disable();
+    });
+
+    map.on("mouseleave", id, function() {
+        if (isDragging) return;
+        canvas.style.cursor = '';
+        cursorOverPoint = null;
+        map.dragPan.enable();
+    });
+
     let maxDistX = window.innerWidth / 2;
     let posX = Math.abs(e.originalEvent.x - maxDistX);
     let panX = 0.6 * posX / maxDistX + 0.25;
     let maxDistY = window.innerHeight / 2;
     let posY = Math.abs(e.originalEvent.y - maxDistY);
     let panY = 0.6 * posY / maxDistY + 0.25;
-    let panDuration = Math.max(panX, panY);
+    let panDuration = Math.max(panX, panY) * 1000;
+    map.panTo(e.lngLat, { duration: panDuration });
 
-    let marker;
-    if (markerCount == 0) {
-        marker = L.marker(
-            [e.latlng.lat, e.latlng.lng],
-            { draggable: true, icon: startIcon }
-        ).addTo(e.target);
-    } else {
-        marker = L.marker(
-            [e.latlng.lat, e.latlng.lng],
-            { draggable: true, icon: icon }
-        ).addTo(e.target);
-        marker.bindPopup(markerPopup(marker._leaflet_id));
-    }
-    marker.on("dragend", onMarkerDrop);
-    marker.on("contextmenu", onMarkerRightClick);
-    markers[marker._leaflet_id] = marker;
     markerCount++;
-    myMap.panTo(e.latlng, {duration: panDuration});
-    app.ports.setAnchor.send([marker._leaflet_id, e.latlng.lat, e.latlng.lng]);
+    app.ports.setAnchor.send([id, e.lngLat.lat, e.lngLat.lng]);
+}
+
+function onMapRightClick(e) {
+    if (cursorOverPoint !== null && cursorOverPoint !== startMarker) {
+        if (popup) {
+            popup.remove();
+        }
+        popup = new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML("<span style='cursor: pointer' onClick='removeMarker(\"" + cursorOverPoint + "\")'>Delete Point</span>")
+            .addTo(map);
+    }
+}
+
+function removeMarker(key) {
+    popup.remove();
+    markers[key].features = [];
+    unusedMarkers.push(key);
+    map.getSource(key).setData(markers[key]);
+    markerCount--;
+    app.ports.removeAnchor.send(key);
 }
 
 // DROP MAP
 app.ports.down.subscribe(function() {
-    if (myMap) {
-        myMap.remove();
-        myMap = null;
+    if (map) {
+        map.remove();
+        map = null;
     }
 });
 
@@ -127,46 +205,122 @@ app.ports.down.subscribe(function() {
 app.ports.snapAnchor.subscribe(function(values) {
     let pointId = values[0];
     let point = values[1];
-    let anchor = markers[pointId];
-    anchor.setLatLng(L.latLng(point.lat, point.lng));
+    markers[pointId].features[0].geometry.coordinates = [point.lng, point.lat];
+    map.getSource(pointId).setData(markers[pointId]);
 });
 
 // PLOT ROUTE
 app.ports.displayRoute.subscribe(function(line) {
-    polyline = L.polyline(line[1], {color: 'black', opacity: 0.5, weight: 5});
-    polyline.addTo(myMap);
-    polylines[line[0]] = polyline;
+    let lineId = line[0];
+    let [ firstPoint, secondPoint ] = lineId.split("_");
+    let lineCoords = [];
+    for (let i = 0; i < line[1].length; i++) {
+        lineCoords.push([line[1][i][1], line[1][i][0]]);
+    }
+
+    let id;
+    if (unusedRoutes.length > 0) {
+        id = unusedRoutes.pop();
+        routes[id].features = [{
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": lineCoords
+            }
+        }];
+        map.getSource(id).setData(routes[id]);
+        polylines[lineId] = id;
+    } else {
+        id = Math.random().toString(36).substr(2, 10);
+        let routeSource = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": lineCoords
+                }
+            }]
+        };
+        map.addSource(id, {
+            "type": "geojson",
+            "data": routeSource
+        });
+        routes[id] = routeSource;
+        polylines[lineId] = id;
+        map.addLayer({
+            "id": id,
+            "type": "line",
+            "source": id,
+            "paint": {
+                "line-opacity": 0.5,
+                "line-width": 5
+            }
+        });
+    }
+    map.moveLayer(id, firstPoint);
 });
 
 app.ports.removeRoute.subscribe(function(route) {
-    polylines[route].remove();
+    id = polylines[route];
+    routes[id].features = [];
+    unusedRoutes.push(id);
+    map.getSource(id).setData(routes[id]);
 });
 
 // CLEAR ROUTE
 app.ports.clearRoute.subscribe(function() {
-    myMap.removeEventListener("click", onMapClick);
+    map.off("mousedown", onMapMouseDown);
+    map.off("click", onMapClick);
+    map.off("contextmenu", onMapRightClick);
     for (let key in markers) {
-        markers[key].remove();
+        markers[key].features = [];
+        if (key === startMarker) {
+            startMarkerUnused = true;
+        } else {
+            unusedMarkers.push(key);
+        }
+        map.getSource(key).setData(markers[key]);
     }
     markerCount = 0;
     for (let key in polylines) {
-        polylines[key].remove();
+        id = polylines[key];
+        routes[id].features = [];
+        unusedRoutes.push(id);
+        map.getSource(id).setData(routes[id]);
     }
 });
 
 // ROUTING BOUNDS
 function createBounds() {
-  var pointA = new L.LatLng(43.753963, -79.632868);
-  var pointB = new L.LatLng(43.561912, -79.632868);
-  var pointC = new L.LatLng(43.561912, -79.194903);
-  var pointD = new L.LatLng(43.753963, -79.194903);
-  var pointList = [pointA, pointB, pointC, pointD, pointA];
-
-  var firstpolyline = new L.Polyline(pointList, {
-      color: 'red',
-      weight: 3,
-      opacity: 0.5,
-      smoothFactor: 1
-  });
-  firstpolyline.addTo(myMap);
+    let geojson = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [ -79.632868, 43.753963 ],
+                    [ -79.632868, 43.561912 ],
+                    [ -79.194903, 43.561912 ],
+                    [ -79.194903, 43.753963 ],
+                    [ -79.632868, 43.753963 ]
+                ]]
+            }
+        }]
+    }
+    map.addSource("routingbounds", {
+        "type": "geojson",
+        "data": geojson
+    });
+    map.addLayer({
+        "id": "routingbounds",
+        "type": "line",
+        "source": "routingbounds",
+        "paint": {
+            "line-color": "green",
+            "line-opacity": 0.5,
+            "line-width": 3
+        }
+    });
 }

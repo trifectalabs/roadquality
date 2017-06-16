@@ -30,15 +30,15 @@ import Route
 type alias Model =
     { errors : List String
     , menu : Menu
-    , anchors : OrderedDict Int Point
+    , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
     }
 
 
-cycleRouteKey : Int -> Int -> String
+cycleRouteKey : String -> String -> String
 cycleRouteKey first second =
-    (toString first) ++ "_" ++ (toString second)
+    first ++ "_" ++ second
 
 
 type MenuStep
@@ -421,10 +421,10 @@ subscriptions model =
 
 
 type Msg
-    = DropAnchorPoint Bool ( Int, Float, Float )
-    | NewAnchorPoint Int (Result Http.Error Point)
-    | ChangeAnchorPoint Int (Result Http.Error Point)
-    | RemoveAnchorPoint Int
+    = DropAnchorPoint Bool ( String, Float, Float )
+    | NewAnchorPoint String (Result Http.Error Point)
+    | ChangeAnchorPoint String (Result Http.Error Point)
+    | RemoveAnchorPoint String
     | ReceiveRoute String Int (Result Http.Error CycleRoute)
     | ClearAnchors
     | SetMenuStep MenuStep
@@ -979,17 +979,17 @@ update session msg model =
                     { model | segments = segments } => Cmd.none => NoOp
 
 
-removeRoute : Int -> Int -> OrderedDict String CycleRoute -> OrderedDict String CycleRoute
+removeRoute : String -> String -> OrderedDict String CycleRoute -> OrderedDict String CycleRoute
 removeRoute startPointId endPointId cycleRoutes =
     OrdDict.remove (cycleRouteKey startPointId endPointId) cycleRoutes
 
 
-removeRouteFromMap : Int -> Int -> Cmd Msg
+removeRouteFromMap : String -> String -> Cmd Msg
 removeRouteFromMap startPointId endPointId =
     Ports.removeRoute <| cycleRouteKey startPointId endPointId
 
 
-addRoute : String -> Maybe AuthToken -> OrderedDict String CycleRoute -> OrderedDict Int Point -> Int -> Int -> Cmd Msg
+addRoute : String -> Maybe AuthToken -> OrderedDict String CycleRoute -> OrderedDict String Point -> String -> String -> Cmd Msg
 addRoute apiUrl maybeAuthToken cycleRoutes anchors startPointId endPointId =
     let
         routeKey =
