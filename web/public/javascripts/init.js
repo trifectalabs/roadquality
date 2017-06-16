@@ -13,7 +13,7 @@ let isDragging = false;
 let viewOnly = true;
 let popup;
 
-// STORE SESSION
+  // STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
     localStorage.session = session;
 });
@@ -49,6 +49,25 @@ app.ports.up.subscribe(function(authed) {
         map.on("load", createBounds);
         map.on("mousedown", onMapMouseDown);
         map.on("mouseup", onMapMouseUp);
+
+        map.on('load', function () {
+            map.addLayer({
+                "id": "mini_segments",
+                "type": "line",
+                "source": {
+                    type: 'vector',
+                    tiles: ['http://localhost:8080/surface_quality/{z}/{x}/{y}.pbf']
+                },
+                "source-layer": "mini_segments",
+                "paint": {
+                    "line-color": {
+                          "type": "identity",
+                          "property": "colour"
+                    },
+                    "line-width": 1.5
+                }
+            });
+        });
     }, 100);
 });
 
