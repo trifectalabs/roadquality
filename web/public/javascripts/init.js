@@ -61,6 +61,7 @@ function onMapMouseUp(e) {
 }
 
 function onMapMouseDown(e) {
+    if (e.originalEvent.which !== 1) return;
     if (cursorOverPoint === null || viewOnly) {
         canvas.style.cursor = "move";
         return;
