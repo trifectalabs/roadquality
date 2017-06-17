@@ -44,6 +44,8 @@ app.ports.up.subscribe(function(authed) {
 
         canvas = map.getCanvasContainer();
         canvas.style.cursor = "default";
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
         map.on("load", createBounds);
         map.on("mousedown", onMapMouseDown);
         map.on("mouseup", onMapMouseUp);
