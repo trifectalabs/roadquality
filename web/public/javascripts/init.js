@@ -10,6 +10,7 @@ let unusedRoutes = [];
 let polylines = {};
 let cursorOverPoint = null;
 let isDragging = false;
+let viewOnly = true;
 let popup;
 
 // STORE SESSION
@@ -42,29 +43,38 @@ app.ports.up.subscribe(function(authed) {
         });
 
         canvas = map.getCanvasContainer();
+        canvas.style.cursor = "default";
         map.on("load", createBounds);
+        map.on("mousedown", onMapMouseDown);
+        map.on("mouseup", onMapMouseUp);
     }, 100);
 });
 
 app.ports.routeCreate.subscribe(function() {
-    map.on("mousedown", onMapMouseDown);
+    viewOnly = false;
     map.on("click", onMapClick);
     map.on("contextmenu", onMapRightClick);
 });
 
+function onMapMouseUp(e) {
+    canvas.style.cursor = "default";
+}
+
 function onMapMouseDown(e) {
-    if (cursorOverPoint === null) return;
+    if (cursorOverPoint === null || viewOnly) {
+        canvas.style.cursor = "move";
+        return;
+    }
     isDragging = true;
-    canvas.style.cursor = "grab";
+    canvas.style.cursor = "grabbing";
     map.on("mousemove", onMoveMarker);
     map.once("mouseup", onDropMarker);
 }
 
 function onMoveMarker(e) {
     if (!isDragging) return;
-    let coords = e.lngLat;
     canvas.style.cursor = "grabbing";
-
+    let coords = e.lngLat;
     markers[cursorOverPoint].features[0].geometry.coordinates = [coords.lng, coords.lat];
     map.getSource(cursorOverPoint).setData(markers[cursorOverPoint]);
 }
@@ -74,7 +84,7 @@ function onDropMarker(e) {
     let coords = e.lngLat;
     app.ports.moveAnchor.send([cursorOverPoint, coords.lat, coords.lng]);
 
-    canvas.style.cursor = '';
+    canvas.style.cursor = "default";
     isDragging = false;
 
     map.off("mousemove", onMoveMarker);
@@ -147,14 +157,14 @@ function onMapClick(e) {
     }
 
     map.on("mouseenter", id, function() {
-        canvas.style.cursor = "move";
+        canvas.style.cursor = "grab";
         cursorOverPoint = id;
         map.dragPan.disable();
     });
 
     map.on("mouseleave", id, function() {
         if (isDragging) return;
-        canvas.style.cursor = '';
+        canvas.style.cursor = "default";
         cursorOverPoint = null;
         map.dragPan.enable();
     });
@@ -270,7 +280,7 @@ app.ports.removeRoute.subscribe(function(route) {
 
 // CLEAR ROUTE
 app.ports.clearRoute.subscribe(function() {
-    map.off("mousedown", onMapMouseDown);
+    viewOnly = true;
     map.off("click", onMapClick);
     map.off("contextmenu", onMapRightClick);
     for (let key in markers) {
