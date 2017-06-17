@@ -164,20 +164,21 @@ update session msg model =
         case msg of
             DropAnchorPoint new ( pointId, lat, lng ) ->
                 let
-                    anchorCount =
-                        List.length anchors.order
+                    ( anchorCount, handler ) =
+                        if new == True then
+                            ( List.length anchors.order + 1
+                            , NewAnchorPoint pointId
+                            )
+                        else
+                            ( List.length anchors.order
+                            , ChangeAnchorPoint pointId
+                            )
 
                     newMenu =
-                        Menu.anchorCountUpdate (anchorCount + 1) menu
+                        Menu.anchorCountUpdate anchorCount menu
 
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
-
-                    handler =
-                        if new == True then
-                            NewAnchorPoint pointId
-                        else
-                            ChangeAnchorPoint pointId
 
                     cmd =
                         Http.send handler req
@@ -327,8 +328,11 @@ update session msg model =
                             |> Maybe.withDefault Cmd.none
 
                     ( removedRoutes, deleteAddCmd ) =
-                        -- Delete route before, Delete/Add route before cmd
-                        if anchorIndex == (anchorCount - 1) then
+                        -- Moving first anchor with no routes, do nothing
+                        if anchorIndex == 0 && anchorCount == 1 then
+                            ( Just cycleRoutes, Cmd.none )
+                            -- Delete route before, Delete/Add route before cmd
+                        else if anchorIndex == (anchorCount - 1) then
                             ( Maybe.map
                                 (\s -> removeRoute s pointId cycleRoutes)
                                 start
