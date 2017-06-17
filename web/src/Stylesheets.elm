@@ -624,18 +624,16 @@ mapCss =
 
                             -- , boxShadow5 (px 2) (px 2) (px 3) (px -1) <| lighter rgbLightGray
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , children
-                                [ class SurfaceRatingOne
-                                    [ hover [ backgroundColor <| darker rgbSurfaceOne ] ]
-                                , class SurfaceRatingTwo
-                                    [ hover [ backgroundColor <| darker rgbSurfaceTwo ] ]
-                                , class SurfaceRatingThree
-                                    [ hover [ backgroundColor <| darker rgbSurfaceThree ] ]
-                                , class SurfaceRatingFour
-                                    [ hover [ backgroundColor <| darker rgbSurfaceFour ] ]
-                                , class SurfaceRatingFive
-                                    [ hover [ backgroundColor <| darker rgbSurfaceFive ] ]
-                                ]
+                            , withClass SurfaceRatingOne
+                                [ hover [ backgroundColor <| darker rgbSurfaceOne ] ]
+                            , withClass SurfaceRatingTwo
+                                [ hover [ backgroundColor <| darker rgbSurfaceTwo ] ]
+                            , withClass SurfaceRatingThree
+                                [ hover [ backgroundColor <| darker rgbSurfaceThree ] ]
+                            , withClass SurfaceRatingFour
+                                [ hover [ backgroundColor <| darker rgbSurfaceFour ] ]
+                            , withClass SurfaceRatingFive
+                                [ hover [ backgroundColor <| darker rgbSurfaceFive ] ]
                             ]
                         ]
                     ]
@@ -656,18 +654,16 @@ mapCss =
 
                             -- , boxShadow5 (px 2) (px 2) (px 3) (px -1) <| lighter rgbLightGray
                             , withClass Active [ border3 (px 2) solid rgbWhite ]
-                            , children
-                                [ class TrafficRatingOne
-                                    [ hover [ backgroundColor <| darker rgbTrafficOne ] ]
-                                , class TrafficRatingTwo
-                                    [ hover [ backgroundColor <| darker rgbTrafficTwo ] ]
-                                , class TrafficRatingThree
-                                    [ hover [ backgroundColor <| darker rgbTrafficThree ] ]
-                                , class TrafficRatingFour
-                                    [ hover [ backgroundColor <| darker rgbTrafficFour ] ]
-                                , class TrafficRatingFive
-                                    [ hover [ backgroundColor <| darker rgbTrafficFive ] ]
-                                ]
+                            , withClass TrafficRatingOne
+                                [ hover [ backgroundColor <| darker rgbTrafficOne ] ]
+                            , withClass TrafficRatingTwo
+                                [ hover [ backgroundColor <| darker rgbTrafficTwo ] ]
+                            , withClass TrafficRatingThree
+                                [ hover [ backgroundColor <| darker rgbTrafficThree ] ]
+                            , withClass TrafficRatingFour
+                                [ hover [ backgroundColor <| darker rgbTrafficFour ] ]
+                            , withClass TrafficRatingFive
+                                [ hover [ backgroundColor <| darker rgbTrafficFive ] ]
                             ]
                         ]
                     ]
