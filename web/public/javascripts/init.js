@@ -56,7 +56,7 @@ app.ports.up.subscribe(function(authed) {
                 "type": "line",
                 "source": {
                     type: 'vector',
-                    tiles: ['http://localhost:8080/surface_quality/{z}/{x}/{y}.pbf']
+                    tiles: ['https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf']
                 },
                 "source-layer": "mini_segments",
                 "paint": {
