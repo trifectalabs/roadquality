@@ -12,7 +12,7 @@ predefined = "web_mercator"
 name = "surface_quality"
 
 [[tileset.layer]]
-name = "mini_segments"
+name = "surface_mini_segments"
 table_name = "mini_segments"
 geometry_field = "polyline"
 geometry_type = "LINESTRING"
@@ -20,6 +20,24 @@ buffer_size = 1
 simplify = true
 [[tileset.layer.query]]
 sql = """SELECT ST_Transform(polyline,3857) AS polyline,"id"::TEXT,"traffic_rating"::FLOAT8,"surface_rating"::FLOAT8,"surface","path_type","weight", (SELECT ratingColour(surface_rating))::text as colour FROM mini_segments"""
+[tileset.layer.style]
+  type = "line"
+  [tileset.layer.style.paint.line-color]
+    type = "identity"
+    property = "colour"
+
+[[tileset]]
+name = "traffic"
+
+[[tileset.layer]]
+name = "traffic_mini_segments"
+table_name = "mini_segments"
+geometry_field = "polyline"
+geometry_type = "LINESTRING"
+buffer_size = 1
+simplify = true
+[[tileset.layer.query]]
+sql = """SELECT ST_Transform(polyline,3857) AS polyline,"id"::TEXT,"traffic_rating"::FLOAT8,"surface_rating"::FLOAT8,"surface","path_type","weight", (SELECT ratingColour(traffic_rating))::text as colour FROM mini_segments"""
 [tileset.layer.style]
   type = "line"
   [tileset.layer.style.paint.line-color]
