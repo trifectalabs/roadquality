@@ -35,7 +35,15 @@ class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: Datab
   }
 
   override def getBoundsFromRatings(created_at: DateTime): Future[String] = {
-    val sql = sql"""SELECT st_ymin(st_extent(st_linefromencodedpolyline(polyline)))::text || ' ' || st_xmin(st_extent(st_linefromencodedpolyline(polyline)))::text || ' ' || st_ymax(st_extent(st_linefromencodedpolyline(polyline)))::text || ' ' || st_xmax(st_extent(st_linefromencodedpolyline(polyline)))::text from segment_ratings sr join segments s on sr.segment_id = s.id where created_at = ${new java.sql.Timestamp(created_at.getMillis())}""".as[String]
+    val sql = sql"""
+      WITH p AS (SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857)))
+      SELECT
+        st_xmin((SELECT * FROM p))::text || ',' ||
+        st_ymin((SELECT * FROM p))::text || ',' ||
+        st_xmax((SELECT * FROM p))::text || ',' ||
+        st_ymax((SELECT * FROM p))::text
+      FROM segment_ratings sr JOIN segments s ON sr.segment_id = s.id
+      WHERE created_at = ${new java.sql.Timestamp(created_at.getMillis())}""".as[String]
     dbMetrics.timer("getBoundsFromRatings").timeFuture { db.run((sql).map{ d => d.head } ) }
   }
 
