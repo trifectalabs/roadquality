@@ -66,7 +66,7 @@ app.ports.up.subscribe(function(authed) {
                         "type": "identity",
                         "property": "colour"
                     },
-                    "line-width": 1.5
+                    "line-width": 2
                 }
             });
         });
@@ -86,18 +86,19 @@ app.ports.setLayer.subscribe(function(layer) {
             "type": "line",
             "source": {
                 type: "vector",
-                tiles: ["http://localhost:8080/traffic/{z}/{x}/{y}.pbf"]
+                tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
             },
-            "source-layer": "mini_segments",
+            "source-layer": "traffic_mini_segments",
             "paint": {
                 "line-color": {
                     "type": "identity",
                     "property": "colour"
                 },
-                "line-width": 1.5
+                "line-width": 2
             }
         });
     }
+    showingLayer = layer;
 });
 
 app.ports.routeCreate.subscribe(function() {

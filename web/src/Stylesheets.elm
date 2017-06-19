@@ -64,7 +64,7 @@ accountNamespace =
 
 type CssIds
     = MainView
-    | AddRatingButton
+    | MapLegend
     | SaveRatingControl
     | NameInput
     | DescriptionInput
@@ -81,6 +81,7 @@ type CssClasses
     | SymbolButton
     | Active
     | Disabled
+    | AddRatingButton
       -- Map Menu Classes
     | CloseMenu
     | BackMenu
@@ -448,10 +449,40 @@ mapCss =
             , width (vw 100)
             , zIndex (int 0)
             ]
-        , id AddRatingButton
+        , id MapLegend
             [ position absolute
             , top (px 10)
             , left (px 10)
+            , width (px 300)
+            , height (px 175)
+            , borderRadius (px 2)
+            , padding (px 25)
+            , backgroundColor <| addAlpha 0.9 <| darker rgbWhite
+            , children
+                [ div
+                    [ firstChild [ marginRight (px 20) ]
+                    , marginBottom (px 25)
+                    ]
+                , img
+                    [ width (px 300)
+                    , height (px 25)
+                    ]
+                , span
+                    [ nthOfType "2" [ float right ] ]
+                , class AddRatingButton
+                    [ position absolute
+                    , bottom (px 25)
+                    , right (px 25)
+                    , marginBottom zero
+                    , active
+                        [ position absolute
+                        , top initial
+                        , left initial
+                        , bottom (px 23)
+                        , right (px 23)
+                        ]
+                    ]
+                ]
             ]
         , id SaveRatingControl
             [ position absolute

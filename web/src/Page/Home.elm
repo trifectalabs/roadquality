@@ -20,6 +20,7 @@ import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClass
 import Html.CssHelpers exposing (Namespace)
 import Util exposing ((=>), pair)
 import Route
+import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 
 
@@ -87,15 +88,63 @@ view : Session -> Model -> Html Msg
 view session model =
     div []
         [ div [ id MainView ] []
-        , div
-            [ id AddRatingButton
-            , g.class [ PrimaryButton ]
-            , onClick <| MenuMsg Menu.ShowMenu
-            ]
-            [ text "Add Rating" ]
+        , legendView session model
         , Menu.view model.menu |> Html.map MenuMsg
         , accountView session
         ]
+
+
+legendView : Session -> Model -> Html Msg
+legendView session model =
+    let
+        legend =
+            case model.mapLayer of
+                SurfaceQuality ->
+                    img [ Assets.src Assets.surfaceQuality ] []
+
+                TrafficSafety ->
+                    img [ Assets.src Assets.trafficSafety ] []
+
+                _ ->
+                    img [] []
+
+        addRating =
+            case session.user of
+                Nothing ->
+                    div
+                        [ class [ AddRatingButton ] ]
+                        [ text "Sign in to add a rating" ]
+
+                Just _ ->
+                    div
+                        [ g.class [ PrimaryButton ]
+                        , class [ AddRatingButton ]
+                        , onClick <| MenuMsg Menu.ShowMenu
+                        ]
+                        [ text "Add Rating" ]
+    in
+        div [ id MapLegend ]
+            [ div
+                [ g.classList
+                    [ ( PrimaryButton, model.mapLayer == SurfaceQuality )
+                    , ( SecondaryButton, model.mapLayer /= SurfaceQuality )
+                    ]
+                , onClick <| SetLayer SurfaceQuality
+                ]
+                [ text "Surface Quality" ]
+            , div
+                [ g.classList
+                    [ ( PrimaryButton, model.mapLayer == TrafficSafety )
+                    , ( SecondaryButton, model.mapLayer /= TrafficSafety )
+                    ]
+                , onClick <| SetLayer TrafficSafety
+                ]
+                [ text "Traffic Safety" ]
+            , legend
+            , span [] [ text "Bad" ]
+            , span [] [ text "Good" ]
+            , addRating
+            ]
 
 
 accountView : Session -> Html Msg

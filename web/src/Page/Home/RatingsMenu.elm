@@ -57,7 +57,7 @@ styles =
     { open =
         [ Animation.left (px 0.0) ]
     , closed =
-        [ Animation.left (px -400.0) ]
+        [ Animation.left (px -405.0) ]
     }
 
 
