@@ -3,7 +3,7 @@ module Page.Home exposing (view, subscriptions, update, Model, Msg, ExternalMsg(
 import Dict exposing (Dict)
 import OrderedDict as OrdDict exposing (OrderedDict)
 import List.Extra exposing (elemIndex)
-import Data.Map exposing (CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
+import Data.Map exposing (MapLayer(..), CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
 import Data.AuthToken exposing (AuthToken)
 import Data.Session as Session exposing (Session)
 import Data.UserPhoto as UserPhoto
@@ -29,6 +29,7 @@ import Page.Home.RatingsMenu as Menu
 type alias Model =
     { errors : List String
     , menu : Menu.Model
+    , mapLayer : MapLayer
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
@@ -62,6 +63,7 @@ initModel : List Segment -> Model
 initModel segments =
     { errors = []
     , menu = Menu.initModel
+    , mapLayer = SurfaceQuality
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , segments = segments
@@ -102,7 +104,12 @@ accountView session =
         Nothing ->
             a
                 [ Route.href Route.Login ]
-                [ div [ class [ GoToAccount ] ] [ text "Sign In" ] ]
+                [ div
+                    [ class [ GoToAccount ]
+                    , g.class [ SecondaryButton ]
+                    ]
+                    [ text "Sign In" ]
+                ]
 
         Just user ->
             a
@@ -125,7 +132,8 @@ subscriptions model =
 
 
 type Msg
-    = DropAnchorPoint Bool ( String, Float, Float )
+    = SetLayer MapLayer
+    | DropAnchorPoint Bool ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
@@ -162,6 +170,26 @@ update session msg model =
             addRoute apiUrl maybeAuthToken cycleRoutes
     in
         case msg of
+            SetLayer layer ->
+                let
+                    stringLayer =
+                        case layer of
+                            PlainMap ->
+                                "PlainMap"
+
+                            SurfaceQuality ->
+                                "SurfaceQuality"
+
+                            TrafficSafety ->
+                                "TrafficSafety"
+
+                            SegmentsView ->
+                                "SegmentsView"
+                in
+                    { model | mapLayer = layer }
+                        => Ports.setLayer stringLayer
+                        => NoOp
+
             DropAnchorPoint new ( pointId, lat, lng ) ->
                 let
                     ( anchorCount, handler ) =
@@ -528,7 +556,7 @@ update session msg model =
                                 }
                                     => Cmd.none
 
-                            Menu.Completed sRating tRating sType pType ->
+                            Menu.Completed sRating tRating name desc ->
                                 let
                                     polylines =
                                         model.cycleRoutes
@@ -536,13 +564,13 @@ update session msg model =
                                             |> List.map .polyline
 
                                     createSegmentForm =
-                                        { name = menu.name
-                                        , description = menu.description
+                                        { name = name
+                                        , description = desc
                                         , polylines = polylines
                                         , surfaceRating = sRating
                                         , trafficRating = tRating
-                                        , surface = sType
-                                        , pathType = pType
+                                        , surface = UnknownSurface
+                                        , pathType = UnknownPath
                                         }
 
                                     req =

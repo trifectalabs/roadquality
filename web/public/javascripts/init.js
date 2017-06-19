@@ -12,6 +12,7 @@ let cursorOverPoint = null;
 let isDragging = false;
 let viewOnly = true;
 let popup;
+let showingLayer;
 
   // STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
@@ -39,7 +40,7 @@ app.ports.up.subscribe(function(authed) {
             container: "MainView",
             style: "mapbox://styles/mapbox/light-v9",
             center: [-79.412190, 43.667632],
-            zoom: 10
+            zoom: 12
         });
 
         canvas = map.getCanvasContainer();
@@ -50,25 +51,53 @@ app.ports.up.subscribe(function(authed) {
         map.on("mousedown", onMapMouseDown);
         map.on("mouseup", onMapMouseUp);
 
-        map.on('load', function () {
+        showingLayer = "SurfaceQuality";
+        map.on("load", function () {
             map.addLayer({
-                "id": "mini_segments",
+                "id": "SurfaceQuality",
                 "type": "line",
                 "source": {
-                    type: 'vector',
-                    tiles: ['https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf']
+                    type: "vector",
+                    tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
                 },
                 "source-layer": "surface_mini_segments",
                 "paint": {
                     "line-color": {
-                          "type": "identity",
-                          "property": "colour"
+                        "type": "identity",
+                        "property": "colour"
                     },
                     "line-width": 1.5
                 }
             });
         });
     }, 100);
+});
+
+app.ports.setLayer.subscribe(function(layer) {
+    if (showingLayer === layer) {
+        return;
+    } else if (map.getLayer(layer)) {
+        map.setLayoutProperty(showingLayer, "visibility", "none");
+        map.setLayoutProperty(layer, "visibility", "visible");
+    } else if (layer === "TrafficSafety") {
+        map.setLayoutProperty(showingLayer, "visibility", "none");
+        map.addLayer({
+            "id": "TrafficSafety",
+            "type": "line",
+            "source": {
+                type: "vector",
+                tiles: ["http://localhost:8080/traffic/{z}/{x}/{y}.pbf"]
+            },
+            "source-layer": "mini_segments",
+            "paint": {
+                "line-color": {
+                    "type": "identity",
+                    "property": "colour"
+                },
+                "line-width": 1.5
+            }
+        });
+    }
 });
 
 app.ports.routeCreate.subscribe(function() {
