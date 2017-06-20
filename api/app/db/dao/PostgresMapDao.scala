@@ -24,9 +24,11 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
   case class MapRouteResult(seq: Integer, geom: Geometry, distance: Double)
 
   override def route(startPoint: Point, endPoint: Point): Future[MapRoute] = {
-    val strSql = s"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});"""
+    val BOUNDING_BOX_RADIUS = 3000 // Number of meters to include the routing ways in the query
+
+    val strSql = s"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS});"""
     println(strSql)
-    val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat});""".as[MapRouteResult]
+    val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS});""".as[MapRouteResult]
     db.run(sql).map { mapRouteResultList =>
       if (mapRouteResultList.size == 0)
         throw new NoRouteFoundException
