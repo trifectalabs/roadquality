@@ -65,6 +65,8 @@ accountNamespace =
 type CssIds
     = MainView
     | MapLegend
+    | MapSwitcher
+    | AddRatingButton
     | SaveRatingControl
     | NameInput
     | DescriptionInput
@@ -81,7 +83,6 @@ type CssClasses
     | SymbolButton
     | Active
     | Disabled
-    | AddRatingButton
       -- Map Menu Classes
     | CloseMenu
     | BackMenu
@@ -449,40 +450,52 @@ mapCss =
             , width (vw 100)
             , zIndex (int 0)
             ]
-        , id MapLegend
+        , id AddRatingButton
             [ position absolute
             , top (px 10)
             , left (px 10)
-            , width (px 300)
-            , height (px 175)
-            , borderRadius (px 2)
-            , padding (px 25)
-            , backgroundColor <| addAlpha 0.9 <| darker rgbWhite
+            , zIndex (int 2)
+            , active
+                [ position absolute
+                , top (px 12)
+                , left (px 12)
+                ]
+            ]
+        , id MapSwitcher
+            [ position absolute
+            , top zero
+            , left zero
+            , right zero
+            , zIndex (int 1)
             , children
                 [ div
-                    [ firstChild [ marginRight (px 20) ]
-                    , marginBottom (px 25)
-                    ]
-                , img
-                    [ width (px 300)
-                    , height (px 25)
-                    ]
-                , span
-                    [ nthOfType "2" [ float right ] ]
-                , class AddRatingButton
-                    [ position absolute
-                    , bottom (px 25)
-                    , right (px 25)
-                    , marginBottom zero
-                    , active
-                        [ position absolute
-                        , top initial
-                        , left initial
-                        , bottom (px 23)
-                        , right (px 23)
+                    [ margin3 (px 10) auto zero
+                    , width (px 300)
+                    , children
+                        [ div
+                            [ position relative
+                            , width (px 150)
+                            , boxSizing borderBox
+                            , textAlign center
+                            , firstChild
+                                [ borderTopRightRadius zero
+                                , borderBottomRightRadius zero
+                                ]
+                            , lastChild
+                                [ borderTopLeftRadius zero
+                                , borderBottomLeftRadius zero
+                                ]
+                            ]
                         ]
                     ]
                 ]
+            ]
+        , id MapLegend
+            [ position absolute
+            , top (px 75)
+            , left (px 10)
+            , width (px 36)
+            , borderRadius (px 18)
             ]
         , id SaveRatingControl
             [ position absolute
@@ -492,6 +505,7 @@ mapCss =
             , backgroundColor (rgb 255 255 255)
             , boxShadow4 (px 1) zero (px 5) rgbDarkGray
             , overflow hidden
+            , zIndex (int 3)
             , descendants
                 [ h2
                     [ width (px 250)
@@ -663,14 +677,13 @@ mapCss =
             ]
         , class GoToAccount
             [ position absolute
-            , top (px 15)
-            , right (px 15)
+            , top (px 10)
+            , right (px 10)
+            , zIndex (int 2)
             ]
         , div
             [ withClass GoToAccount
-                [ top (px 10)
-                , right (px 10)
-                , active
+                [ active
                     [ position absolute
                     , top (px 12)
                     , right (px 8)

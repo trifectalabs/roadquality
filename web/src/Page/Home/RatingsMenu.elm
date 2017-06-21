@@ -1,6 +1,5 @@
 module Page.Home.RatingsMenu exposing (view, subscriptions, update, anchorCountUpdate, Model, Msg(..), ExternalMsg(..), initModel)
 
-import Data.Map exposing (SurfaceType(..), PathType(..))
 import Html exposing (..)
 import Html.Attributes as Attr exposing (type_, value, for, title, name, checked, placeholder)
 import Html.Events exposing (onClick, onInput, onMouseEnter, onMouseLeave)
@@ -646,7 +645,8 @@ type Msg
 
 
 type ExternalMsg
-    = Closed
+    = OpenMenu
+    | CloseMenu
     | Completed Int Int String String
     | Error String
     | NoOp
@@ -676,7 +676,7 @@ update msg model =
                         model.style
             }
                 => Ports.routeCreate ()
-                => NoOp
+                => OpenMenu
 
         AnimateMenu animMsg ->
             { model | style = Animation.update animMsg model.style }
@@ -706,7 +706,7 @@ update msg model =
                         model.style
             }
                 => Ports.clearRoute ()
-                => Closed
+                => CloseMenu
 
         SaveSegment quickSave ->
             let

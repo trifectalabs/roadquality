@@ -29,12 +29,12 @@ stravaLogin =
 
 surfaceQuality : Image
 surfaceQuality =
-    Image "/assets/img/surface-quality.png"
+    Image "/assets/img/surface-quality-vert.png"
 
 
 trafficSafety : Image
 trafficSafety =
-    Image "/assets/img/traffic-safety.png"
+    Image "/assets/img/traffic-safety-vert.png"
 
 
 

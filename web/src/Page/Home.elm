@@ -22,6 +22,7 @@ import Util exposing ((=>), pair)
 import Route
 import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
+import Animation exposing (px)
 
 
 -- MODEL --
@@ -31,9 +32,16 @@ type alias Model =
     { errors : List String
     , menu : Menu.Model
     , mapLayer : MapLayer
+    , style : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
+    }
+
+
+type alias Styles =
+    { open : List Animation.Property
+    , closed : List Animation.Property
     }
 
 
@@ -65,9 +73,19 @@ initModel segments =
     { errors = []
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
+    , style = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , segments = segments
+    }
+
+
+styles : Styles
+styles =
+    { open =
+        [ Animation.paddingLeft (px 400.0) ]
+    , closed =
+        [ Animation.paddingLeft (px 0.0) ]
     }
 
 
@@ -86,64 +104,58 @@ g =
 
 view : Session -> Model -> Html Msg
 view session model =
-    div []
-        [ div [ id MainView ] []
-        , legendView session model
-        , Menu.view model.menu |> Html.map MenuMsg
-        , accountView session
-        ]
-
-
-legendView : Session -> Model -> Html Msg
-legendView session model =
     let
+        addRatingCmd =
+            case session.user of
+                Nothing ->
+                    ShowLogin
+
+                Just _ ->
+                    MenuMsg Menu.ShowMenu
+
         legend =
             case model.mapLayer of
                 SurfaceQuality ->
-                    img [ Assets.src Assets.surfaceQuality ] []
+                    img [ id MapLegend, Assets.src Assets.surfaceQuality ] []
 
                 TrafficSafety ->
-                    img [ Assets.src Assets.trafficSafety ] []
+                    img [ id MapLegend, Assets.src Assets.trafficSafety ] []
 
                 _ ->
                     img [] []
-
-        addRating =
-            case session.user of
-                Nothing ->
-                    div
-                        [ class [ AddRatingButton ] ]
-                        [ text "Sign in to add a rating" ]
-
-                Just _ ->
-                    div
-                        [ g.class [ PrimaryButton ]
-                        , class [ AddRatingButton ]
-                        , onClick <| MenuMsg Menu.ShowMenu
-                        ]
-                        [ text "Add Rating" ]
     in
-        div [ id MapLegend ]
-            [ div
-                [ g.classList
-                    [ ( PrimaryButton, model.mapLayer == SurfaceQuality )
-                    , ( SecondaryButton, model.mapLayer /= SurfaceQuality )
-                    ]
-                , onClick <| SetLayer SurfaceQuality
-                ]
-                [ text "Surface Quality" ]
+        div []
+            [ div [ id MainView ] []
             , div
-                [ g.classList
-                    [ ( PrimaryButton, model.mapLayer == TrafficSafety )
-                    , ( SecondaryButton, model.mapLayer /= TrafficSafety )
-                    ]
-                , onClick <| SetLayer TrafficSafety
+                [ g.class [ PrimaryButton ]
+                , id AddRatingButton
+                , onClick addRatingCmd
                 ]
-                [ text "Traffic Safety" ]
+                [ text "Add Rating" ]
             , legend
-            , span [] [ text "Bad" ]
-            , span [] [ text "Good" ]
-            , addRating
+            , div
+                (Animation.render model.style ++ [ id MapSwitcher ])
+                [ div []
+                    [ div
+                        [ g.classList
+                            [ ( PrimaryButton, model.mapLayer == SurfaceQuality )
+                            , ( SecondaryButton, model.mapLayer /= SurfaceQuality )
+                            ]
+                        , onClick <| SetLayer SurfaceQuality
+                        ]
+                        [ text "Surface Quality" ]
+                    , div
+                        [ g.classList
+                            [ ( PrimaryButton, model.mapLayer == TrafficSafety )
+                            , ( SecondaryButton, model.mapLayer /= TrafficSafety )
+                            ]
+                        , onClick <| SetLayer TrafficSafety
+                        ]
+                        [ text "Traffic Safety" ]
+                    ]
+                ]
+            , Menu.view model.menu |> Html.map MenuMsg
+            , accountView session
             ]
 
 
@@ -173,6 +185,7 @@ subscriptions model =
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
+        , Animation.subscription AnimateSwitcher [ model.style ]
         ]
 
 
@@ -182,6 +195,8 @@ subscriptions model =
 
 type Msg
     = SetLayer MapLayer
+    | ShowLogin
+    | AnimateSwitcher Animation.Msg
     | DropAnchorPoint Bool ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
@@ -238,6 +253,14 @@ update session msg model =
                     { model | mapLayer = layer }
                         => Ports.setLayer stringLayer
                         => NoOp
+
+            ShowLogin ->
+                model => Cmd.none => Unauthorized
+
+            AnimateSwitcher animMsg ->
+                { model | style = Animation.update animMsg model.style }
+                    => Cmd.none
+                    => NoOp
 
             DropAnchorPoint new ( pointId, lat, lng ) ->
                 let
@@ -598,10 +621,23 @@ update session msg model =
                                     |> Util.appendErrors model
                                     => Cmd.none
 
-                            Menu.Closed ->
+                            Menu.OpenMenu ->
+                                { model
+                                    | style =
+                                        Animation.interrupt
+                                            [ Animation.to styles.open ]
+                                            model.style
+                                }
+                                    => Cmd.none
+
+                            Menu.CloseMenu ->
                                 { model
                                     | anchors = OrdDict.empty
                                     , cycleRoutes = OrdDict.empty
+                                    , style =
+                                        Animation.interrupt
+                                            [ Animation.to styles.closed ]
+                                            model.style
                                 }
                                     => Cmd.none
 
