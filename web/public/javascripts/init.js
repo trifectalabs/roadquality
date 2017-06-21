@@ -221,14 +221,28 @@ function onMapClick(e) {
         map.dragPan.enable();
     });
 
-    let maxDistX = window.innerWidth / 2;
-    let posX = Math.abs(e.originalEvent.x - maxDistX);
-    let panX = 0.6 * posX / maxDistX + 0.25;
+    // Shift LngLat for map pan to compensate for open sidebar menu
+    let mapBounds = map.getBounds();
+    let mapMinX = mapBounds.getWest();
+    let mapMaxX = mapBounds.getEast();
+    let windowMinX = 0;
+    let windowMaxX = window.innerWidth;
+    let mapPosX = e.lngLat.lng;
+    let mapPosY = e.lngLat.lat;
+    let windowPosX = windowMinX + ((windowMaxX - windowMinX) / (mapMaxX - mapMinX)) * (mapPosX - mapMinX);
+    let shiftedWindowPosX = windowPosX - 200;
+    let shiftedMapPosX = mapMinX + ((mapMaxX - mapMinX) / (windowMaxX - windowMinX)) * (shiftedWindowPosX - windowMinX);
+    let shiftedLngLat = [shiftedMapPosX, mapPosY];
+
+    // Calculate pan duration based on distance to pan
+    let maxDistX = (window.innerWidth - 400) / 2;
+    let posX = Math.abs(e.originalEvent.x - 400 - maxDistX);
+    let panX = 0.25 + (0.6 / maxDistX) * (posX - 400);
     let maxDistY = window.innerHeight / 2;
     let posY = Math.abs(e.originalEvent.y - maxDistY);
-    let panY = 0.6 * posY / maxDistY + 0.25;
+    let panY = 0.25 + (0.6 / maxDistY) * posY;
     let panDuration = Math.max(panX, panY) * 1000;
-    map.panTo(e.lngLat, { duration: panDuration });
+    map.panTo(shiftedLngLat, { duration: panDuration });
 
     markerCount++;
     app.ports.setAnchor.send([id, e.lngLat.lat, e.lngLat.lng]);
