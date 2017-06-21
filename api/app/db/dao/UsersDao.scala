@@ -16,12 +16,18 @@ trait UsersDao {
     firstName: String,
     lastName: String,
     email: String,
+    city: String,
+    province: String,
+    country: String,
     birthdate: _root_.scala.Option[_root_.org.joda.time.DateTime],
     sex: _root_.scala.Option[String],
     stravaToken: String): Future[User]
   def upsert(firstName: String,
     lastName: String,
     email: String,
+    city: String,
+    province: String,
+    country: String,
     birthdate: _root_.scala.Option[_root_.org.joda.time.DateTime],
     sex: _root_.scala.Option[String],
     stravaToken: String): Future[User]

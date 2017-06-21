@@ -29,6 +29,9 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
     def firstName = column[String]("first_name")
     def lastName = column[String]("last_name")
     def email = column[String]("email")
+    def city = column[String]("city")
+    def province = column[String]("province")
+    def country = column[String]("country")
     def birthdate = column[Option[DateTime]]("birthdate")
     def sex = column[Option[String]]("sex")
     def role = column[UserRole]("role")
@@ -37,7 +40,7 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
     def updatedAt = column[DateTime]("updated_at")
     def deletedAt = column[Option[DateTime]]("deleted_at")
 
-    override def * = (id, firstName, lastName, email, birthdate, sex, role, stravaToken, createdAt, updatedAt, deletedAt) <> (User.tupled, User.unapply)
+    override def * = (id, firstName, lastName, email, city, province, country, birthdate, sex, role, stravaToken, createdAt, updatedAt, deletedAt) <> (User.tupled, User.unapply)
   }
 
   val users = TableQuery[Users]

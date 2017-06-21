@@ -38,15 +38,18 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
             userData.firstName,
             userData.lastName,
             userData.email,
+            userData.city,
+            userData.province,
+            userData.country,
             None,
-			userData.sex,
-			userData.stravaToken).map { user =>
-			  val jwtToken = jwt.createToken(user)
-              if (user.role == UserRole.Admin)
-                Redirect(s"/app?token=$jwtToken")
-              else
-                Redirect("/")
-			}
+            userData.sex,
+            userData.stravaToken).map { user =>
+              val jwtToken = jwt.createToken(user)
+                if (user.role == UserRole.Admin)
+                  Redirect(s"/app?token=$jwtToken")
+                else
+                  Redirect("/")
+            }
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
         }
@@ -73,12 +76,18 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
         val firstName = (response.json \ "athlete" \ "firstname").as[String]
         val lastName = (response.json \ "athlete" \ "lastname").as[String]
         val email = (response.json \ "athlete" \ "email").as[String]
+        val city = (response.json \ "athlete" \ "city").as[String]
+        val province = (response.json \ "athlete" \ "state").as[String]
+        val country = (response.json \ "athlete" \ "country").as[String]
         val sex = (response.json \ "athlete" \ "sex").asOpt[String]
 
         StravaUserData(
           firstName = firstName,
           lastName = lastName,
           email = email,
+          city = city,
+          province = province,
+          country = country,
           stravaToken = accessToken,
           sex = sex)
       }
@@ -89,5 +98,8 @@ case class StravaUserData(
   firstName: String,
   lastName: String,
   email: String,
+  city: String,
+  province: String,
+  country: String,
   stravaToken: String,
   sex: Option[String])
