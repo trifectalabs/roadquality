@@ -1,15 +1,15 @@
 module Page.Home.RatingsMenu exposing (view, subscriptions, update, anchorCountUpdate, Model, Msg(..), ExternalMsg(..), initModel)
 
-import Data.Map exposing (SurfaceType(..), PathType(..))
 import Html exposing (..)
-import Html.Attributes as Attr exposing (type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes as Attr exposing (type_, value, for, title, name, checked, placeholder)
+import Html.Events exposing (onClick, onInput, onMouseEnter, onMouseLeave)
+import Svg exposing (svg, polygon, line, polyline)
+import Svg.Attributes exposing (xmlSpace, width, height, viewBox, fill, stroke, strokeWidth, strokeLinecap, strokeLinejoin, points, x1, x2, y1, y2)
 import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClasses(..))
 import Html.CssHelpers exposing (Namespace)
 import Animation exposing (px, percent)
 import Util exposing ((=>))
 import Ports
-import Views.Assets as Assets
 
 
 -- MODEL --
@@ -17,30 +17,25 @@ import Views.Assets as Assets
 
 type MenuStep
     = NeedAnchorsPlaced
-    | AddRatings
-      -- | AddTags
+    | AddSurfaceRating
+    | AddTrafficRating
     | AddName
 
 
 type alias Model =
     { step : MenuStep
     , style : Animation.State
-    , progress : Animation.State
-    , autoAdvance : Bool
-    , name : String
-    , description : String
+    , ratingHover : Maybe Int
     , surfaceRating : Maybe Int
     , trafficRating : Maybe Int
-
-    -- , surfaceType : Maybe SurfaceType
-    -- , pathType : Maybe PathType
+    , name : String
+    , description : String
     }
 
 
 type alias Styles =
     { open : List Animation.Property
     , closed : List Animation.Property
-    , progressWidth : Float -> List Animation.Property
     }
 
 
@@ -48,15 +43,11 @@ initModel : Model
 initModel =
     { step = NeedAnchorsPlaced
     , style = Animation.style styles.closed
-    , progress = Animation.style <| styles.progressWidth 33.3
-    , autoAdvance = True
-    , name = ""
-    , description = ""
+    , ratingHover = Nothing
     , surfaceRating = Nothing
     , trafficRating = Nothing
-
-    -- , surfaceType = Nothing
-    -- , pathType = Nothing
+    , name = ""
+    , description = ""
     }
 
 
@@ -65,9 +56,7 @@ styles =
     { open =
         [ Animation.left (px 0.0) ]
     , closed =
-        [ Animation.left (px -400.0) ]
-    , progressWidth =
-        (\p -> [ Animation.width (percent p) ])
+        [ Animation.left (px -405.0) ]
     }
 
 
@@ -86,46 +75,93 @@ g =
 
 view : Model -> Html Msg
 view model =
-    -- TODO: Add info about ratings
     div
         (Animation.render model.style ++ [ id SaveRatingControl ])
-        (toolBar model ++ [ ratingsControl model, ratingsInfo model.step ])
+        [ menuClose model.step
+        , ratingsControl model
+        , menuProgress model
+        ]
 
 
-toolBar : Model -> List (Html Msg)
-toolBar model =
+menuClose : MenuStep -> Html Msg
+menuClose step =
     let
-        close =
-            img
-                [ class [ CloseMenu ]
-                , Assets.src Assets.close
-                , onClick ClearAnchors
-                ]
-                []
+        strokeColor =
+            case step of
+                AddName ->
+                    whiteString
 
-        back step =
-            img
-                [ class [ BackMenu ]
-                , Assets.src Assets.backArrow
-                , onClick <| SetMenuStep True step
+                _ ->
+                    blackString
+    in
+        span
+            [ class [ CloseMenu ]
+            , g.class [ SymbolButton ]
+            , onClick ClearAnchors
+            ]
+            [ svg
+                [ xmlSpace "http://www.w3.org/2000/svg"
+                , width "24"
+                , height "24"
+                , viewBox "0 0 24 24"
+                , fill "none"
+                , stroke strokeColor
+                , strokeWidth "2"
+                , strokeLinecap "round"
+                , strokeLinejoin "round"
                 ]
-                []
+                [ line [ x1 "18", y1 "6", x2 "6", y2 "18" ] []
+                , line [ x1 "6", y1 "6", x2 "18", y2 "18" ] []
+                ]
+            ]
+
+
+menuProgress : Model -> Html Msg
+menuProgress model =
+    let
+        back step =
+            span
+                [ class [ BackMenu ]
+                , g.class [ SecondaryButton, SymbolButton ]
+                , onClick <| SetMenuStep step
+                ]
+                [ svg
+                    [ xmlSpace "http://www.w3.org/2000/svg"
+                    , width "24"
+                    , height "24"
+                    , viewBox "0 0 24 24"
+                    , fill "none"
+                    , stroke greyString
+                    , strokeWidth "2"
+                    , strokeLinecap "round"
+                    , strokeLinejoin "round"
+                    ]
+                    [ line [ x1 "20", y1 "12", x2 "4", y2 "12" ] []
+                    , polyline [ points "10 18 4 12 10 6" ] []
+                    ]
+                ]
 
         next click =
-            img
+            span
                 [ class [ NextMenu ]
-                , Assets.src Assets.nextArrow
+                , g.class [ PrimaryButton, SymbolButton ]
                 , click
                 ]
-                []
-
-        done =
-            img
-                [ class [ DoneMenu ]
-                , Assets.src Assets.done
-                , onClick SaveSegment
+                [ svg
+                    [ xmlSpace "http://www.w3.org/2000/svg"
+                    , width "24"
+                    , height "24"
+                    , viewBox "0 0 24 24"
+                    , fill "none"
+                    , stroke whiteString
+                    , strokeWidth "2"
+                    , strokeLinecap "round"
+                    , strokeLinejoin "round"
+                    ]
+                    [ line [ x1 "4", y1 "12", x2 "20", y2 "12" ] []
+                    , polyline [ points "14 6 20 12 14 18" ] []
+                    ]
                 ]
-                []
 
         nothing =
             span [] []
@@ -133,29 +169,53 @@ toolBar model =
         ( leftAction, rightAction ) =
             case model.step of
                 NeedAnchorsPlaced ->
-                    ( close, nothing )
+                    ( nothing, nothing )
 
-                AddRatings ->
-                    if
-                        model.surfaceRating
-                            /= Nothing
-                            && model.trafficRating
-                            /= Nothing
-                    then
-                        ( close, next <| onClick <| SetMenuStep False AddName )
-                    else
-                        ( close, next <| class [ Disabled ] )
+                AddSurfaceRating ->
+                    case model.surfaceRating of
+                        Nothing ->
+                            ( nothing, next <| class [ Disabled ] )
 
-                -- AddTags ->
-                --     ( back AddRatings, next AddName )
+                        Just _ ->
+                            ( nothing
+                            , next <| onClick <| SetMenuStep AddTrafficRating
+                            )
+
+                AddTrafficRating ->
+                    case model.trafficRating of
+                        Nothing ->
+                            ( back AddSurfaceRating
+                            , next <| class [ Disabled ]
+                            )
+
+                        Just _ ->
+                            ( back AddSurfaceRating
+                            , next <| onClick <| SetMenuStep AddName
+                            )
+
                 AddName ->
-                    ( back AddRatings, done )
+                    ( back AddTrafficRating, nothing )
     in
-        [ leftAction
-        , div
-            [ class [ ProgressBar ] ]
-            [ div (Animation.render model.progress) [] ]
-        , rightAction
+        div [ class [ ProgressBar ] ]
+            [ leftAction
+            , progressDots model.step
+            , rightAction
+            ]
+
+
+progressDots : MenuStep -> Html Msg
+progressDots step =
+    div [ class [ ProgressDots ] ]
+        [ span
+            [ classList [ ( Active, step == NeedAnchorsPlaced ) ] ]
+            [ text "⬤" ]
+        , span
+            [ classList [ ( Active, step == AddSurfaceRating ) ] ]
+            [ text "⬤" ]
+        , span
+            [ classList [ ( Active, step == AddTrafficRating ) ] ]
+            [ text "⬤" ]
+        , span [ classList [ ( Active, step == AddName ) ] ] [ text "⬤" ]
         ]
 
 
@@ -165,281 +225,397 @@ ratingsControl model =
         NeedAnchorsPlaced ->
             needAnchorsPlaced
 
-        AddRatings ->
-            addRatings model
+        AddSurfaceRating ->
+            addSurfaceRating model
 
-        -- AddTags ->
-        --     addTags model
+        AddTrafficRating ->
+            addTrafficRating model
+
         AddName ->
             addName model
 
 
+star : String -> String -> Html msg
+star fillColor strokeColor =
+    svg
+        [ xmlSpace "http://www.w3.org/2000/svg"
+        , width "32"
+        , height "32"
+        , viewBox "0 0 32 32"
+        , fill fillColor
+        , stroke strokeColor
+        , strokeWidth "1"
+        , strokeLinecap "round"
+        , strokeLinejoin "round"
+        ]
+        [ polygon [ points "16,2 20.326,11.216 30,12.703 23.001,19.872 24.651,30 16,25.215 7.348,30 9,19.872 2,12.703 11.675,11.216" ] [] ]
+
+
+surfaceRatingOneString : String
+surfaceRatingOneString =
+    "rgb(166, 3, 15)"
+
+
+surfaceRatingTwoString : String
+surfaceRatingTwoString =
+    "rgb(198, 97, 22)"
+
+
+surfaceRatingThreeString : String
+surfaceRatingThreeString =
+    "rgb(230, 191, 28)"
+
+
+surfaceRatingFourString : String
+surfaceRatingFourString =
+    "rgb(143, 191, 28)"
+
+
+surfaceRatingFiveString : String
+surfaceRatingFiveString =
+    "rgb(56, 191, 28)"
+
+
+trafficRatingOneString : String
+trafficRatingOneString =
+    "rgb(200, 3, 15)"
+
+
+trafficRatingTwoString : String
+trafficRatingTwoString =
+    "rgb(150, 23, 88)"
+
+
+trafficRatingThreeString : String
+trafficRatingThreeString =
+    "rgb(100, 42, 160)"
+
+
+trafficRatingFourString : String
+trafficRatingFourString =
+    "rgb(64, 54, 198)"
+
+
+trafficRatingFiveString : String
+trafficRatingFiveString =
+    "rgb(27, 65, 236)"
+
+
+whiteString : String
+whiteString =
+    "rgb(255, 255, 255)"
+
+
+greyString : String
+greyString =
+    "rgb(170, 170, 170)"
+
+
+blackString : String
+blackString =
+    "rgb(44, 44, 44)"
+
+
 needAnchorsPlaced : Html Msg
 needAnchorsPlaced =
-    div [ class [ NeedAnchorsControl ] ]
-        [ -- span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-          h3 [] [ text "Start by placing points on the map to select a road" ]
-        ]
-
-
-addRatings : Model -> Html Msg
-addRatings model =
-    div [ class [ AddRatingsControl ] ]
-        [ --     span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-          -- , div
-          --     [ class [ ProgressBar ] ]
-          --     [ div (Animation.render model.progress) [] ]
-          -- , span
-          --     [ g.class [ PrimaryButton ]
-          --     , Attr.class "fa fa-arrow-right"
-          --     , case ( model.surfaceRating, model.trafficRating ) of
-          --         ( Just _, Just _ ) ->
-          --             onClick <| SetMenuStep AddTags
-          --         _ ->
-          --             class [ Disabled ]
-          --     ]
-          --     []
-          div
-            [ class [ SurfaceRatingMenu ] ]
-            [ h2 [] [ text "Surface Rating" ]
-            , div
-                [ onClick <| ChangeSurfaceRating <| Just 1
-                , classList
-                    [ ( SurfaceRatingOne, True )
-                    , ( Active, model.surfaceRating == Just 1 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeSurfaceRating <| Just 2
-                , classList
-                    [ ( SurfaceRatingTwo, True )
-                    , ( Active, model.surfaceRating == Just 2 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeSurfaceRating <| Just 3
-                , classList
-                    [ ( SurfaceRatingThree, True )
-                    , ( Active, model.surfaceRating == Just 3 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeSurfaceRating <| Just 4
-                , classList
-                    [ ( SurfaceRatingFour, True )
-                    , ( Active, model.surfaceRating == Just 4 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeSurfaceRating <| Just 5
-                , classList
-                    [ ( SurfaceRatingFive, True )
-                    , ( Active, model.surfaceRating == Just 5 )
-                    ]
-                ]
-                []
-            ]
-        , div
-            [ class [ TrafficRatingMenu ] ]
-            [ h2 [] [ text "Traffic Rating" ]
-            , div
-                [ onClick <| ChangeTrafficRating <| Just 1
-                , classList
-                    [ ( TrafficRatingOne, True )
-                    , ( Active, model.trafficRating == Just 1 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeTrafficRating <| Just 2
-                , classList
-                    [ ( TrafficRatingTwo, True )
-                    , ( Active, model.trafficRating == Just 2 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeTrafficRating <| Just 3
-                , classList
-                    [ ( TrafficRatingThree, True )
-                    , ( Active, model.trafficRating == Just 3 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeTrafficRating <| Just 4
-                , classList
-                    [ ( TrafficRatingFour, True )
-                    , ( Active, model.trafficRating == Just 4 )
-                    ]
-                ]
-                []
-            , div
-                [ onClick <| ChangeTrafficRating <| Just 5
-                , classList
-                    [ ( TrafficRatingFive, True )
-                    , ( Active, model.trafficRating == Just 5 )
-                    ]
-                ]
-                []
+    div [ class [ RatingsMenu ] ]
+        [ div [] []
+        , h2 []
+            [ text "Start by selecting your route on the "
+            , span [] [ text "map" ]
+            , text "."
             ]
         ]
 
 
+addSurfaceRating : Model -> Html Msg
+addSurfaceRating model =
+    let
+        selectedRating =
+            case ( model.surfaceRating, model.ratingHover ) of
+                ( _, Just ratingHover ) ->
+                    Just ratingHover
 
--- addTags : Model -> Html Msg
--- addTags model =
---     div [ class [ AddTagsControl ] ]
---         [ div
---             [ class [ SurfaceTypeMenu ] ]
---             [ h2 [] [ text "Surface Type" ]
---             , div
---                 [ onClick <| ChangeSurfaceType <| Just Asphalt
---                 , classList [ ( Active, model.surface == Just Asphalt ) ]
---                 ]
---                 [ text "Asphalt" ]
---             , div
---                 [ onClick <| ChangeSurfaceType <| Just Gravel
---                 , classList [ ( Active, model.surface == Just Gravel ) ]
---                 ]
---                 [ text "Gravel" ]
---             , div
---                 [ onClick <| ChangeSurfaceType <| Just Dirt
---                 , classList [ ( Active, model.surface == Just Dirt ) ]
---                 ]
---                 [ text "Dirt" ]
---             ]
---         , div
---             [ class [ PathTypeMenu ] ]
---             [ h2 [] [ text "Path Type" ]
---             , div
---                 [ onClick <| ChangePathType <| Just Shared
---                 , classList [ ( Active, model.pathType == Just Shared ) ]
---                 ]
---                 [ text "Shared Road" ]
---             , div
---                 [ onClick <| ChangePathType <| Just DedicatedLane
---                 , classList [ ( Active, model.pathType == Just DedicatedLane ) ]
---                 ]
---                 [ text "Bike Lane" ]
---             , div
---                 [ onClick <| ChangePathType <| Just BikePath
---                 , classList [ ( Active, model.pathType == Just BikePath ) ]
---                 ]
---                 [ text "Bike Path" ]
---             ]
---         ]
+                ( Just surfaceRating, Nothing ) ->
+                    Just surfaceRating
+
+                ( Nothing, Nothing ) ->
+                    Nothing
+
+        ratingInfo =
+            case selectedRating of
+                Just 1 ->
+                    "For all intents and purposes this road doesn't exist"
+
+                Just 2 ->
+                    "This road is in desperate need of some repairs"
+
+                Just 3 ->
+                    "This road can be a bit bumpy but its certainly rideable"
+
+                Just 4 ->
+                    "Its not perfect but this is a good road for riding"
+
+                Just 5 ->
+                    "If all roads were like this road you'd never leave the saddle"
+
+                _ ->
+                    ""
+
+        starActive rating =
+            case ( model.surfaceRating, model.ratingHover ) of
+                ( _, Just ratingHover ) ->
+                    if ratingHover >= 5 && rating <= 5 then
+                        star surfaceRatingFiveString surfaceRatingFiveString
+                    else if ratingHover >= 4 && rating <= 4 then
+                        star surfaceRatingFourString surfaceRatingFourString
+                    else if ratingHover >= 3 && rating <= 3 then
+                        star surfaceRatingThreeString surfaceRatingThreeString
+                    else if ratingHover >= 2 && rating <= 2 then
+                        star surfaceRatingTwoString surfaceRatingTwoString
+                    else if ratingHover >= 1 && rating <= 1 then
+                        star surfaceRatingOneString surfaceRatingOneString
+                    else
+                        star whiteString greyString
+
+                ( Just surfaceRating, Nothing ) ->
+                    if surfaceRating >= 5 && rating <= 5 then
+                        star surfaceRatingFiveString surfaceRatingFiveString
+                    else if surfaceRating >= 4 && rating <= 4 then
+                        star surfaceRatingFourString surfaceRatingFourString
+                    else if surfaceRating >= 3 && rating <= 3 then
+                        star surfaceRatingThreeString surfaceRatingThreeString
+                    else if surfaceRating >= 2 && rating <= 2 then
+                        star surfaceRatingTwoString surfaceRatingTwoString
+                    else if surfaceRating >= 1 && rating <= 1 then
+                        star surfaceRatingOneString surfaceRatingOneString
+                    else
+                        star whiteString greyString
+
+                ( Nothing, Nothing ) ->
+                    star whiteString greyString
+    in
+        div [ class [ RatingsMenu ] ]
+            [ div [] []
+            , h2 []
+                [ text "How would rate the "
+                , span [] [ text "surface quality" ]
+                , text "?"
+                ]
+            , div
+                [ class [ RatingsControl ] ]
+                [ span
+                    [ onClick <| ChangeSurfaceRating <| Just 1
+                    , onMouseEnter <| ChangeRatingHover <| Just 1
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 1 ]
+                , span
+                    [ onClick <| ChangeSurfaceRating <| Just 2
+                    , onMouseEnter <| ChangeRatingHover <| Just 2
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 2 ]
+                , span
+                    [ onClick <| ChangeSurfaceRating <| Just 3
+                    , onMouseEnter <| ChangeRatingHover <| Just 3
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 3 ]
+                , span
+                    [ onClick <| ChangeSurfaceRating <| Just 4
+                    , onMouseEnter <| ChangeRatingHover <| Just 4
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 4 ]
+                , span
+                    [ onClick <| ChangeSurfaceRating <| Just 5
+                    , onMouseEnter <| ChangeRatingHover <| Just 5
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 5 ]
+                ]
+            , div [ class [ RatingInfo ] ] [ text ratingInfo ]
+            ]
+
+
+addTrafficRating : Model -> Html Msg
+addTrafficRating model =
+    let
+        selectedRating =
+            case ( model.trafficRating, model.ratingHover ) of
+                ( _, Just ratingHover ) ->
+                    Just ratingHover
+
+                ( Just trafficRating, Nothing ) ->
+                    Just trafficRating
+
+                ( Nothing, Nothing ) ->
+                    Nothing
+
+        ratingInfo =
+            case selectedRating of
+                Just 1 ->
+                    "Heavy motor traffic, avoid riding this road at all costs"
+
+                Just 2 ->
+                    "Lots of car traffic, you would only ride as a last resort"
+
+                Just 3 ->
+                    "Some car traffic but this road is definitely rideable"
+
+                Just 4 ->
+                    "Fairly light car traffic, this is a good road for riding"
+
+                Just 5 ->
+                    "Virtually no car traffic, you could ride here for days"
+
+                _ ->
+                    ""
+
+        starActive rating =
+            case ( model.trafficRating, model.ratingHover ) of
+                ( _, Just ratingHover ) ->
+                    if ratingHover >= 5 && rating <= 5 then
+                        star trafficRatingFiveString trafficRatingFiveString
+                    else if ratingHover >= 4 && rating <= 4 then
+                        star trafficRatingFourString trafficRatingFourString
+                    else if ratingHover >= 3 && rating <= 3 then
+                        star trafficRatingThreeString trafficRatingThreeString
+                    else if ratingHover >= 2 && rating <= 2 then
+                        star trafficRatingTwoString trafficRatingTwoString
+                    else if ratingHover >= 1 && rating <= 1 then
+                        star trafficRatingOneString trafficRatingOneString
+                    else
+                        star whiteString greyString
+
+                ( Just trafficRating, Nothing ) ->
+                    if trafficRating >= 5 && rating <= 5 then
+                        star trafficRatingFiveString trafficRatingFiveString
+                    else if trafficRating >= 4 && rating <= 4 then
+                        star trafficRatingFourString trafficRatingFourString
+                    else if trafficRating >= 3 && rating <= 3 then
+                        star trafficRatingThreeString trafficRatingThreeString
+                    else if trafficRating >= 2 && rating <= 2 then
+                        star trafficRatingTwoString trafficRatingTwoString
+                    else if trafficRating >= 1 && rating <= 1 then
+                        star trafficRatingOneString trafficRatingOneString
+                    else
+                        star whiteString greyString
+
+                ( Nothing, Nothing ) ->
+                    star whiteString greyString
+    in
+        div [ class [ RatingsMenu ] ]
+            [ div [] []
+            , h2 []
+                [ text "How would rate the "
+                , span [] [ text "traffic safety" ]
+                , text "?"
+                ]
+            , div
+                [ class [ RatingsControl ] ]
+                [ span
+                    [ onClick <| ChangeTrafficRating <| Just 1
+                    , onMouseEnter <| ChangeRatingHover <| Just 1
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 1 ]
+                , span
+                    [ onClick <| ChangeTrafficRating <| Just 2
+                    , onMouseEnter <| ChangeRatingHover <| Just 2
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 2 ]
+                , span
+                    [ onClick <| ChangeTrafficRating <| Just 3
+                    , onMouseEnter <| ChangeRatingHover <| Just 3
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 3 ]
+                , span
+                    [ onClick <| ChangeTrafficRating <| Just 4
+                    , onMouseEnter <| ChangeRatingHover <| Just 4
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 4 ]
+                , span
+                    [ onClick <| ChangeTrafficRating <| Just 5
+                    , onMouseEnter <| ChangeRatingHover <| Just 5
+                    , onMouseLeave <| ChangeRatingHover Nothing
+                    ]
+                    [ starActive 5 ]
+                ]
+            , div [ class [ RatingInfo ] ] [ text ratingInfo ]
+            ]
 
 
 addName : Model -> Html Msg
 addName model =
-    div [ class [ AddNameControl ] ]
-        [ --     span [ Attr.class "fa fa-times", onClick ClearAnchors ] []
-          -- , div
-          --     [ class [ ProgressBar ] ]
-          --     [ div (Animation.render model.progress) [] ]
-          -- , div
-          --     [ Attr.class "fa fa-arrow-left"
-          --     , onClick <| SetMenuStep AddTags
-          --     ]
-          --     []
-          -- , span
-          --     [ g.class [ PrimaryButton ]
-          --     , Attr.class "fa fa-check"
-          --     , onClick SaveSegment
-          --     ]
-          --     []
-          div [] [ h2 [] [ text "Make Segment (Optional)" ] ]
-        , div
-            [ class [ SegmentNameInput ] ]
-            [ span [] [ text "Name" ]
+    let
+        activeStar modelRating rating =
+            case modelRating of
+                Nothing ->
+                    star "transparent" whiteString
+
+                Just number ->
+                    if number >= rating then
+                        star whiteString whiteString
+                    else
+                        star "transparent" whiteString
+    in
+        div []
+            [ div [ class [ RatingsSummary ] ]
+                [ div [] [ text "Surface Quality" ]
+                , div []
+                    [ span [] [ activeStar model.surfaceRating 1 ]
+                    , span [] [ activeStar model.surfaceRating 2 ]
+                    , span [] [ activeStar model.surfaceRating 3 ]
+                    , span [] [ activeStar model.surfaceRating 4 ]
+                    , span [] [ activeStar model.surfaceRating 5 ]
+                    ]
+                , div [] [ text "Traffic Safety" ]
+                , div []
+                    [ span [] [ activeStar model.trafficRating 1 ]
+                    , span [] [ activeStar model.trafficRating 2 ]
+                    , span [] [ activeStar model.trafficRating 3 ]
+                    , span [] [ activeStar model.trafficRating 4 ]
+                    , span [] [ activeStar model.trafficRating 5 ]
+                    ]
+                , span
+                    [ g.class [ SecondaryButton ]
+                    , class [ SaveButton ]
+                    , onClick <| SaveSegment True
+                    ]
+                    [ text "Quick Save" ]
+                ]
             , input
-                [ type_ "text", onInput ChangeName, value model.name ]
+                [ class [ SegmentNameInput ]
+                , type_ "text"
+                , onInput ChangeName
+                , value model.name
+                , placeholder "Name"
+                ]
                 []
-            ]
-        , div
-            [ class [ SegmentDescriptionInput ] ]
-            [ span [] [ text "Description" ]
             , textarea
-                [ onInput ChangeDescription
+                [ class [ SegmentDescriptionInput ]
+                , onInput ChangeDescription
                 , value model.description
+                , placeholder "Description"
                 ]
                 []
+            , div
+                [ g.class [ PrimaryButton ]
+                , class [ SaveButton ]
+                , onClick <| SaveSegment False
+                ]
+                [ text "Save as Segment" ]
+            , div
+                [ class [ SegmentInfo ] ]
+                [ h3 [] [ text "Why save as a segment?" ]
+                , h4 [] [ text "If you save a rating as a segment it allows you to easily access it later to make another rating." ]
+                ]
             ]
-        ]
-
-
-ratingsInfo : MenuStep -> Html Msg
-ratingsInfo step =
-    case step of
-        NeedAnchorsPlaced ->
-            span [] []
-
-        AddRatings ->
-            div [ class [ AddRatingsInfo ] ]
-                [ h2 [] [ text "Surface Rating Details" ]
-                , div
-                    []
-                    [ div [ class [ SurfaceRatingOne ] ] []
-                    , span [] [ text "For all intents and purposes this road doesn't exist" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ SurfaceRatingTwo ] ] []
-                    , span [] [ text "This road is in desperate need of some repairs" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ SurfaceRatingThree ] ] []
-                    , span [] [ text "This road can be a bit bumpy but its certainly rideable" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ SurfaceRatingFour ] ] []
-                    , span [] [ text "Its not perfect but this is a good road for riding" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ SurfaceRatingFive ] ] []
-                    , span [] [ text "If all roads were like this road you'd never leave the saddle" ]
-                    ]
-                , h2 [] [ text "Traffic Rating Details" ]
-                , div
-                    []
-                    [ div [ class [ TrafficRatingOne ] ] []
-                    , span [] [ text "Heavy motor traffic, avoid riding this road at all costs" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ TrafficRatingTwo ] ] []
-                    , span [] [ text "Lots of car traffic, you would only ride as a last resort" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ TrafficRatingThree ] ] []
-                    , span [] [ text "Some car traffic but this road is definitely rideable" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ TrafficRatingFour ] ] []
-                    , span [] [ text "Fairly light car traffic, this is a good road for riding" ]
-                    ]
-                , div
-                    []
-                    [ div [ class [ TrafficRatingFive ] ] []
-                    , span [] [ text "Virtually no car traffic, you could ride here for days" ]
-                    ]
-                ]
-
-        AddName ->
-            div [ class [ AddNameInfo ] ]
-                [ h2 [] [ text "Why make a segment?" ]
-                , h3 [] [ text "If you add a name and/or description this section of road will be saved to your segments for you to easily access again later for rating." ]
-                ]
 
 
 
@@ -448,10 +624,7 @@ ratingsInfo step =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Animation.subscription AnimateMenu [ model.style ]
-        , Animation.subscription AnimateProgress [ model.progress ]
-        ]
+    Animation.subscription AnimateMenu [ model.style ]
 
 
 
@@ -459,23 +632,22 @@ subscriptions model =
 
 
 type Msg
-    = SetMenuStep Bool MenuStep
+    = SetMenuStep MenuStep
     | ShowMenu
     | AnimateMenu Animation.Msg
-    | AnimateProgress Animation.Msg
-    | ChangeName String
-    | ChangeDescription String
+    | ChangeRatingHover (Maybe Int)
     | ChangeSurfaceRating (Maybe Int)
     | ChangeTrafficRating (Maybe Int)
-      -- | ChangePathType (Maybe PathType)
-      -- | ChangeSurfaceType (Maybe SurfaceType)
+    | ChangeName String
+    | ChangeDescription String
     | ClearAnchors
-    | SaveSegment
+    | SaveSegment Bool
 
 
 type ExternalMsg
-    = Closed
-    | Completed Int Int SurfaceType PathType
+    = OpenMenu
+    | CloseMenu
+    | Completed Int Int String String
     | Error String
     | NoOp
 
@@ -483,25 +655,9 @@ type ExternalMsg
 anchorCountUpdate : Int -> Model -> Model
 anchorCountUpdate anchorCount model =
     if anchorCount < 2 then
-        { model
-            | step = NeedAnchorsPlaced
-            , progress =
-                Animation.interrupt
-                    [ Animation.to <|
-                        styles.progressWidth 33.3
-                    ]
-                    model.progress
-        }
+        { model | step = NeedAnchorsPlaced }
     else if anchorCount == 2 && model.step == NeedAnchorsPlaced then
-        { model
-            | step = AddRatings
-            , progress =
-                Animation.interrupt
-                    [ Animation.to <|
-                        styles.progressWidth 66.6
-                    ]
-                    model.progress
-        }
+        { model | step = AddSurfaceRating }
     else
         model
 
@@ -509,44 +665,8 @@ anchorCountUpdate anchorCount model =
 update : Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
 update msg model =
     case msg of
-        SetMenuStep disableAutoAdvance step ->
-            let
-                progress =
-                    case step of
-                        NeedAnchorsPlaced ->
-                            Animation.interrupt
-                                [ Animation.to <|
-                                    styles.progressWidth 33.3
-                                ]
-                                model.progress
-
-                        AddRatings ->
-                            Animation.interrupt
-                                [ Animation.to <|
-                                    styles.progressWidth 66.6
-                                ]
-                                model.progress
-
-                        -- AddTags ->
-                        --     Animation.interrupt
-                        --         [ Animation.to <|
-                        --             styles.progressWidth 75.0
-                        --         ]
-                        --         model.progress
-                        AddName ->
-                            Animation.interrupt
-                                [ Animation.to <|
-                                    styles.progressWidth 100.0
-                                ]
-                                model.progress
-            in
-                { model
-                    | step = step
-                    , progress = progress
-                    , autoAdvance = not disableAutoAdvance
-                }
-                    => Cmd.none
-                    => NoOp
+        SetMenuStep step ->
+            { model | step = step } => Cmd.none => NoOp
 
         ShowMenu ->
             { initModel
@@ -556,17 +676,21 @@ update msg model =
                         model.style
             }
                 => Ports.routeCreate ()
-                => NoOp
+                => OpenMenu
 
         AnimateMenu animMsg ->
             { model | style = Animation.update animMsg model.style }
                 => Cmd.none
                 => NoOp
 
-        AnimateProgress animMsg ->
-            { model | progress = Animation.update animMsg model.progress }
-                => Cmd.none
-                => NoOp
+        ChangeRatingHover rating ->
+            { model | ratingHover = rating } => Cmd.none => NoOp
+
+        ChangeSurfaceRating rating ->
+            { model | surfaceRating = rating } => Cmd.none => NoOp
+
+        ChangeTrafficRating rating ->
+            { model | trafficRating = rating } => Cmd.none => NoOp
 
         ChangeName name ->
             { model | name = name } => Cmd.none => NoOp
@@ -574,92 +698,6 @@ update msg model =
         ChangeDescription description ->
             { model | description = description } => Cmd.none => NoOp
 
-        ChangeSurfaceRating rating ->
-            let
-                ( progress, step ) =
-                    case ( model.autoAdvance, rating, model.trafficRating ) of
-                        ( True, Just _, Just _ ) ->
-                            ( Animation.interrupt
-                                [ Animation.to <|
-                                    styles.progressWidth 100.0
-                                ]
-                                model.progress
-                            , AddName
-                            )
-
-                        _ ->
-                            ( model.progress, model.step )
-            in
-                { model
-                    | surfaceRating = rating
-                    , progress = progress
-                    , step = step
-                }
-                    => Cmd.none
-                    => NoOp
-
-        ChangeTrafficRating rating ->
-            let
-                ( progress, step ) =
-                    case ( model.autoAdvance, rating, model.surfaceRating ) of
-                        ( True, Just _, Just _ ) ->
-                            ( Animation.interrupt
-                                [ Animation.to <|
-                                    styles.progressWidth 100.0
-                                ]
-                                model.progress
-                            , AddName
-                            )
-
-                        _ ->
-                            ( model.progress, model.step )
-            in
-                { model
-                    | trafficRating = rating
-                    , progress = progress
-                    , step = step
-                }
-                    => Cmd.none
-                    => NoOp
-
-        -- ChangePathType pathType ->
-        --     let
-        --         progress =
-        --             case ( pathType, model.surface ) of
-        --                 ( Just _, Just _ ) ->
-        --                     Animation.interrupt
-        --                         [ Animation.to <|
-        --                             styles.progressWidth 100.0
-        --                         ]
-        --                         model.progress
-        --                 _ ->
-        --                     model.progress
-        --     in
-        --         { model
-        --             | pathType = pathType
-        --             , progress = progress
-        --         }
-        --             => Cmd.none
-        --             => NoOp
-        -- ChangeSurfaceType surfaceType ->
-        --     let
-        --         progress =
-        --             case ( surfaceType, model.pathType ) of
-        --                 ( Just _, Just _ ) ->
-        --                     Animation.interrupt
-        --                         [ Animation.to <|
-        --                             styles.progressWidth 100.0
-        --                         ]
-        --                         model.progress
-        --                 _ ->
-        --                     model.progress
-        --     in
-        --         { model
-        --             | surface = surfaceType
-        --             , progress = progress
-        --         }
-        --             => Cmd.none
-        --             => NoOp
         ClearAnchors ->
             { model
                 | style =
@@ -668,22 +706,25 @@ update msg model =
                         model.style
             }
                 => Ports.clearRoute ()
-                => Closed
+                => CloseMenu
 
-        SaveSegment ->
-            case
-                ( model.surfaceRating
-                , model.trafficRating
-                  -- , model.surfaceType
-                  -- , model.pathType
-                )
-            of
-                ( Just sRating, Just tRating ) ->
-                    model
-                        => Ports.clearRoute ()
-                        => Completed sRating tRating UnknownSurface UnknownPath
+        SaveSegment quickSave ->
+            let
+                ( name, description ) =
+                    if quickSave == True then
+                        ( "", "" )
+                    else
+                        ( model.name, model.description )
+            in
+                case
+                    ( model.surfaceRating, model.trafficRating )
+                of
+                    ( Just sRating, Just tRating ) ->
+                        model
+                            => Ports.clearRoute ()
+                            => Completed sRating tRating name description
 
-                _ ->
-                    model
-                        => Cmd.none
-                        => Error "There was a client error saving your segment. Sorry!"
+                    _ ->
+                        model
+                            => Cmd.none
+                            => Error "There was a client error saving your segment. Sorry!"

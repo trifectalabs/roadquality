@@ -3,7 +3,7 @@ module Page.Home exposing (view, subscriptions, update, Model, Msg, ExternalMsg(
 import Dict exposing (Dict)
 import OrderedDict as OrdDict exposing (OrderedDict)
 import List.Extra exposing (elemIndex)
-import Data.Map exposing (CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
+import Data.Map exposing (MapLayer(..), CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
 import Data.AuthToken exposing (AuthToken)
 import Data.Session as Session exposing (Session)
 import Data.UserPhoto as UserPhoto
@@ -20,7 +20,9 @@ import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClass
 import Html.CssHelpers exposing (Namespace)
 import Util exposing ((=>), pair)
 import Route
+import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
+import Animation exposing (px)
 
 
 -- MODEL --
@@ -29,9 +31,17 @@ import Page.Home.RatingsMenu as Menu
 type alias Model =
     { errors : List String
     , menu : Menu.Model
+    , mapLayer : MapLayer
+    , style : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
+    }
+
+
+type alias Styles =
+    { open : List Animation.Property
+    , closed : List Animation.Property
     }
 
 
@@ -62,9 +72,20 @@ initModel : List Segment -> Model
 initModel segments =
     { errors = []
     , menu = Menu.initModel
+    , mapLayer = SurfaceQuality
+    , style = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , segments = segments
+    }
+
+
+styles : Styles
+styles =
+    { open =
+        [ Animation.paddingLeft (px 400.0) ]
+    , closed =
+        [ Animation.paddingLeft (px 0.0) ]
     }
 
 
@@ -83,17 +104,59 @@ g =
 
 view : Session -> Model -> Html Msg
 view session model =
-    div []
-        [ div [ id MainView ] []
-        , div
-            [ id AddRatingButton
-            , g.class [ PrimaryButton ]
-            , onClick <| MenuMsg Menu.ShowMenu
+    let
+        addRatingCmd =
+            case session.user of
+                Nothing ->
+                    ShowLogin
+
+                Just _ ->
+                    MenuMsg Menu.ShowMenu
+
+        legend =
+            case model.mapLayer of
+                SurfaceQuality ->
+                    img [ id MapLegend, Assets.src Assets.surfaceQuality ] []
+
+                TrafficSafety ->
+                    img [ id MapLegend, Assets.src Assets.trafficSafety ] []
+
+                _ ->
+                    img [] []
+    in
+        div []
+            [ div [ id MainView ] []
+            , div
+                [ g.class [ PrimaryButton ]
+                , id AddRatingButton
+                , onClick addRatingCmd
+                ]
+                [ text "Add Rating" ]
+            , legend
+            , div
+                (Animation.render model.style ++ [ id MapSwitcher ])
+                [ div []
+                    [ div
+                        [ g.classList
+                            [ ( PrimaryButton, model.mapLayer == SurfaceQuality )
+                            , ( SecondaryButton, model.mapLayer /= SurfaceQuality )
+                            ]
+                        , onClick <| SetLayer SurfaceQuality
+                        ]
+                        [ text "Surface Quality" ]
+                    , div
+                        [ g.classList
+                            [ ( PrimaryButton, model.mapLayer == TrafficSafety )
+                            , ( SecondaryButton, model.mapLayer /= TrafficSafety )
+                            ]
+                        , onClick <| SetLayer TrafficSafety
+                        ]
+                        [ text "Traffic Safety" ]
+                    ]
+                ]
+            , Menu.view model.menu |> Html.map MenuMsg
+            , accountView session
             ]
-            [ text "Add Rating" ]
-        , Menu.view model.menu |> Html.map MenuMsg
-        , accountView session
-        ]
 
 
 accountView : Session -> Html Msg
@@ -102,7 +165,12 @@ accountView session =
         Nothing ->
             a
                 [ Route.href Route.Login ]
-                [ div [ class [ GoToAccount ] ] [ text "Sign In" ] ]
+                [ div
+                    [ class [ GoToAccount ]
+                    , g.class [ SecondaryButton ]
+                    ]
+                    [ text "Sign In" ]
+                ]
 
         Just user ->
             a
@@ -117,6 +185,7 @@ subscriptions model =
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
+        , Animation.subscription AnimateSwitcher [ model.style ]
         ]
 
 
@@ -125,7 +194,10 @@ subscriptions model =
 
 
 type Msg
-    = DropAnchorPoint Bool ( String, Float, Float )
+    = SetLayer MapLayer
+    | ShowLogin
+    | AnimateSwitcher Animation.Msg
+    | DropAnchorPoint Bool ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
@@ -162,6 +234,34 @@ update session msg model =
             addRoute apiUrl maybeAuthToken cycleRoutes
     in
         case msg of
+            SetLayer layer ->
+                let
+                    stringLayer =
+                        case layer of
+                            PlainMap ->
+                                "PlainMap"
+
+                            SurfaceQuality ->
+                                "SurfaceQuality"
+
+                            TrafficSafety ->
+                                "TrafficSafety"
+
+                            SegmentsView ->
+                                "SegmentsView"
+                in
+                    { model | mapLayer = layer }
+                        => Ports.setLayer stringLayer
+                        => NoOp
+
+            ShowLogin ->
+                model => Cmd.none => Unauthorized
+
+            AnimateSwitcher animMsg ->
+                { model | style = Animation.update animMsg model.style }
+                    => Cmd.none
+                    => NoOp
+
             DropAnchorPoint new ( pointId, lat, lng ) ->
                 let
                     ( anchorCount, handler ) =
@@ -521,14 +621,27 @@ update session msg model =
                                     |> Util.appendErrors model
                                     => Cmd.none
 
-                            Menu.Closed ->
+                            Menu.OpenMenu ->
                                 { model
-                                    | anchors = OrdDict.empty
-                                    , cycleRoutes = OrdDict.empty
+                                    | style =
+                                        Animation.interrupt
+                                            [ Animation.to styles.open ]
+                                            model.style
                                 }
                                     => Cmd.none
 
-                            Menu.Completed sRating tRating sType pType ->
+                            Menu.CloseMenu ->
+                                { model
+                                    | anchors = OrdDict.empty
+                                    , cycleRoutes = OrdDict.empty
+                                    , style =
+                                        Animation.interrupt
+                                            [ Animation.to styles.closed ]
+                                            model.style
+                                }
+                                    => Cmd.none
+
+                            Menu.Completed sRating tRating name desc ->
                                 let
                                     polylines =
                                         model.cycleRoutes
@@ -536,13 +649,13 @@ update session msg model =
                                             |> List.map .polyline
 
                                     createSegmentForm =
-                                        { name = menu.name
-                                        , description = menu.description
+                                        { name = name
+                                        , description = desc
                                         , polylines = polylines
                                         , surfaceRating = sRating
                                         , trafficRating = tRating
-                                        , surface = sType
-                                        , pathType = pType
+                                        , surface = UnknownSurface
+                                        , pathType = UnknownPath
                                         }
 
                                     req =

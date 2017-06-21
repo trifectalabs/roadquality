@@ -355,7 +355,7 @@ updatePage page msg model =
                                     }
                                         => Cmd.batch
                                             [ Ports.storeSession Nothing
-                                            , Route.modifyUrl Route.Home
+                                            , Route.modifyUrl Route.Login
                                             ]
 
                     cmd =

@@ -1,4 +1,4 @@
-module Views.Assets exposing (error, stravaLogin, src, backArrow, nextArrow, close, done)
+module Views.Assets exposing (error, stravaLogin, surfaceQuality, trafficSafety, src)
 
 {-| Assets, such as images, videos, and audio. (We only have images for now.)
 We should never expose asset URLs directly; this module should be in charge of
@@ -24,27 +24,17 @@ error =
 
 stravaLogin : Image
 stravaLogin =
-    Image "/assets/img/strava_login.svg"
+    Image "/assets/img/strava-login.svg"
 
 
-backArrow : Image
-backArrow =
-    Image "/assets/img/arrow-left.svg"
+surfaceQuality : Image
+surfaceQuality =
+    Image "/assets/img/surface-quality-vert.png"
 
 
-nextArrow : Image
-nextArrow =
-    Image "/assets/img/arrow-right.svg"
-
-
-close : Image
-close =
-    Image "/assets/img/x.svg"
-
-
-done : Image
-done =
-    Image "/assets/img/check.svg"
+trafficSafety : Image
+trafficSafety =
+    Image "/assets/img/traffic-safety-vert.png"
 
 
 

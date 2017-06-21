@@ -1,9 +1,16 @@
-module Data.Map exposing (CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
+module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 import Json.Encode as Encode exposing (Value)
 import Util exposing ((=>))
+
+
+type MapLayer
+    = PlainMap
+    | SurfaceQuality
+    | TrafficSafety
+    | SegmentsView
 
 
 type alias CycleRoute =

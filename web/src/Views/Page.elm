@@ -57,7 +57,7 @@ viewHeader page user isLoading =
             , ul [ class [ Nav ] ] <|
                 -- TODO: add loading spinner to main map ui
                 lazy2 Util.viewIf isLoading spinner
-                    :: (navbarLink (page == Home) Route.Home [ text "Home" ])
+                    :: (navbarLink (page == Home) Route.Home [ text "Map" ])
                     :: viewSignIn page user
             ]
         ]
@@ -68,7 +68,8 @@ viewSignIn page user =
     case user of
         Nothing ->
             [ navbarLink (page == Login) Route.Login [ text "Sign in" ]
-              -- , navbarLink (page == Register) Route.Register [ text "Sign up" ]
+
+            -- , navbarLink (page == Register) Route.Register [ text "Sign up" ]
             ]
 
         Just user ->
