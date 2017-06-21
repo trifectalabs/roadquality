@@ -47,7 +47,6 @@ app.ports.up.subscribe(function(authed) {
         canvas.style.cursor = "default";
         map.dragRotate.disable();
         map.touchZoomRotate.disableRotation();
-        map.on("load", createBounds);
         map.on("mousedown", onMapMouseDown);
         map.on("mouseup", onMapMouseUp);
 
@@ -229,9 +228,9 @@ function onMapClick(e) {
     let windowMaxX = window.innerWidth;
     let mapPosX = e.lngLat.lng;
     let mapPosY = e.lngLat.lat;
-    let windowPosX = windowMinX + ((windowMaxX - windowMinX) / (mapMaxX - mapMinX)) * (mapPosX - mapMinX);
+    let windowPosX = windowMaxX / (mapMaxX - mapMinX) * (mapPosX - mapMinX);
     let shiftedWindowPosX = windowPosX - 200;
-    let shiftedMapPosX = mapMinX + ((mapMaxX - mapMinX) / (windowMaxX - windowMinX)) * (shiftedWindowPosX - windowMinX);
+    let shiftedMapPosX = mapMinX + (mapMaxX - mapMinX) / windowMaxX * shiftedWindowPosX;
     let shiftedLngLat = [shiftedMapPosX, mapPosY];
 
     // Calculate pan duration based on distance to pan
@@ -366,37 +365,3 @@ app.ports.clearRoute.subscribe(function() {
         map.getSource(id).setData(routes[id]);
     }
 });
-
-// ROUTING BOUNDS
-function createBounds() {
-    let geojson = {
-        "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[
-                    [ -79.632868, 43.753963 ],
-                    [ -79.632868, 43.561912 ],
-                    [ -79.194903, 43.561912 ],
-                    [ -79.194903, 43.753963 ],
-                    [ -79.632868, 43.753963 ]
-                ]]
-            }
-        }]
-    }
-    map.addSource("routingbounds", {
-        "type": "geojson",
-        "data": geojson
-    });
-    map.addLayer({
-        "id": "routingbounds",
-        "type": "line",
-        "source": "routingbounds",
-        "paint": {
-            "line-color": "green",
-            "line-opacity": 0.5,
-            "line-width": 3
-        }
-    });
-}

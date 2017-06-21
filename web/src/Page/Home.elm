@@ -667,6 +667,10 @@ update session msg model =
                                     { model
                                         | anchors = OrdDict.empty
                                         , cycleRoutes = OrdDict.empty
+                                        , style =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.style
                                     }
                                         => Http.send ReceiveSegment req
 
