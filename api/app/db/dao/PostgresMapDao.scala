@@ -25,10 +25,10 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 
   override def route(startPoint: Point, endPoint: Point): Future[MapRoute] = {
     val BOUNDING_BOX_RADIUS = 3000 // Number of meters to include the routing ways in the query
+    val NEARBY_WAYS_LIMIT = 30000 // Number of nearby ways to include in the subquery to the routing function
 
-    val strSql = s"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS});"""
-    println(strSql)
-    val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS});""".as[MapRouteResult]
+    val strSql = s"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS}, ${NEARBY_WAYS_LIMIT});"""
+    val sql = sql"""SELECT seq, path, distance from shortest_distance_route(${startPoint.lng}, ${startPoint.lat}, ${endPoint.lng}, ${endPoint.lat}, ${BOUNDING_BOX_RADIUS}, ${NEARBY_WAYS_LIMIT});""".as[MapRouteResult]
     db.run(sql).map { mapRouteResultList =>
       if (mapRouteResultList.size == 0)
         throw new NoRouteFoundException
