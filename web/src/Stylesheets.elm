@@ -22,6 +22,7 @@ fileStructure =
                 , errorCss
                 , mapCss
                 , accountCss
+                , messagesCss
                 ]
           )
         ]
@@ -62,6 +63,11 @@ accountNamespace =
     withNamespace "account"
 
 
+messagesNamespace : Namespace String class id msg
+messagesNamespace =
+    withNamespace "msg"
+
+
 type CssIds
     = MainView
     | MapLegend
@@ -75,6 +81,7 @@ type CssIds
     | SurfaceTypeInput
     | PathTypeInput
     | Content
+    | MessagesContainer
 
 
 type CssClasses
@@ -117,6 +124,10 @@ type CssClasses
     | Account
       -- Account
     | GoToAccount
+      -- Messages
+    | InfoMessage
+    | WarningMessage
+    | ErrorMessage
 
 
 rgbTrifectaBrightGreen : Color
@@ -418,6 +429,52 @@ errorCss =
             [ descendants
                 [ h1
                     [ textAlign center ]
+                ]
+            ]
+        ]
+
+
+messagesCss : Stylesheet
+messagesCss =
+    (stylesheet << namespace messagesNamespace.name)
+        [ id MessagesContainer
+            [ width (px 500)
+            , position fixed
+            , top (px 55)
+            , property "left" "calc(50% - 250px)"
+            , children
+                [ div
+                    [ width (px 470)
+                    , marginTop (px 10)
+                    , padding (px 15)
+                    , position relative
+                    , borderRadius (px 2)
+                    , withClass InfoMessage
+                        [ backgroundColor (rgb 217 237 247)
+                        , border3 (px 1) solid (rgb 202 234 244)
+                        , color (rgb 49 114 150)
+                        ]
+                    , withClass WarningMessage
+                        [ backgroundColor (rgb 252 248 227)
+                        , border3 (px 1) solid (rgb 251 241 215)
+                        , color (rgb 138 109 59)
+                        ]
+                    , withClass ErrorMessage
+                        [ backgroundColor (rgb 242 222 222)
+                        , border3 (px 1) solid (rgb 235 204 204)
+                        , color (rgb 132 53 52)
+                        ]
+                    , children
+                        [ div
+                            []
+                        , svg
+                            [ position absolute
+                            , top (px 15)
+                            , right (px 15)
+                            , cursor pointer
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ]

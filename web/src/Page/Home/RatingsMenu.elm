@@ -709,22 +709,30 @@ update msg model =
                 => CloseMenu
 
         SaveSegment quickSave ->
-            let
-                ( name, description ) =
-                    if quickSave == True then
-                        ( "", "" )
-                    else
-                        ( model.name, model.description )
-            in
-                case
-                    ( model.surfaceRating, model.trafficRating )
-                of
-                    ( Just sRating, Just tRating ) ->
-                        model
-                            => Ports.clearRoute ()
-                            => Completed sRating tRating name description
+            if quickSave == False && model.name == "" then
+                model => Cmd.none => Error "Add a name to save your segment."
+            else
+                let
+                    ( name, description ) =
+                        if quickSave == True then
+                            ( "", "" )
+                        else
+                            ( model.name, model.description )
+                in
+                    case
+                        ( model.surfaceRating, model.trafficRating )
+                    of
+                        ( Just sRating, Just tRating ) ->
+                            { model
+                                | style =
+                                    Animation.interrupt
+                                        [ Animation.to styles.closed ]
+                                        model.style
+                            }
+                                => Ports.clearRoute ()
+                                => Completed sRating tRating name description
 
-                    _ ->
-                        model
-                            => Cmd.none
-                            => Error "There was a client error saving your segment. Sorry!"
+                        _ ->
+                            model
+                                => Cmd.none
+                                => Error "There was a client error saving your segment. Sorry!"

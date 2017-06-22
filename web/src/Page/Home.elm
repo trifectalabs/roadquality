@@ -23,16 +23,18 @@ import Route
 import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 import Animation exposing (px)
+import Views.Messages as Messages exposing (Msg(AddMessage))
 
 
 -- MODEL --
 
 
 type alias Model =
-    { errors : List String
+    { errors : Messages.Model
     , menu : Menu.Model
     , mapLayer : MapLayer
-    , style : Animation.State
+    , switchStyle : Animation.State
+    , errorsStyle : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , segments : List Segment
@@ -40,8 +42,9 @@ type alias Model =
 
 
 type alias Styles =
-    { open : List Animation.Property
+    { switchOpen : List Animation.Property
     , closed : List Animation.Property
+    , msgOpen : List Animation.Property
     }
 
 
@@ -70,10 +73,11 @@ init session =
 
 initModel : List Segment -> Model
 initModel segments =
-    { errors = []
+    { errors = Messages.initModel
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
-    , style = Animation.style styles.closed
+    , switchStyle = Animation.style styles.closed
+    , errorsStyle = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , segments = segments
@@ -82,10 +86,12 @@ initModel segments =
 
 styles : Styles
 styles =
-    { open =
+    { switchOpen =
         [ Animation.paddingLeft (px 400.0) ]
     , closed =
         [ Animation.paddingLeft (px 0.0) ]
+    , msgOpen =
+        [ Animation.paddingLeft (px 200.0) ]
     }
 
 
@@ -132,9 +138,11 @@ view session model =
                 , onClick addRatingCmd
                 ]
                 [ text "Add Rating" ]
+            , Messages.view (Animation.render model.errorsStyle) model.errors
+                |> Html.map ErrorMsg
             , legend
             , div
-                (Animation.render model.style ++ [ id MapSwitcher ])
+                (Animation.render model.switchStyle ++ [ id MapSwitcher ])
                 [ div []
                     [ div
                         [ g.classList
@@ -185,7 +193,9 @@ subscriptions model =
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
-        , Animation.subscription AnimateSwitcher [ model.style ]
+        , Animation.subscription AnimateSwitcher [ model.switchStyle ]
+        , Animation.subscription AnimateErrors [ model.errorsStyle ]
+        , Messages.subscriptions model.errors |> Sub.map ErrorMsg
         ]
 
 
@@ -194,9 +204,11 @@ subscriptions model =
 
 
 type Msg
-    = SetLayer MapLayer
+    = ErrorMsg Messages.Msg
+    | SetLayer MapLayer
     | ShowLogin
     | AnimateSwitcher Animation.Msg
+    | AnimateErrors Animation.Msg
     | DropAnchorPoint Bool ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
@@ -214,6 +226,9 @@ type ExternalMsg
 update : Session -> Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
 update session msg model =
     let
+        errors =
+            model.errors
+
         anchors =
             model.anchors
 
@@ -234,6 +249,15 @@ update session msg model =
             addRoute apiUrl maybeAuthToken cycleRoutes
     in
         case msg of
+            ErrorMsg subMsg ->
+                let
+                    ( newErrors, errorCmd ) =
+                        Messages.update subMsg errors
+                in
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
+                        => NoOp
+
             SetLayer layer ->
                 let
                     stringLayer =
@@ -258,7 +282,16 @@ update session msg model =
                 model => Cmd.none => Unauthorized
 
             AnimateSwitcher animMsg ->
-                { model | style = Animation.update animMsg model.style }
+                { model
+                    | switchStyle = Animation.update animMsg model.switchStyle
+                }
+                    => Cmd.none
+                    => NoOp
+
+            AnimateErrors animMsg ->
+                { model
+                    | errorsStyle = Animation.update animMsg model.errorsStyle
+                }
                     => Cmd.none
                     => NoOp
 
@@ -297,10 +330,17 @@ update session msg model =
 
                             _ ->
                                 NoOp
+
+                    errorMsg =
+                        { type_ = Messages.Error
+                        , message = "There was a server error trying to place your point. Sorry!"
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
                 in
-                    [ "There was a server error trying to place your point. Sorry!" ]
-                        |> Util.appendErrors model
-                        => Cmd.none
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
                         => externalMsg
 
             -- Scenario One
@@ -363,10 +403,17 @@ update session msg model =
 
                             _ ->
                                 NoOp
+
+                    errorMsg =
+                        { type_ = Messages.Error
+                        , message = "There was a server error trying to move your point. Sorry!"
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
                 in
-                    [ "There was a server error trying to move your point. Sorry!" ]
-                        |> Util.appendErrors model
-                        => Cmd.none
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
                         => externalMsg
 
             -- Scenario One
@@ -577,7 +624,7 @@ update session msg model =
             ReceiveRoute _ _ (Err error) ->
                 let
                     default =
-                        [ "There was a server error creating your route. Sorry!" ]
+                        "There was a server error creating your route. Sorry!"
 
                     textErrors =
                         case error of
@@ -591,8 +638,18 @@ update session msg model =
 
                             _ ->
                                 default
+
+                    errorMsg =
+                        { type_ = Messages.Error
+                        , message = textErrors
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
                 in
-                    Util.appendErrors model textErrors => Cmd.none => NoOp
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
+                        => NoOp
 
             ReceiveRoute key index (Ok route) ->
                 let
@@ -617,16 +674,30 @@ update session msg model =
                                 model => Cmd.none
 
                             Menu.Error error ->
-                                [ error ]
-                                    |> Util.appendErrors model
-                                    => Cmd.none
+                                let
+                                    errorMsg =
+                                        { type_ = Messages.Error
+                                        , message = error
+                                        }
+
+                                    ( newErrors, errorCmd ) =
+                                        Messages.update
+                                            (AddMessage errorMsg)
+                                            errors
+                                in
+                                    { model | errors = newErrors }
+                                        => Cmd.map ErrorMsg errorCmd
 
                             Menu.OpenMenu ->
                                 { model
-                                    | style =
+                                    | switchStyle =
                                         Animation.interrupt
-                                            [ Animation.to styles.open ]
-                                            model.style
+                                            [ Animation.to styles.switchOpen ]
+                                            model.switchStyle
+                                    , errorsStyle =
+                                        Animation.interrupt
+                                            [ Animation.to styles.msgOpen ]
+                                            model.errorsStyle
                                 }
                                     => Cmd.none
 
@@ -634,10 +705,14 @@ update session msg model =
                                 { model
                                     | anchors = OrdDict.empty
                                     , cycleRoutes = OrdDict.empty
-                                    , style =
+                                    , switchStyle =
                                         Animation.interrupt
                                             [ Animation.to styles.closed ]
-                                            model.style
+                                            model.switchStyle
+                                    , errorsStyle =
+                                        Animation.interrupt
+                                            [ Animation.to styles.closed ]
+                                            model.errorsStyle
                                 }
                                     => Cmd.none
 
@@ -667,10 +742,14 @@ update session msg model =
                                     { model
                                         | anchors = OrdDict.empty
                                         , cycleRoutes = OrdDict.empty
-                                        , style =
+                                        , switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
-                                                model.style
+                                                model.switchStyle
+                                        , errorsStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.errorsStyle
                                     }
                                         => Http.send ReceiveSegment req
 
@@ -694,10 +773,17 @@ update session msg model =
 
                             _ ->
                                 NoOp
+
+                    errorMsg =
+                        { type_ = Messages.Error
+                        , message = "There was a server error saving your segment. Sorry!"
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
                 in
-                    [ "There was a server error saving your segment. Sorry!" ]
-                        |> Util.appendErrors model
-                        => Cmd.none
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
                         => externalMsg
 
             ReceiveSegment (Ok segment) ->
