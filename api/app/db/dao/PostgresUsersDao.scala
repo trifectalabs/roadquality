@@ -77,7 +77,16 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
 
     isExistingUser.flatMap { isEu =>
       isEu match {
-        case Some(eu) => update(eu)
+        case Some(eu) => update(eu.copy(
+          firstName = firstName,
+          lastName = lastName,
+          email = email,
+          city = city,
+          province = province,
+          country = country,
+          birthdate = birthdate,
+          sex = sex,
+          stravaToken = stravaToken))
         case None => insert(UUID.randomUUID(), firstName, lastName, email, city, province,
           country, birthdate, sex, stravaToken)
       }
