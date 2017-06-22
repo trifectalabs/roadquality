@@ -98,8 +98,15 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
   }
 
   override def snapPoint(point: Point): Future[Point] = {
-    val sql = sql"""SELECT * from closest_point_on_road(${point.lng}, ${point.lat});""".as[Point]
-    db.run(sql).map(r => r.head)
+    val BOUNDING_BOX_RADIUS = 1000 // Distance to snap to nearest road within (meters)
+    val sql = sql"""SELECT * from closest_point_on_road(${point.lng}, ${point.lat}, ${BOUNDING_BOX_RADIUS});""".as[Point]
+    db.run(sql).map { r =>
+      // This is stupid. It should be an empty list, but its a list with 1 element with lat/lng = 0,0
+      if (r.head.lat == 0 && r.head.lng == 0)
+        throw new NoSnapFoundException
+      else
+        r.head
+    }
   }
 
   override def intersectionsSplitsFromSegment(segment_polyline: String): Future[Seq[Geometry]] = {

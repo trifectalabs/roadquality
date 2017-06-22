@@ -22,6 +22,7 @@ extends DefaultHttpErrorHandler(env, config, sourceMapper, router) {
   override def onServerError(request: RequestHeader, exception: Throwable) = {
     exception match {
       case e: NoRouteFoundException => Future(NoContent)
+      case e: NoSnapFoundException => Future(NoContent)
     }
   }
 }
