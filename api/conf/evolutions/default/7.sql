@@ -101,7 +101,7 @@ $$ LANGUAGE plpgsql;
 
 # --- !Downs
 
-ALTER TABLE users DROP COLUMN layer;
+ALTER TABLE colours DROP COLUMN layer;
 
 DELETE FROM colours WHERE layer = 'traffic';
 
