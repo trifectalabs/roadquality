@@ -315,8 +315,19 @@ update session msg model =
 
                     cmd =
                         Http.send handler req
+
+                    currentAnchor =
+                        Dict.get pointId anchors.dict
+                            -- Impossible Values
+                            |> Maybe.withDefault { lat = 1000.0, lng = 1000.0 }
                 in
-                    { model | menu = newMenu } => cmd => NoOp
+                    if
+                        ((abs <| currentAnchor.lat - lat) < 0.0001)
+                            && ((abs <| currentAnchor.lng - lng) < 0.0001)
+                    then
+                        model => Cmd.none => NoOp
+                    else
+                        { model | menu = newMenu } => cmd => NoOp
 
             NewAnchorPoint _ (Err error) ->
                 let
