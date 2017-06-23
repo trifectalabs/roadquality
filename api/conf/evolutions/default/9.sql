@@ -6,8 +6,8 @@ RETURNS TABLE (id bigint, road geometry) AS $$
 BEGIN
   RETURN QUERY
   SELECT gid, the_geom as road
-  FROM (SELECT * FROM ways ORDER BY the_geom <-> ST_SetSRID(ST_Point(lon, lat),4326) ASC) as nearby_ways
-  WHERE the_geom && ST_Buffer(CAST(ST_SetSRID(ST_Point(lon, lat),4326) AS geography), buffer)
+  FROM (SELECT * FROM ways ORDER BY the_geom <-> ST_SetSRID(ST_Point(lon, lat),4326) ASC LIMIT 1) as nearby_ways
+  WHERE ST_DWithin(the_geom, ST_SetSRID(ST_Point(lon, lat),4326), buffer, false)
   LIMIT 1;;
 END;;
 $$ LANGUAGE plpgsql;
