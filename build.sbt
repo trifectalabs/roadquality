@@ -39,6 +39,7 @@ lazy val commonSettings = Seq(
     "com.github.tminglei"     %% "slick-pg_jts"          % "0.15.0",
     "com.pauldijou"           %% "jwt-core"              % "0.12.1",
     "org.scalatestplus.play"  %% "scalatestplus-play"    % "2.0.0" % "test",
+    "io.dropwizard.metrics"   %  "metrics-graphite"      % "3.2.2",
     "nl.grons"                %% "metrics-scala"         % "3.5.8_a2.3",
     specs2,
     ws,

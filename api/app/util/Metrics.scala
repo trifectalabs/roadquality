@@ -1,9 +1,13 @@
 package util
 
 import com.codahale.metrics._
+import com.codahale.metrics.graphite._
 import nl.grons.metrics.scala.{ MetricBuilder, MetricName }
 import nl.grons.metrics.scala.InstrumentedBuilder
+
 import java.util.concurrent.TimeUnit
+import java.net.InetSocketAddress
+import play.api.Configuration
 
 trait Metrics extends Instrumented {
   val apiMetrics = new MetricBuilder(MetricName("api"), Application.metricRegistry)
@@ -12,15 +16,21 @@ trait Metrics extends Instrumented {
 }
 
 trait Instrumented extends InstrumentedBuilder {
+  private[this] def config = play.api.Play.current.injector.instanceOf[Configuration]
+  lazy val graphiteUrl = config.getString("graphite.url").get
+
   val metricRegistry = Application.metricRegistry
 
-  val reporter: ConsoleReporter = ConsoleReporter
-    .forRegistry(metricRegistry)
-    .convertRatesTo(TimeUnit.SECONDS)
-    .convertDurationsTo(TimeUnit.MILLISECONDS)
-    .build()
+  val graphite = new Graphite(new InetSocketAddress(graphiteUrl, 2003));
+	val reporter = GraphiteReporter
+		.forRegistry(metricRegistry)
+		.prefixedWith("roadquality.org")
+		.convertRatesTo(TimeUnit.SECONDS)
+		.convertDurationsTo(TimeUnit.MILLISECONDS)
+		.filter(MetricFilter.ALL)
+		.build(graphite);
 
-  reporter.start(5, TimeUnit.SECONDS);
+		reporter.start(10, TimeUnit.SECONDS)
 }
 
 object Application {
