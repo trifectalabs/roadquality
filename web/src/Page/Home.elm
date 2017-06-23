@@ -690,7 +690,7 @@ update session msg model =
                         else if responseCode == 204 then
                             NoOp
                                 => { type_ = Messages.Error
-                                   , message = "You're trying to route outside the currently supported area. Whoops!"
+                                   , message = "We weren't able to find a path between those points. Sorry!"
                                    }
                         else
                             NoOp
