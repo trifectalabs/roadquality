@@ -330,7 +330,11 @@ updatePage page msg model =
 
             ( HomeLoaded (Ok subModel), _ ) ->
                 { model | pageState = Loaded (Home subModel) }
-                    => Ports.up ()
+                    => Ports.up
+                        (Maybe.map
+                            (\u -> ( u.city, u.province, u.country ))
+                            session.user
+                        )
 
             ( HomeLoaded (Err error), _ ) ->
                 { model | pageState = Loaded (Errored error) } => Cmd.none

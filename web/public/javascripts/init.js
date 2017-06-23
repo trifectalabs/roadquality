@@ -27,50 +27,79 @@ window.addEventListener("storage", function(event) {
 }, false);
 
 // SETUP MAP
-app.ports.up.subscribe(function(authed) {
+app.ports.up.subscribe(function(location) {
     // TODO: there must be a better way :(
     setTimeout(function() {
         if (map) {
             return;
+        } else if (location === null) {
+            setupMap(location);
+            return;
         }
 
-        mapboxgl.accessToken = "pk.eyJ1Ijoia2lhbWJvZ28iLCJhIjoiY2l2MWVqdWdpMDBiMDJ5bXB5aXdyY3JrdyJ9.oqpLQhZcd0yOzBKdSxyk2w";
-
-        map = new mapboxgl.Map({
-            container: "MainView",
-            style: "mapbox://styles/mapbox/light-v9",
-            center: [-79.412190, 43.667632],
-            zoom: 12
-        });
-
-        canvas = map.getCanvasContainer();
-        canvas.style.cursor = "default";
-        map.dragRotate.disable();
-        map.touchZoomRotate.disableRotation();
-        map.on("mousedown", onMapMouseDown);
-        map.on("mouseup", onMapMouseUp);
-
-        showingLayer = "SurfaceQuality";
-        map.on("load", function () {
-            map.addLayer({
-                "id": "SurfaceQuality",
-                "type": "line",
-                "source": {
-                    type: "vector",
-                    tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
-                },
-                "source-layer": "surface_mini_segments",
-                "paint": {
-                    "line-color": {
-                        "type": "identity",
-                        "property": "colour"
-                    },
-                    "line-width": 2
-                }
-            });
+        let city = location[0];
+        let province = location[1];
+        let country = location[2];
+        let url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + city + ",+" + province + ",+" + country + "&key=AIzaSyAzfXJoOAt7m6C4ocTX_-odOj739BqtXts";
+        fetch(url).then(function(response) {
+            return response.json();
+        }).then(function(data) {
+            let coords = data.results[0].geometry.location;
+            setupMap(coords);
         });
     }, 100);
 });
+
+function setupMap(coords) {
+    if (map) {
+        return;
+    }
+
+    mapboxgl.accessToken = "pk.eyJ1Ijoia2lhbWJvZ28iLCJhIjoiY2l2MWVqdWdpMDBiMDJ5bXB5aXdyY3JrdyJ9.oqpLQhZcd0yOzBKdSxyk2w";
+
+    let center, zoom;
+    if (coords) {
+        center = [ coords.lng, coords.lat ];
+        zoom = 11;
+    } else {
+        center = [-75.93432, 51.46046];
+        zoom = 4;
+    }
+
+    map = new mapboxgl.Map({
+        container: "MainView",
+        style: "mapbox://styles/mapbox/light-v9",
+        center: center,
+        zoom: zoom
+    });
+
+    canvas = map.getCanvasContainer();
+    canvas.style.cursor = "default";
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
+    map.on("mousedown", onMapMouseDown);
+    map.on("mouseup", onMapMouseUp);
+
+    showingLayer = "SurfaceQuality";
+    map.on("load", function () {
+        map.addLayer({
+            "id": "SurfaceQuality",
+            "type": "line",
+            "source": {
+                type: "vector",
+                tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
+            },
+            "source-layer": "surface_mini_segments",
+            "paint": {
+                "line-color": {
+                    "type": "identity",
+                    "property": "colour"
+                },
+                "line-width": 2
+            }
+        });
+    });
+}
 
 app.ports.setLayer.subscribe(function(layer) {
     if (showingLayer === layer) {
