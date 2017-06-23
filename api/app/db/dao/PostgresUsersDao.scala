@@ -11,11 +11,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 import db.MyPostgresDriver
 import db.Tables._
+import util.Metrics
 
 
 @Singleton
 class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
-extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
+extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import profile.api._
 
   override def getById(id: UUID): Future[User] = {
@@ -54,6 +55,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
       deletedAt = None,
       role = UserRole.User)
 
+		webMetrics.counter("new-users") += 1
     db.run((users += user).map(_ => user))
   }
 
@@ -73,6 +75,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] {
     sex: _root_.scala.Option[String],
     stravaToken: String
   ): Future[User] = {
+		webMetrics.counter("logins") += 1
     val isExistingUser = db.run(users.filter(_.email === email.trim.toLowerCase).result.headOption)
 
     isExistingUser.flatMap { isEu =>
