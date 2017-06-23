@@ -15,7 +15,6 @@ class JwtUtil @Inject() (configuration: Configuration) {
 
   def isTokenValid(token: String): Boolean = {
     Jwt.isValid(token, secret, Seq(JwtAlgorithm.HS256))
-    // TODO check if token exists
   }
 
   def decodeToken(token: String): Option[User] = {
