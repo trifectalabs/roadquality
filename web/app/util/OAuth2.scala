@@ -16,9 +16,9 @@ import play.api.Configuration
 
 import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 import com.trifectalabs.roadquality.v0.models.json._
-import db.dao.UsersDao
+import db.dao.{ UsersDao, BetaUserWhitelistDao }
 
-class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JwtUtil) extends Controller {
+class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: UsersDao, jwt: JwtUtil, betaList: BetaUserWhitelistDao) extends Controller {
   lazy val stravaAuthUri = configuration.getString("strava.auth.uri").get
   lazy val stravaTokenUri = configuration.getString("strava.auth.token_uri").get
   lazy val stravaClientId = configuration.getString("strava.client.id").get
@@ -34,22 +34,24 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
     } yield {
       if (state == oauthState) {
         getStravaUserData(code).flatMap { userData =>
-          userDao.upsert(
-            userData.firstName,
-            userData.lastName,
-            userData.email,
-            userData.city,
-            userData.province,
-            userData.country,
-            None,
-            userData.sex,
-            userData.stravaToken).map { user =>
-              val jwtToken = jwt.createToken(user)
-                if (user.role == UserRole.Admin)
+          betaList.exists(userData.email).flatMap { isBetaUser =>
+            if (isBetaUser) {
+              userDao.upsert(
+                userData.firstName,
+                userData.lastName,
+                userData.email,
+                userData.city,
+                userData.province,
+                userData.country,
+                None,
+                userData.sex,
+                userData.stravaToken).map { user =>
+                  val jwtToken = jwt.createToken(user)
                   Redirect(s"/app?token=$jwtToken")
-                else
-                  Redirect("/")
+                }
             }
+            else Future(Redirect("/"))
+          }
         }.recover {
           case ex: IllegalStateException => Unauthorized(ex.getMessage)
         }

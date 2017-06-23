@@ -54,9 +54,7 @@ object Authenticated extends ActionBuilder[AuthenticatedRequest] {
       case Some(user) => {
         try {
           block {
-            val r = new AuthenticatedRequest(user, request)
-            r.requireAdmin
-            r
+            new AuthenticatedRequest(user, request)
           }
         } catch {
           case e: UnauthenticatedException => Future(Unauthorized(e.msg))

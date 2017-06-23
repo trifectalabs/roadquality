@@ -96,4 +96,12 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
 
   val tileCacheExpirations = TableQuery[TileCacheExpirations]
 
+  class BetaUserWhitelist(tag: Tag) extends Table[(String)](tag, "beta_user_whitelist") {
+    def email = column[String]("email")
+
+    override def * = (email)
+  }
+
+  val betaUserWhitelist = TableQuery[BetaUserWhitelist]
+
 }
