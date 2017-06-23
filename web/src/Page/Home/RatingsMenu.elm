@@ -263,42 +263,42 @@ surfaceRatingTwoString =
 
 surfaceRatingThreeString : String
 surfaceRatingThreeString =
-    "rgb(230, 191, 28)"
+    "rgb(230, 180, 28)"
 
 
 surfaceRatingFourString : String
 surfaceRatingFourString =
-    "rgb(143, 191, 28)"
+    "rgb(100, 180, 28)"
 
 
 surfaceRatingFiveString : String
 surfaceRatingFiveString =
-    "rgb(56, 191, 28)"
+    "rgb(60, 145, 50)"
 
 
 trafficRatingOneString : String
 trafficRatingOneString =
-    "rgb(200, 3, 15)"
+    "rgb(252, 0, 0)"
 
 
 trafficRatingTwoString : String
 trafficRatingTwoString =
-    "rgb(150, 23, 88)"
+    "rgb(189, 0, 63)"
 
 
 trafficRatingThreeString : String
 trafficRatingThreeString =
-    "rgb(100, 42, 160)"
+    "rgb(126, 0, 126)"
 
 
 trafficRatingFourString : String
 trafficRatingFourString =
-    "rgb(64, 54, 198)"
+    "rgb(63, 0, 189)"
 
 
 trafficRatingFiveString : String
 trafficRatingFiveString =
-    "rgb(27, 65, 236)"
+    "rgb(0, 0, 252)"
 
 
 whiteString : String
