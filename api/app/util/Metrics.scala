@@ -1,5 +1,7 @@
 package util
 
+import javax.inject.Inject
+
 import com.codahale.metrics._
 import com.codahale.metrics.graphite._
 import nl.grons.metrics.scala.{ MetricBuilder, MetricName }
@@ -16,12 +18,9 @@ trait Metrics extends Instrumented {
 }
 
 trait Instrumented extends InstrumentedBuilder {
-  private[this] def config = play.api.Play.current.injector.instanceOf[Configuration]
-  lazy val graphiteUrl = config.getString("graphite.url").get
-
   val metricRegistry = Application.metricRegistry
 
-  val graphite = new Graphite(new InetSocketAddress(graphiteUrl, 2003));
+  val graphite = new Graphite(new InetSocketAddress("graphite.rq.org", 2003));
 	val reporter = GraphiteReporter
 		.forRegistry(metricRegistry)
 		.prefixedWith("roadquality.org")
