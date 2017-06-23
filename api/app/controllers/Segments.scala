@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentService)(implicit ec: ExecutionContext) extends Controller {
   implicit def formErrorFormat = Json.writes[FormError]
 
-  def get(segment_id: Option[UUID]) = Action.async {
+  def get(segment_id: Option[UUID]) = Authenticated.async {
     segment_id.map(id => segmentsDao.getById(id).map(s => Ok(Json.toJson(Seq(s)))))
       .getOrElse(segmentsDao.getAll.map(s => Ok(Json.toJson(s))))
   }

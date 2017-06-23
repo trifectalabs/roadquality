@@ -6,6 +6,8 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import scala.concurrent.{ ExecutionContext, Future }
 import util.JwtUtil
+import util.Metrics
+import nl.grons.metrics.scala._
 import play.api.mvc.Security._
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -43,8 +45,7 @@ class AuthenticatedRequest[A](val user: User, request: Request[A]) extends Wrapp
   }
 }
 
-object Authenticated extends ActionBuilder[AuthenticatedRequest] {
-
+object Authenticated extends ActionBuilder[AuthenticatedRequest] with Metrics {
   def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
     RequestHelper.userAuth(request.headers) match {
       case None => {
@@ -52,13 +53,15 @@ object Authenticated extends ActionBuilder[AuthenticatedRequest] {
       }
 
       case Some(user) => {
-        try {
-          block {
-            new AuthenticatedRequest(user, request)
+        apiMetrics.timer(s"${request.path.tail} ${request.method}").timeFuture {
+          try {
+            block {
+              new AuthenticatedRequest(user, request)
+            }
+          } catch {
+            case e: UnauthenticatedException => Future(Unauthorized(e.msg))
+            case e: UnauthorizedException => Future(Forbidden(e.msg))
           }
-        } catch {
-          case e: UnauthenticatedException => Future(Unauthorized(e.msg))
-          case e: UnauthorizedException => Future(Forbidden(e.msg))
         }
       }
     }

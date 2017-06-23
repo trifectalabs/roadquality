@@ -9,6 +9,7 @@ import com.vividsolutions.jts.geom.Geometry
 import db.MyPostgresDriver
 import db.Tables._
 import models._
+import util.Metrics
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
 
@@ -16,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PostgresMiniSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
-  extends MiniSegmentsDao with HasDatabaseConfigProvider[MyPostgresDriver] {
+  extends MiniSegmentsDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import _root_.db.TablesHelper._
   import profile.api._
 
@@ -57,7 +58,7 @@ class PostgresMiniSegmentsDao @Inject() (protected val dbConfigProvider: Databas
       ORDER BY ST_Length(mini_segment_polyline) DESC
       LIMIT 1;
     """.as[MiniSegmentToSegment]
-      db.run(sql)
+      dbMetrics.timer("overlappingMiniSegmentsFromPolyline").timeFuture { db.run(sql) }
   }
 
 }
