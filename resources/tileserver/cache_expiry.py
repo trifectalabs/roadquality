@@ -1,5 +1,4 @@
 import psycopg2
-import tilestacheseed
 import os
 import subprocess
 import sys
@@ -31,4 +30,4 @@ while (True):
         print '...done'
     # Close communication with the database
     cur.close()
-    time.sleep(3)
+    time.sleep(1)
