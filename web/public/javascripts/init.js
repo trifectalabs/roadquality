@@ -344,6 +344,7 @@ app.ports.displayRoute.subscribe(function(line) {
 
 app.ports.removeRoute.subscribe(function(route) {
     id = polylines[route];
+    if (!routes[id]) return;
     routes[id].features = [];
     unusedRoutes.push(id);
     map.getSource(id).setData(routes[id]);

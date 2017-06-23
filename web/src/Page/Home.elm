@@ -213,7 +213,7 @@ type Msg
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
-    | ReceiveRoute String Int (Result Http.Error CycleRoute)
+    | ReceiveRoute String String Int (Result Http.Error CycleRoute)
     | MenuMsg Menu.Msg
     | ReceiveSegment (Result Http.Error Segment)
 
@@ -668,7 +668,7 @@ update session msg model =
                         => cmd
                         => NoOp
 
-            ReceiveRoute _ _ (Err error) ->
+            ReceiveRoute _ endPointId _ (Err error) ->
                 let
                     responseCode =
                         case error of
@@ -700,13 +700,22 @@ update session msg model =
 
                     ( newErrors, errorCmd ) =
                         Messages.update (AddMessage errorMsg) errors
+
+                    cmd =
+                        Cmd.batch
+                            [ Ports.removeAnchor endPointId
+                            , Cmd.map ErrorMsg errorCmd
+                            ]
                 in
                     { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                        => cmd
                         => NoOp
 
-            ReceiveRoute key index (Ok route) ->
+            ReceiveRoute startPointId endPointId index (Ok route) ->
                 let
+                    key =
+                        cycleRouteKey startPointId endPointId
+
                     line =
                         Polyline.decode route.polyline
 
@@ -880,5 +889,5 @@ addRoute apiUrl maybeAuthToken cycleRoutes anchors startPointId endPointId =
                 |> List.filterMap (\id -> Dict.get id anchors.dict)
     in
         Http.send
-            (ReceiveRoute routeKey routeIndex)
+            (ReceiveRoute startPointId endPointId routeIndex)
             (makeRoute apiUrl maybeAuthToken points)
