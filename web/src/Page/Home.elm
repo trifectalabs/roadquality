@@ -189,7 +189,7 @@ accountView session =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Ports.removeAnchor RemoveAnchorPoint
+        [ Ports.removedAnchor RemoveAnchorPoint
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
@@ -329,29 +329,47 @@ update session msg model =
                     else
                         { model | menu = newMenu } => cmd => NoOp
 
-            NewAnchorPoint _ (Err error) ->
+            NewAnchorPoint pointId (Err error) ->
                 let
-                    externalMsg =
+                    responseCode =
                         case error of
+                            Http.BadPayload _ response ->
+                                response.status.code
+
                             Http.BadStatus response ->
-                                if response.status.code == 401 then
-                                    Unauthorized
-                                else
-                                    NoOp
+                                response.status.code
 
                             _ ->
-                                NoOp
+                                0
 
-                    errorMsg =
-                        { type_ = Messages.Error
-                        , message = "There was a server error trying to place your point. Sorry!"
-                        }
+                    ( externalMsg, errorMsg ) =
+                        if responseCode == 401 then
+                            Unauthorized
+                                => { type_ = Messages.Error
+                                   , message = "You must login to place a point. Sorry!"
+                                   }
+                        else if responseCode == 204 then
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "You're trying to place a point outside the currently supported area. Whoops!"
+                                   }
+                        else
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "There was a server error trying to place your point. Sorry!"
+                                   }
 
                     ( newErrors, errorCmd ) =
                         Messages.update (AddMessage errorMsg) errors
+
+                    cmd =
+                        Cmd.batch
+                            [ Ports.removeAnchor pointId
+                            , Cmd.map ErrorMsg errorCmd
+                            ]
                 in
                     { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                        => cmd
                         => externalMsg
 
             -- Scenario One
@@ -402,29 +420,47 @@ update session msg model =
                 in
                     { model | anchors = newAnchors } => cmd => NoOp
 
-            ChangeAnchorPoint _ (Err error) ->
+            ChangeAnchorPoint pointId (Err error) ->
                 let
-                    externalMsg =
+                    responseCode =
                         case error of
+                            Http.BadPayload _ response ->
+                                response.status.code
+
                             Http.BadStatus response ->
-                                if response.status.code == 401 then
-                                    Unauthorized
-                                else
-                                    NoOp
+                                response.status.code
 
                             _ ->
-                                NoOp
+                                0
 
-                    errorMsg =
-                        { type_ = Messages.Error
-                        , message = "There was a server error trying to move your point. Sorry!"
-                        }
+                    ( externalMsg, errorMsg ) =
+                        if responseCode == 401 then
+                            Unauthorized
+                                => { type_ = Messages.Error
+                                   , message = "You must login to move a point. Sorry!"
+                                   }
+                        else if responseCode == 204 then
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "You're trying to move a point outside the currently supported area. Whoops!"
+                                   }
+                        else
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "There was a server error trying to move your point. Sorry!"
+                                   }
 
                     ( newErrors, errorCmd ) =
                         Messages.update (AddMessage errorMsg) errors
+
+                    cmd =
+                        Cmd.batch
+                            [ Ports.removeAnchor pointId
+                            , Cmd.map ErrorMsg errorCmd
+                            ]
                 in
                     { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                        => cmd
                         => externalMsg
 
             -- Scenario One
@@ -634,26 +670,33 @@ update session msg model =
 
             ReceiveRoute _ _ (Err error) ->
                 let
-                    default =
-                        "There was a server error creating your route. Sorry!"
-
-                    textErrors =
+                    responseCode =
                         case error of
+                            Http.BadPayload _ response ->
+                                response.status.code
+
                             Http.BadStatus response ->
-                                -- TODO: Display to user
-                                -- Routing Failure
-                                if response.status.code == 204 then
-                                    default
-                                else
-                                    default
+                                response.status.code
 
                             _ ->
-                                default
+                                0
 
-                    errorMsg =
-                        { type_ = Messages.Error
-                        , message = textErrors
-                        }
+                    ( externalMsg, errorMsg ) =
+                        if responseCode == 401 then
+                            Unauthorized
+                                => { type_ = Messages.Error
+                                   , message = "You must login to creating your route. Sorry!"
+                                   }
+                        else if responseCode == 204 then
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "You're trying to route outside the currently supported area. Whoops!"
+                                   }
+                        else
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "There was a server error creating your route. Sorry!"
+                                   }
 
                     ( newErrors, errorCmd ) =
                         Messages.update (AddMessage errorMsg) errors
@@ -774,21 +817,28 @@ update session msg model =
 
             ReceiveSegment (Err error) ->
                 let
-                    externalMsg =
+                    responseCode =
                         case error of
+                            Http.BadPayload _ response ->
+                                response.status.code
+
                             Http.BadStatus response ->
-                                if response.status.code == 401 then
-                                    Unauthorized
-                                else
-                                    NoOp
+                                response.status.code
 
                             _ ->
-                                NoOp
+                                0
 
-                    errorMsg =
-                        { type_ = Messages.Error
-                        , message = "There was a server error saving your segment. Sorry!"
-                        }
+                    ( externalMsg, errorMsg ) =
+                        if responseCode == 401 then
+                            Unauthorized
+                                => { type_ = Messages.Error
+                                   , message = "You must login to save a segment. Sorry!"
+                                   }
+                        else
+                            NoOp
+                                => { type_ = Messages.Error
+                                   , message = "There was a server error saving your segment. Sorry!"
+                                   }
 
                     ( newErrors, errorCmd ) =
                         Messages.update (AddMessage errorMsg) errors

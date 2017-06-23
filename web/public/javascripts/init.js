@@ -260,12 +260,14 @@ function onMapRightClick(e) {
 }
 
 function removeMarker(key) {
-    popup.remove();
+    if (popup) {
+        popup.remove();
+    }
     markers[key].features = [];
     unusedMarkers.push(key);
     map.getSource(key).setData(markers[key]);
     markerCount--;
-    app.ports.removeAnchor.send(key);
+    app.ports.removedAnchor.send(key);
 }
 
 // DROP MAP
@@ -282,6 +284,10 @@ app.ports.snapAnchor.subscribe(function(values) {
     let point = values[1];
     markers[pointId].features[0].geometry.coordinates = [point.lng, point.lat];
     map.getSource(pointId).setData(markers[pointId]);
+});
+
+app.ports.removeAnchor.subscribe(function(pointId) {
+    removeMarker(pointId);
 });
 
 // PLOT ROUTE

@@ -444,9 +444,9 @@ messagesCss =
             , property "left" "calc(50% - 250px)"
             , children
                 [ div
-                    [ width (px 470)
+                    [ width (px 450)
                     , marginTop (px 10)
-                    , padding (px 15)
+                    , padding4 (px 15) (px 35) (px 15) (px 15)
                     , position relative
                     , borderRadius (px 2)
                     , withClass InfoMessage
