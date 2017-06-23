@@ -75,6 +75,14 @@ viewSignIn page user =
         Just user ->
             [ navbarLink (page == Account) Route.Account [ text "Account" ]
             , navbarLink False Route.Logout [ text "Sign out" ]
+            , li
+                [ class [ NavItem ] ]
+                [ a
+                    [ class [ NavLink ]
+                    , href "https://goo.gl/forms/moVg23W1xmSMC2g83"
+                    ]
+                    [ text "Feedback" ]
+                ]
             ]
 
 
