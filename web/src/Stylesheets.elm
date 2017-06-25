@@ -82,6 +82,7 @@ type CssIds
     | PathTypeInput
     | Content
     | MessagesContainer
+    | EmailListBanner
 
 
 type CssClasses
@@ -506,6 +507,44 @@ mapCss =
             [ height (vh 100)
             , width (vw 100)
             , zIndex (int 0)
+            ]
+        , id EmailListBanner
+            [ position fixed
+            , left zero
+            , right zero
+            , bottom zero
+            , height (px 50)
+            , padding4 (px 20) (px 15) (px 15) (px 15)
+            , backgroundColor rgbBlack
+            , color rgbWhite
+            , children
+                [ div
+                    [ margin2 zero auto
+                    , width (px 871)
+                    , children
+                        [ span
+                            [ display inlineBlock
+                            , maxWidth (px 500)
+                            , marginRight (px 5)
+                            ]
+                        , input
+                            [ padding (px 10)
+                            , width (px 200)
+                            , borderRadius (px 2)
+                            , border3 (px 1) solid rgbLightGray
+                            , verticalAlign textBottom
+                            , marginRight (px 5)
+                            , fontSize (px 14)
+                            , focus
+                                [ borderColor rgbDarkGray
+                                , outline none
+                                ]
+                            ]
+                        , div
+                            [ verticalAlign textBottom ]
+                        ]
+                    ]
+                ]
             ]
         , id AddRatingButton
             [ position absolute

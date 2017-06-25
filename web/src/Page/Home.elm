@@ -8,6 +8,7 @@ import Data.AuthToken exposing (AuthToken)
 import Data.Session as Session exposing (Session)
 import Data.UserPhoto as UserPhoto
 import Request.Map exposing (snap, makeRoute, saveSegment)
+import Request.User exposing (emailListSignUp)
 import Ports
 import Http
 import Task exposing (Task)
@@ -16,6 +17,7 @@ import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Polyline
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (type_, value)
 import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClasses(..))
 import Html.CssHelpers exposing (Namespace)
 import Util exposing ((=>), pair)
@@ -31,6 +33,7 @@ import Views.Messages as Messages exposing (Msg(AddMessage))
 
 type alias Model =
     { errors : Messages.Model
+    , listEmail : String
     , menu : Menu.Model
     , mapLayer : MapLayer
     , switchStyle : Animation.State
@@ -74,6 +77,7 @@ init session =
 initModel : List Segment -> Model
 initModel segments =
     { errors = Messages.initModel
+    , listEmail = ""
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
     , switchStyle = Animation.style styles.closed
@@ -164,6 +168,7 @@ view session model =
                 ]
             , Menu.view model.menu |> Html.map MenuMsg
             , accountView session
+            , signUpBanner model.listEmail (session.user == Nothing)
             ]
 
 
@@ -184,6 +189,20 @@ accountView session =
             a
                 [ Route.href Route.Account ]
                 [ img [ UserPhoto.src user.photo, class [ GoToAccount ] ] [] ]
+
+
+signUpBanner : String -> Bool -> Html Msg
+signUpBanner email showBanner =
+    if showBanner == True then
+        div [ id EmailListBanner ]
+            [ div []
+                [ span [] [ text "Want access to Road Quality? Add your email here and we will let you know when we're adding more users!" ]
+                , input [ type_ "text", onInput ChangeEmailList, value email ] []
+                , div [ g.class [ SecondaryButton ], onClick EmailListSignup ] [ text "Let me know!" ]
+                ]
+            ]
+    else
+        span [] []
 
 
 subscriptions : Model -> Sub Msg
@@ -207,6 +226,9 @@ type Msg
     = ErrorMsg Messages.Msg
     | SetLayer MapLayer
     | ShowLogin
+    | ChangeEmailList String
+    | EmailListSignup
+    | EmailListSignupResult (Result Http.Error String)
     | AnimateSwitcher Animation.Msg
     | AnimateErrors Animation.Msg
     | DropAnchorPoint Bool ( String, Float, Float )
@@ -280,6 +302,44 @@ update session msg model =
 
             ShowLogin ->
                 model => Cmd.none => Unauthorized
+
+            ChangeEmailList email ->
+                { model | listEmail = email } => Cmd.none => NoOp
+
+            EmailListSignup ->
+                model
+                    => Http.send
+                        EmailListSignupResult
+                        (emailListSignUp apiUrl model.listEmail)
+                    => NoOp
+
+            EmailListSignupResult (Err error) ->
+                let
+                    errorMsg =
+                        { message = "Email list sign up failed"
+                        , type_ = Messages.Error
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
+                in
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
+                        => NoOp
+
+            EmailListSignupResult (Ok response) ->
+                let
+                    errorMsg =
+                        { message = "We'll let you know when you can sign up!"
+                        , type_ = Messages.Info
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
+                in
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
+                        => NoOp
 
             AnimateSwitcher animMsg ->
                 { model
