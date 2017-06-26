@@ -55,7 +55,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
       deletedAt = None,
       role = UserRole.User)
 
-		webMetrics.counter("new-users") += 1
+    webMetrics.counter("new-users") += 1
     db.run((users += user).map(_ => user))
   }
 
@@ -75,7 +75,7 @@ extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
     sex: _root_.scala.Option[String],
     stravaToken: String
   ): Future[User] = {
-		webMetrics.counter("logins") += 1
+    webMetrics.counter("logins") += 1
     val isExistingUser = db.run(users.filter(_.email === email.trim.toLowerCase).result.headOption)
 
     isExistingUser.flatMap { isEu =>

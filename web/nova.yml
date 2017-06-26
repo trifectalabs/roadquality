@@ -37,7 +37,6 @@ environments:
           - STRAVA_CLIENT_ID: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.strava.application.id get)"
           - STRAVA_CLIENT_SECRET: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.strava.application.secret get)"
           - STRAVA_CLIENT_REDIRECT_URI: "https://roadquality.org/callback"
-          - GRAPHITE_URL: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/graphite.url get)"
         deployment_group: roadquality-web-ProductionDeploymentGroup-QE2Z51DIUEOU
         InstanceSecurityGroups: sg-eb2f1c95
         ElbSecurityGroups: sg-a52a19db

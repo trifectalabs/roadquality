@@ -21,15 +21,15 @@ trait Instrumented extends InstrumentedBuilder {
   val metricRegistry = Application.metricRegistry
 
   val graphite = new Graphite(new InetSocketAddress("graphite.rq.org", 2003));
-	val reporter = GraphiteReporter
-		.forRegistry(metricRegistry)
-		.prefixedWith("roadquality.org")
-		.convertRatesTo(TimeUnit.SECONDS)
-		.convertDurationsTo(TimeUnit.MILLISECONDS)
-		.filter(MetricFilter.ALL)
-		.build(graphite);
+  val reporter = GraphiteReporter
+    .forRegistry(metricRegistry)
+    .prefixedWith("roadquality.org")
+    .convertRatesTo(TimeUnit.SECONDS)
+    .convertDurationsTo(TimeUnit.MILLISECONDS)
+    .filter(MetricFilter.ALL)
+    .build(graphite);
 
-		reporter.start(10, TimeUnit.SECONDS)
+    reporter.start(10, TimeUnit.SECONDS)
 }
 
 object Application {
