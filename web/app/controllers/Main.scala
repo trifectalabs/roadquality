@@ -13,6 +13,7 @@ import com.trifectalabs.roadquality.v0.models.json._
 import util.actions.Authenticated
 import util.OAuth2
 import util.JwtUtil
+import models.EmailSignup
 
 class Main @Inject() (jwtUtil: JwtUtil)(implicit ec: ExecutionContext) extends Controller {
 
@@ -26,6 +27,12 @@ class Main @Inject() (jwtUtil: JwtUtil)(implicit ec: ExecutionContext) extends C
 
   def notFound(path: String) = Action { request =>
     NotFound(views.html.notFound())
+  }
+
+  def addEmail = Action(parse.json[EmailSignup]) { request =>
+    val signup = req.body
+
+
   }
 
 }
