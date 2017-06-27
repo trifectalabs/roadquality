@@ -44,7 +44,8 @@ app.ports.up.subscribe(function(authed) {
         });
 
         canvas = map.getCanvasContainer();
-        canvas.style.cursor = "default";
+        cursorClass = "default-cursor";
+        addClass(canvas, cursorClass);
         map.dragRotate.disable();
         map.touchZoomRotate.disableRotation();
         map.on("mousedown", onMapMouseDown);
@@ -107,24 +108,32 @@ app.ports.routeCreate.subscribe(function() {
 });
 
 function onMapMouseUp(e) {
-    canvas.style.cursor = "default";
+    removeClass(canvas, cursorClass);
+    cursorClass = "default-cursor";
+    addClass(canvas, cursorClass);
 }
 
 function onMapMouseDown(e) {
     if (e.originalEvent.which !== 1) return;
     if (cursorOverPoint === null || viewOnly) {
-        canvas.style.cursor = "move";
+        removeClass(canvas, cursorClass);
+        cursorClass = "move-cursor";
+        addClass(canvas, cursorClass);
         return;
     }
     isDragging = true;
-    canvas.style.cursor = "grabbing";
+    removeClass(canvas, cursorClass);
+    cursorClass = "grabbing-cursor";
+    addClass(canvas, cursorClass);
     map.on("mousemove", onMoveMarker);
     map.once("mouseup", onDropMarker);
 }
 
 function onMoveMarker(e) {
     if (!isDragging) return;
-    canvas.style.cursor = "grabbing";
+    removeClass(canvas, cursorClass);
+    cursorClass = "grabbing-cursor";
+    addClass(canvas, cursorClass);
     let coords = e.lngLat;
     markers[cursorOverPoint].features[0].geometry.coordinates = [coords.lng, coords.lat];
     map.getSource(cursorOverPoint).setData(markers[cursorOverPoint]);
@@ -134,10 +143,7 @@ function onDropMarker(e) {
     if (!isDragging) return;
     let coords = e.lngLat;
     app.ports.moveAnchor.send([cursorOverPoint, coords.lat, coords.lng]);
-
-    canvas.style.cursor = "default";
     isDragging = false;
-
     map.off("mousemove", onMoveMarker);
 }
 
@@ -208,14 +214,18 @@ function onMapClick(e) {
     }
 
     map.on("mouseenter", id, function() {
-        canvas.style.cursor = "grab";
+        removeClass(canvas, cursorClass);
+        cursorClass = "grab-cursor";
+        addClass(canvas, cursorClass);
         cursorOverPoint = id;
         map.dragPan.disable();
     });
 
     map.on("mouseleave", id, function() {
         if (isDragging) return;
-        canvas.style.cursor = "default";
+        removeClass(canvas, cursorClass);
+        cursorClass = "default-cursor";
+        addClass(canvas, cursorClass);
         cursorOverPoint = null;
         map.dragPan.enable();
     });
@@ -372,3 +382,21 @@ app.ports.clearRoute.subscribe(function() {
         map.getSource(id).setData(routes[id]);
     }
 });
+
+// UTIL
+
+// from http://www.openjs.com/scripts/dom/class_manipulation.php
+function hasClass(ele, cls) {
+    return ele.className.match(new RegExp('(\\s|^)' + cls + '(\\s|$)'));
+}
+
+function addClass(ele, cls) {
+    if (!this.hasClass(ele, cls)) ele.className += " " + cls;
+}
+
+function removeClass(ele, cls) {
+    if (hasClass(ele,cls)) {
+        var reg = new RegExp('(\\s|^)' + cls + '(\\s|$)');
+        ele.className = ele.className.replace(reg, ' ');
+    }
+}

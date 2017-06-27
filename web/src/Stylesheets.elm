@@ -248,6 +248,18 @@ generalCss =
             [ margin zero
             , fontFamilies [ "Lato", "Arial", "Sans-serif" ]
             ]
+        , class "default-cursor" [ cursor default |> important ]
+        , class "move-cursor" [ cursor move |> important ]
+        , class "grab-cursor"
+            [ cursor grab |> important
+            , property "cursor" "-webkit-grab" |> important
+            , property "cursor" "-moz-grab" |> important
+            ]
+        , class "grabbing-cursor"
+            [ cursor grabbing |> important
+            , property "cursor" "-webkit-grabbing" |> important
+            , property "cursor" "-moz-grabbing" |> important
+            ]
         ]
 
 
