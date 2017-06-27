@@ -22,7 +22,7 @@ while (True):
         timestamp = row[1]
     if bound is not None:
         print 'Rendering tiles for bounding box ' + str(bound)
-        cmd = 'cd /opt/t-rex && ./t_rex generate --config=/config.toml --extent=' + str(bound) + ' --overwrite=true --minzoom=0 --maxzoom=17'
+        cmd = 'cd /opt/t-rex && ./t_rex generate --config=/opt/t-rex/config.toml --extent=' + str(bound) + ' --overwrite=true --minzoom=0 --maxzoom=17'
         FNULL = open(os.devnull, 'w')
         subprocess.call(cmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT, close_fds=True)
         cur.execute("UPDATE tile_cache_expirations SET processed_at = now() where created_at = (%s)", [timestamp])
