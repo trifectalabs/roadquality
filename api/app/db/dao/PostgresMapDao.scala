@@ -1,7 +1,5 @@
 package db.dao
-
 import javax.inject.{Inject, Singleton}
-
 import com.vividsolutions.jts.geom.{ Geometry, LineString, Coordinate }
 import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
@@ -109,22 +107,9 @@ class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigPr
   }
 
   override def intersectionsSplitsFromSegment(segment_polyline: String): Future[Seq[Geometry]] = {
-    val sql = sql"""
-      WITH
-        polyline      AS (SELECT ST_LineFromEncodedPolyline(${segment_polyline})),
-        intersections AS (SELECT the_geom as intersection FROM ways_vertices_pgr
-          WHERE ST_DWithin(the_geom, (SELECT * FROM polyline), 5, false))
-      SELECT (st_dump(
-        st_split(
-          st_snap(
-            (SELECT * FROM polyline),
-            (SELECT st_collect(array_agg(intersection::geometry)) FROM intersections),
-            0.00008
-          ),
-          (SELECT st_collect(array_agg(intersection::geometry)) FROM intersections)
-        )
-      )).geom;
-    """.as[Geometry]
+		// Segment snap buffer = 0.00008
+		// Nearby vertices limit = 10000
+    val sql = sql"""SELECT * FROM intersection_splits_from_segment(${segment_polyline}, 0.00008, 10000)""".as[Geometry]
     dbMetrics.timer("intersectionSplitsFromSegment").timeFuture { db.run(sql) }
   }
 
