@@ -86,16 +86,6 @@ class Users(tag: Tag) extends Table[User](tag, "users") {
 
   val miniSegmentsToSegments = TableQuery[MiniSegmentsToSegments]
 
-  class TileCacheExpirations(tag: Tag) extends Table[TileCacheExpiration](tag, "tile_cache_expirations") {
-    def bounds = column[String]("bounds")
-    def createdAt = column[DateTime]("created_at")
-    def processedAt = column[Option[DateTime]]("processed_at")
-
-    override def * = (bounds, createdAt, processedAt) <> (TileCacheExpiration.tupled, TileCacheExpiration.unapply)
-  }
-
-  val tileCacheExpirations = TableQuery[TileCacheExpirations]
-
   class BetaUserWhitelist(tag: Tag) extends Table[(String)](tag, "beta_user_whitelist") {
     def email = column[String]("email")
 

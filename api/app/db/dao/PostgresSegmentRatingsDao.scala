@@ -8,7 +8,9 @@ import com.trifectalabs.roadquality.v0.models._
 import db.MyPostgresDriver
 import db.Tables._
 import util.Metrics
+import models.Extent
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.jdbc.GetResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,6 +19,8 @@ class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: Datab
   extends SegmentRatingsDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import _root_.db.TablesHelper._
   import profile.api._
+
+  implicit val getExtentResult = GetResult(r => Extent(r.nextDouble(), r.nextDouble(), r.nextDouble(), r.nextDouble()))
 
   override def getAll(): Future[Seq[SegmentRating]] = {
     db.run(segmentRatings.result)
@@ -34,15 +38,15 @@ class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: Datab
     db.run((segmentRatings += rating).map(_ => rating))
   }
 
-  override def getBoundsFromRatings(created_at: DateTime): Future[String] = {
+  override def getBoundsFromRatings(created_at: DateTime): Future[Extent] = {
     val sql = sql"""
       SELECT
-        st_xmin((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text || ',' ||
-        st_ymin((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text || ',' ||
-        st_xmax((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text || ',' ||
+        st_xmin((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text,
+        st_ymin((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text,
+        st_xmax((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text,
         st_ymax((SELECT ST_Extent(ST_Transform(ST_LineFromEncodedPolyline(polyline), 3857))))::text
       FROM segment_ratings sr JOIN segments s ON sr.segment_id = s.id
-      WHERE created_at = ${new java.sql.Timestamp(created_at.getMillis())}""".as[String]
+      WHERE created_at = ${new java.sql.Timestamp(created_at.getMillis())}""".as[Extent]
     dbMetrics.timer("getBoundsFromRatings").timeFuture { db.run((sql).map{ d => d.head } ) }
   }
 

@@ -11,7 +11,6 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind(classOf[SegmentsDao]).to(classOf[PostgresSegmentsDao])
     bind(classOf[MiniSegmentsDao]).to(classOf[PostgresMiniSegmentsDao])
     bind(classOf[SegmentRatingsDao]).to(classOf[PostgresSegmentRatingsDao])
-    bind(classOf[TileCacheExpirationsDao]).to(classOf[PostgresTileCacheExpirationsDao])
     bind(classOf[BetaUserWhitelistDao]).to(classOf[PostgresBetaUserWhitelistDao])
 
     // Services

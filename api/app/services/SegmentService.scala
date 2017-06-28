@@ -8,17 +8,19 @@ import com.trifectalabs.roadquality.v0.models.{Point, Segment, SegmentCreateForm
 import com.vividsolutions.jts.geom.{ GeometryFactory, Coordinate, PrecisionModel, LineString }
 import db.dao.{MapDao, MiniSegmentsDao, SegmentRatingsDao, SegmentsDao}
 import models._
+import util.Metrics
 import org.joda.time.DateTime
 import com.trifectalabs.roadquality.v0.models.{Segment, SegmentCreateForm, SegmentRating}
 import scala.language.postfixOps
 import scala.collection.JavaConversions._
 import com.vividsolutions.jts.geom.Geometry
 import play.api.Logger
+import play.api.libs.ws._
+import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
-import models.TileCacheExpiration
 import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, SegmentRating, Segment }
-import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao, TileCacheExpirationsDao }
+import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao }
 
 
 trait SegmentService {
@@ -28,8 +30,8 @@ trait SegmentService {
 }
 
 class SegmentServiceImpl @Inject()
-  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, tileCacheExpirationsDao: TileCacheExpirationsDao)
-  (implicit ec: ExecutionContext) extends SegmentService {
+  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, wsClient: WSClient)
+  (implicit ec: ExecutionContext) extends SegmentService with Metrics {
   implicit def latLng2Point(latLng: LatLng): Point = Point(lat = latLng.lat, lng = latLng.lng)
 
   def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
@@ -84,9 +86,13 @@ class SegmentServiceImpl @Inject()
             segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
           )
         ).flatMap { r =>
-          ratingsDao.getBoundsFromRatings(r.createdAt).map { bounds =>
-            println(bounds)
-            tileCacheExpirationsDao.insert(TileCacheExpiration(bounds, DateTime.now(), None))
+          ratingsDao.getBoundsFromRatings(r.createdAt).map { extent =>
+            apiMetrics.timer("tile-rerendering").timeFuture {
+              (wsClient
+                .url("https://tiles.roadquality.org/refresh")
+                .post(Json.toJson(extent).as[JsObject] + ("minzoom" -> Json.toJson("0")) + ("maxzoom" -> Json.toJson("17")))
+                )
+            }
           }
         }
         Future.sequence(Seq(miniSegmentsFuture, ratingsFuture)).map( p => segment)
