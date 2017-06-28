@@ -105,8 +105,6 @@ styles =
 
 { id, class, classList } =
     mapNamespace
-
-
 g : Namespace String class id msg
 g =
     globalNamespace
@@ -310,7 +308,7 @@ update session msg model =
                 model
                     => Http.send
                         EmailListSignupResult
-                        (emailListSignUp apiUrl model.listEmail)
+                        (emailListSignUp "https://roadquality.org" model.listEmail)
                     => NoOp
 
             EmailListSignupResult (Err error) ->

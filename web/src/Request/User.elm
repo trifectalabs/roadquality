@@ -97,16 +97,16 @@ edit apiUrl { username, email, bio, password, image } maybeToken =
 
 
 emailListSignUp : String -> String -> Http.Request String
-emailListSignUp apiUrl email =
+emailListSignUp url email =
     let
         body =
             Encode.object
-                [ "email" => Encode.string email
+                [ "email_address" => Encode.string email
                 , "status" => Encode.string "subscribed"
                 ]
                 |> Http.jsonBody
     in
-        (apiUrl ++ "/emailList")
+        (url ++ "/emailList")
             |> HttpBuilder.post
             |> HttpBuilder.withExpect Http.expectString
             |> HttpBuilder.withBody body

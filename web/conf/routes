@@ -3,7 +3,7 @@ GET        /app/            controllers.Main.app(token: Option[String])
 GET        /login           controllers.Login.oauth
 GET        /callback        util.OAuth2.callback(code: Option[String], state: Option[String])
 
-GET        /emailList       controllers.Main.addEmail
+POST       /emailList       controllers.Main.addEmail
 
 GET        /assets/*file    controllers.Assets.at(path="/public", file)
 

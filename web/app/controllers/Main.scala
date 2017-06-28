@@ -35,7 +35,7 @@ class Main @Inject() (jwtUtil: JwtUtil, wsClient: WSClient, config: Configuratio
     val signup = request.body
 
     (wsClient
-      .url("https://us12.api.mailchimp.com/lists/8271d03ba2/members")
+      .url("https://us12.api.mailchimp.com/3.0/lists/8271d03ba2/members")
       .withAuth("", mailchimpToken, WSAuthScheme.BASIC)
       .post(Json.toJson(signup))) map { resp =>
         if (resp.status == 200) {
