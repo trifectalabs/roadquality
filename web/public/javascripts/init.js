@@ -13,6 +13,7 @@ let isDragging = false;
 let viewOnly = true;
 let popup;
 let showingLayer;
+let cursorClass;
 
   // STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
@@ -50,13 +51,6 @@ app.ports.up.subscribe(function(location) {
     }, 100);
 });
 
-        canvas = map.getCanvasContainer();
-        cursorClass = "default-cursor";
-        addClass(canvas, cursorClass);
-        map.dragRotate.disable();
-        map.touchZoomRotate.disableRotation();
-        map.on("mousedown", onMapMouseDown);
-        map.on("mouseup", onMapMouseUp);
 function setupMap(coords) {
     if (map) {
         return;
@@ -81,7 +75,8 @@ function setupMap(coords) {
     });
 
     canvas = map.getCanvasContainer();
-    canvas.style.cursor = "default";
+    cursorClass = "default-cursor";
+    addClass(canvas, cursorClass);
     map.dragRotate.disable();
     map.touchZoomRotate.disableRotation();
     map.on("mousedown", onMapMouseDown);
