@@ -82,6 +82,7 @@ type CssIds
     | PathTypeInput
     | Content
     | MessagesContainer
+    | EmailListBanner
 
 
 type CssClasses
@@ -182,42 +183,42 @@ rgbSurfaceTwo =
 
 rgbSurfaceThree : Color
 rgbSurfaceThree =
-    rgb 230 191 28
+    rgb 230 180 28
 
 
 rgbSurfaceFour : Color
 rgbSurfaceFour =
-    rgb 143 191 28
+    rgb 100 180 28
 
 
 rgbSurfaceFive : Color
 rgbSurfaceFive =
-    rgb 56 191 28
+    rgb 60 145 50
 
 
 rgbTrafficOne : Color
 rgbTrafficOne =
-    rgb 200 3 15
+    rgb 252 0 0
 
 
 rgbTrafficTwo : Color
 rgbTrafficTwo =
-    rgb 150 23 88
+    rgb 189 0 63
 
 
 rgbTrafficThree : Color
 rgbTrafficThree =
-    rgb 100 42 160
+    rgb 126 0 126
 
 
 rgbTrafficFour : Color
 rgbTrafficFour =
-    rgb 64 54 198
+    rgb 63 0 189
 
 
 rgbTrafficFive : Color
 rgbTrafficFive =
-    rgb 27 65 236
+    rgb 0 0 252
 
 
 lighter : Color -> Color
@@ -518,6 +519,44 @@ mapCss =
             [ height (vh 100)
             , width (vw 100)
             , zIndex (int 0)
+            ]
+        , id EmailListBanner
+            [ position fixed
+            , left zero
+            , right zero
+            , bottom zero
+            , height (px 50)
+            , padding4 (px 20) (px 15) (px 15) (px 15)
+            , backgroundColor rgbBlack
+            , color rgbWhite
+            , children
+                [ div
+                    [ margin2 zero auto
+                    , width (px 871)
+                    , children
+                        [ span
+                            [ display inlineBlock
+                            , maxWidth (px 500)
+                            , marginRight (px 5)
+                            ]
+                        , input
+                            [ padding (px 10)
+                            , width (px 200)
+                            , borderRadius (px 2)
+                            , border3 (px 1) solid rgbLightGray
+                            , verticalAlign textBottom
+                            , marginRight (px 5)
+                            , fontSize (px 14)
+                            , focus
+                                [ borderColor rgbDarkGray
+                                , outline none
+                                ]
+                            ]
+                        , div
+                            [ verticalAlign textBottom ]
+                        ]
+                    ]
+                ]
             ]
         , id AddRatingButton
             [ position absolute

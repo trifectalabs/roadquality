@@ -1,4 +1,4 @@
-module Request.User exposing (login, register, edit, storeSession)
+module Request.User exposing (login, register, edit, storeSession, emailListSignUp)
 
 import Http
 import Ports
@@ -56,13 +56,14 @@ register apiUrl { username, email, password } =
 
 edit :
     String
-    -> { r
-        | username : String
-        , email : String
-        , bio : String
-        , password : Maybe String
-        , image : Maybe String
-       }
+    ->
+        { r
+            | username : String
+            , email : String
+            , bio : String
+            , password : Maybe String
+            , image : Maybe String
+        }
     -> Maybe AuthToken
     -> Http.Request User
 edit apiUrl { username, email, bio, password, image } maybeToken =
@@ -92,4 +93,21 @@ edit apiUrl { username, email, bio, password, image } maybeToken =
             |> HttpBuilder.withExpect expect
             |> HttpBuilder.withBody body
             |> withAuthorization maybeToken
+            |> HttpBuilder.toRequest
+
+
+emailListSignUp : String -> String -> Http.Request String
+emailListSignUp url email =
+    let
+        body =
+            Encode.object
+                [ "email_address" => Encode.string email
+                , "status" => Encode.string "subscribed"
+                ]
+                |> Http.jsonBody
+    in
+        (url ++ "/emailList")
+            |> HttpBuilder.post
+            |> HttpBuilder.withExpect Http.expectString
+            |> HttpBuilder.withBody body
             |> HttpBuilder.toRequest
