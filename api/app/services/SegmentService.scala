@@ -80,13 +80,13 @@ class SegmentServiceImpl @Inject()
           }
         }
 
-        val ratingsFuture = ratingsDao.insert(
+        val ratingsFuture: Future[WSResponse] = ratingsDao.insert(
           SegmentRating(
             UUID.randomUUID(), segmentId, userId, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
             segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
           )
         ).flatMap { r =>
-          ratingsDao.getBoundsFromRatings(r.createdAt).map { extent =>
+          ratingsDao.getBoundsFromRatings(r.createdAt).flatMap { extent =>
             apiMetrics.timer("tile-rerendering").timeFuture {
               (wsClient
                 .url("https://tiles.roadquality.org/refresh")
