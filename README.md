@@ -8,6 +8,11 @@ To compile server components:
 
     sbt api/compile
 
+To run server locally:
+
+    sbt "api/run -Dhttp.port=9001"
+    sbt web/run
+
 To compile web assets:
 
     cd web/
