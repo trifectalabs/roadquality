@@ -383,6 +383,9 @@
         },
         { "method": "POST",
           "body": { "type": "segmentCreateForm" },
+          "parameters": [
+            { "name": "currentZoomLevel", "type": "integer", "required": false }
+          ],
           "responses": {
             "201": { "type": "segment" },
             "400": { "type": "string" }

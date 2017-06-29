@@ -17,6 +17,7 @@ import com.vividsolutions.jts.geom.Geometry
 import play.api.Logger
 import play.api.libs.ws._
 import play.api.libs.json._
+import play.api.Configuration
 
 import scala.concurrent.{ExecutionContext, Future}
 import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, SegmentRating, Segment }
@@ -24,17 +25,18 @@ import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao }
 
 
 trait SegmentService {
-  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment]
+  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int] = None): Future[Segment]
   def handleEndpointOfSegment(miniSegmentSplit: MiniSegmentSplit, segmentId: UUID): Future[Option[MiniSegmentToSegment]]
   def newOverlappingMiniSegments(polyline: String, segmentId: UUID): Future[Seq[MiniSegmentToSegment]]
 }
 
 class SegmentServiceImpl @Inject()
-  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, wsClient: WSClient)
+  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, wsClient: WSClient, configuration: Configuration)
   (implicit ec: ExecutionContext) extends SegmentService with Metrics {
   implicit def latLng2Point(latLng: LatLng): Point = Point(lat = latLng.lat, lng = latLng.lng)
+  lazy val ratingsTileserverUrl = configuration.getString("ratings.tileserver.url").get
 
-  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID): Future[Segment] = {
+  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int]): Future[Segment] = {
     val segmentId = UUID.randomUUID()
     val polyline = joinPolylines(segmentCreateForm.polylines)
     val segmentPoints: Seq[Point] = Polyline.decode(polyline).map(latLng2Point)
@@ -86,14 +88,50 @@ class SegmentServiceImpl @Inject()
             segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
           )
         ).flatMap { r =>
-          ratingsDao.getBoundsFromRatings(r.createdAt).flatMap { extent =>
-            apiMetrics.timer("tile-rerendering").timeFuture {
+          val boundsFut = ratingsDao.getBoundsFromRatings(r.createdAt)
+          val minZoom = applyZoomLimits(currentZoomLevel.getOrElse(10) - 2)
+          val maxZoom = applyZoomLimits(currentZoomLevel.getOrElse(10) + 2)
+          val asyncLevels = ((10 to 17).toList) diff (minZoom to maxZoom)
+          // Run this portion synchronously -- i.e. wait fore response
+          val syncResp = boundsFut.flatMap { extent =>
+            apiMetrics.timer("synchronous-tile-rerendering").timeFuture {
               (wsClient
-                .url("https://tiles.roadquality.org/refresh")
-                .post(Json.toJson(extent).as[JsObject] + ("minzoom" -> Json.toJson("0")) + ("maxzoom" -> Json.toJson("17")))
-                )
+                .url(s"$ratingsTileserverUrl/refresh")
+                .post {
+                  Json.toJson(extent).as[JsObject] +
+                  ("minzoom" -> Json.toJson(minZoom)) +
+                  ("maxzoom" -> Json.toJson(maxZoom))
+                }
+              )
             }
           }
+          // Run this portion asynchronously
+          boundsFut.map { extent =>
+            apiMetrics.timer("background-tile-rerendering").timeFuture {
+            val minZoomAsync1 = asyncLevels.head
+            val maxZoomAsync1 = applyZoomLimits(minZoom-1)
+            val minZoomAsync2 = applyZoomLimits(maxZoom+1)
+            val maxZoomAsync2 = asyncLevels.last
+              (wsClient
+                .url(s"$ratingsTileserverUrl/refresh")
+                .post {
+                  Json.toJson(extent).as[JsObject] +
+                  ("minzoom" -> Json.toJson(minZoomAsync1)) +
+                  ("maxzoom" -> Json.toJson(maxZoomAsync1))
+                }
+              )
+            (wsClient
+                .url(s"$ratingsTileserverUrl/refresh")
+                .post {
+                  Json.toJson(extent).as[JsObject] +
+                  ("minzoom" -> Json.toJson(minZoomAsync2)) +
+                  ("maxzoom" -> Json.toJson(maxZoomAsync2))
+                }
+              )
+            }
+          }
+
+          syncResp
         }
         Future.sequence(Seq(miniSegmentsFuture, ratingsFuture)).map( p => segment)
     }) flatMap identity
@@ -148,6 +186,14 @@ class SegmentServiceImpl @Inject()
 
   private[this] def geomToPolyline(geom: Geometry): String = {
     Polyline.encode(geom.asInstanceOf[LineString].getCoordinates().toList.map(c => LatLng(c.y, c.x)))
+  }
+
+  private[this] def applyZoomLimits(zoomLevel: Int): Int = {
+    zoomLevel match {
+      case i if (i < 10) => 10
+      case i if (i > 17) => 17
+      case i => i
+    }
   }
 
 }
