@@ -19,6 +19,8 @@ geometry_type = "LINESTRING"
 buffer_size = 1
 simplify = true
 [[tileset.layer.query]]
+minzoom = 10
+maxzoom = 17
 sql = """SELECT ST_Transform(polyline,3857) AS polyline,"id"::TEXT,"traffic_rating"::FLOAT8,"surface_rating"::FLOAT8,"surface","path_type","weight", (SELECT surfaceRatingColour(surface_rating))::text as colour FROM mini_segments"""
 [tileset.layer.style]
   type = "line"
@@ -37,6 +39,8 @@ geometry_type = "LINESTRING"
 buffer_size = 1
 simplify = true
 [[tileset.layer.query]]
+minzoom = 10
+maxzoom = 17
 sql = """SELECT ST_Transform(polyline,3857) AS polyline,"id"::TEXT,"traffic_rating"::FLOAT8,"surface_rating"::FLOAT8,"surface","path_type","weight", (SELECT trafficRatingColour(traffic_rating))::text as colour FROM mini_segments"""
 [tileset.layer.style]
   type = "line"
