@@ -129,6 +129,7 @@ type CssClasses
     | InfoMessage
     | WarningMessage
     | ErrorMessage
+    | LoadingMessage
 
 
 rgbTrifectaBrightGreen : Color

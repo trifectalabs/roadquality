@@ -15,7 +15,7 @@ let popup;
 let showingLayer;
 let cursorClass;
 
-  // STORE SESSION
+// STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
     localStorage.session = session;
 });
@@ -81,6 +81,7 @@ function setupMap(coords) {
     map.touchZoomRotate.disableRotation();
     map.on("mousedown", onMapMouseDown);
     map.on("mouseup", onMapMouseUp);
+    map.on("zoomend", function() { app.ports.zoomLevel.send(map.getZoom()); });
 
     showingLayer = "SurfaceQuality";
     map.on("load", function () {
@@ -129,6 +130,12 @@ app.ports.setLayer.subscribe(function(layer) {
         });
     }
     showingLayer = layer;
+});
+
+app.ports.refreshLayer.subscribe(function(layer) {
+    let mapLayer = map.getLayer(layer);
+    map.removeLayer(layer);
+    map.addLayer(mapLayer);
 });
 
 app.ports.routeCreate.subscribe(function() {
