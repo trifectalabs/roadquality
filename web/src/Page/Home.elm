@@ -880,7 +880,7 @@ update session msg model =
 
                                     loadMsg =
                                         { type_ = Messages.Loading
-                                        , message = "We're processing you're rating"
+                                        , message = "We're processing your rating"
                                         }
 
                                     msgKey =
