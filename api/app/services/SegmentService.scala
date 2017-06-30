@@ -94,7 +94,7 @@ class SegmentServiceImpl @Inject()
           val asyncLevels = ((10 to 17).toList) diff (minZoom to maxZoom)
 
           // Run this portion asynchronously
-          boundsFut.map { extent =>
+          val asyncFut = boundsFut.map { extent =>
             apiMetrics.timer("background-tile-rerendering").timeFuture {
               val asyncLevelsTuple = asyncLevels.tail.foldLeft((List[Int](asyncLevels.head), List[Int]())) { case ((l1, l2), zoom) =>
                 if (zoom - l1.last == 1) (l1 :+ zoom, l2)
@@ -105,29 +105,32 @@ class SegmentServiceImpl @Inject()
               val maxZoomAsync1 = asyncLevelsTuple._1.last
               val minZoomAsync2 = asyncLevelsTuple._2.head
               val maxZoomAsync2 = asyncLevelsTuple._2.last
-              (wsClient
-                .url(s"$ratingsTileserverUrl/refresh")
-                .post {
-                  Json.toJson(extent).as[JsObject] +
-                  ("minzoom" -> Json.toJson(minZoomAsync1)) +
-                  ("maxzoom" -> Json.toJson(maxZoomAsync1))
-                }
-                )
-              if (!asyncLevelsTuple._2.isEmpty) {
-                (wsClient
+              Future.sequence {
+                Seq((wsClient
                   .url(s"$ratingsTileserverUrl/refresh")
                   .post {
                     Json.toJson(extent).as[JsObject] +
-                    ("minzoom" -> Json.toJson(minZoomAsync2)) +
-                    ("maxzoom" -> Json.toJson(maxZoomAsync2))
+                    ("minzoom" -> Json.toJson(minZoomAsync1)) +
+                    ("maxzoom" -> Json.toJson(maxZoomAsync1))
                   }
-                  )
-              } else Future.successful()
+                  ),
+                if (!asyncLevelsTuple._2.isEmpty) {
+                  (wsClient
+                    .url(s"$ratingsTileserverUrl/refresh")
+                    .post {
+                      Json.toJson(extent).as[JsObject] +
+                      ("minzoom" -> Json.toJson(minZoomAsync2)) +
+                      ("maxzoom" -> Json.toJson(maxZoomAsync2))
+                    }
+                    )
+                } else Future((): Unit)
+                )
+              }
             }
           }
 
-          // Run this portion synchronously -- i.e. wait for response
-          boundsFut.flatMap { extent =>
+          // Run this portion synchronously after async reqs have fired
+          asyncFut.map { _ => boundsFut.flatMap { extent =>
             apiMetrics.timer("synchronous-tile-rerendering").timeFuture {
               (wsClient
                 .url(s"$ratingsTileserverUrl/refresh")
@@ -138,6 +141,7 @@ class SegmentServiceImpl @Inject()
                 }
                 )
             }
+          }
           }
         }
         Future.sequence(Seq(miniSegmentsFuture, ratingsFuture)).map( p => segment)
