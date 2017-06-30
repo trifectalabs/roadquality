@@ -71,7 +71,8 @@ function setupMap(coords) {
         container: "MainView",
         style: "mapbox://styles/mapbox/light-v9",
         center: center,
-        zoom: zoom
+        zoom: zoom,
+        maxZoom: 17
     });
 
     canvas = map.getCanvasContainer();
