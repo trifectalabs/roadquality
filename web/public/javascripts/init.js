@@ -20,7 +20,7 @@ let surfaceLayer = {
   "type": "line",
   "source": {
     type: "vector",
-    tiles: ["http://localhost:8080/surface_quality/{z}/{x}/{y}.pbf"]
+    tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
   },
   "source-layer": "surface_mini_segments",
   "paint": {
@@ -37,7 +37,7 @@ let trafficLayer = {
   "type": "line",
   "source": {
     type: "vector",
-    tiles: ["http://localhost:8080/traffic/{z}/{x}/{y}.pbf"]
+    tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
   },
   "source-layer": "traffic_mini_segments",
   "paint": {
