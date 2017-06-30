@@ -41,15 +41,20 @@ makeRoute apiUrl maybeToken points =
             |> HttpBuilder.toRequest
 
 
-saveSegment : String -> Maybe AuthToken -> CreateSegmentForm -> Http.Request Segment
-saveSegment apiUrl maybeToken createSegmentForm =
+saveSegment : String -> Maybe AuthToken -> CreateSegmentForm -> Float -> Http.Request Segment
+saveSegment apiUrl maybeToken createSegmentForm zoom =
     let
         body =
             createSegmentForm
                 |> encodeCreateSegmentForm
                 |> Http.jsonBody
+
+        zoomString =
+            zoom
+                |> round
+                |> toString
     in
-        (apiUrl ++ "/segments")
+        (apiUrl ++ "/segments?currentZoomLevel=" ++ zoomString)
             |> HttpBuilder.post
             |> withExpect (Http.expectJson decodeSegment)
             |> withBody body

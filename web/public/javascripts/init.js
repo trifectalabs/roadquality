@@ -15,7 +15,41 @@ let popup;
 let showingLayer;
 let cursorClass;
 
-  // STORE SESSION
+let surfaceLayer = {
+  "id": "SurfaceQuality",
+  "type": "line",
+  "source": {
+    type: "vector",
+    tiles: ["http://localhost:8080/surface_quality/{z}/{x}/{y}.pbf"]
+  },
+  "source-layer": "surface_mini_segments",
+  "paint": {
+    "line-color": {
+      "type": "identity",
+      "property": "colour"
+    },
+    "line-width": 2
+  }
+};
+
+let trafficLayer = {
+  "id": "TrafficSafety",
+  "type": "line",
+  "source": {
+    type: "vector",
+    tiles: ["http://localhost:8080/traffic/{z}/{x}/{y}.pbf"]
+  },
+  "source-layer": "traffic_mini_segments",
+  "paint": {
+    "line-color": {
+      "type": "identity",
+      "property": "colour"
+    },
+    "line-width": 2
+  }
+};
+
+// STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
     localStorage.session = session;
 });
@@ -71,7 +105,8 @@ function setupMap(coords) {
         container: "MainView",
         style: "mapbox://styles/mapbox/light-v9",
         center: center,
-        zoom: zoom
+        zoom: zoom,
+        maxZoom: 17
     });
 
     canvas = map.getCanvasContainer();
@@ -81,25 +116,11 @@ function setupMap(coords) {
     map.touchZoomRotate.disableRotation();
     map.on("mousedown", onMapMouseDown);
     map.on("mouseup", onMapMouseUp);
+    map.on("zoomend", function() { app.ports.zoomLevel.send(map.getZoom()); });
 
     showingLayer = "SurfaceQuality";
     map.on("load", function () {
-        map.addLayer({
-            "id": "SurfaceQuality",
-            "type": "line",
-            "source": {
-                type: "vector",
-                tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
-            },
-            "source-layer": "surface_mini_segments",
-            "paint": {
-                "line-color": {
-                    "type": "identity",
-                    "property": "colour"
-                },
-                "line-width": 2
-            }
-        });
+        map.addLayer(Object.assign({}, surfaceLayer));
     });
 }
 
@@ -111,24 +132,26 @@ app.ports.setLayer.subscribe(function(layer) {
         map.setLayoutProperty(layer, "visibility", "visible");
     } else if (layer === "TrafficSafety") {
         map.setLayoutProperty(showingLayer, "visibility", "none");
-        map.addLayer({
-            "id": "TrafficSafety",
-            "type": "line",
-            "source": {
-                type: "vector",
-                tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
-            },
-            "source-layer": "traffic_mini_segments",
-            "paint": {
-                "line-color": {
-                    "type": "identity",
-                    "property": "colour"
-                },
-                "line-width": 2
-            }
-        });
+        map.addLayer(Object.assign({}, trafficLayer));
     }
     showingLayer = layer;
+});
+
+app.ports.refreshLayer.subscribe(function(layer) {
+    map.removeLayer(layer);
+    map.removeSource(layer);
+    if (layer === "SurfaceQuality") {
+      let dirtySurfaceLayer = Object.assign({}, surfaceLayer);
+      dirtySurfaceLayer.dirty = Math.random();
+      dirtySurfaceLayer.source.tiles[0] = dirtySurfaceLayer.source.tiles[0] + "?dirty=" + Math.random()
+      map.addLayer(dirtySurfaceLayer);
+    }
+    else {
+      let dirtyTrafficLayer= Object.assign({}, trafficLayer);
+      dirtyTrafficLayer.dirty = Math.random();
+      dirtySurfaceLayer.source.tiles[0] + "?dirty=" + Math.random()
+      map.addLayer(dirtyTrafficLayer);
+    }
 });
 
 app.ports.routeCreate.subscribe(function() {

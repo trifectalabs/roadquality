@@ -82,7 +82,7 @@ class SegmentServiceImpl @Inject()
           }
         }
 
-        val ratingsFuture: Future[WSResponse] = ratingsDao.insert(
+        val ratingsFuture: Future[Any] = ratingsDao.insert(
           SegmentRating(
             UUID.randomUUID(), segmentId, userId, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
             segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()
@@ -92,8 +92,42 @@ class SegmentServiceImpl @Inject()
           val minZoom = applyZoomLimits(currentZoomLevel.getOrElse(10) - 2)
           val maxZoom = applyZoomLimits(currentZoomLevel.getOrElse(10) + 2)
           val asyncLevels = ((10 to 17).toList) diff (minZoom to maxZoom)
-          // Run this portion synchronously -- i.e. wait fore response
-          val syncResp = boundsFut.flatMap { extent =>
+
+          // Run this portion asynchronously
+          boundsFut.map { extent =>
+            apiMetrics.timer("background-tile-rerendering").timeFuture {
+              val asyncLevelsTuple = asyncLevels.tail.foldLeft((List[Int](asyncLevels.head), List[Int]())) { case ((l1, l2), zoom) =>
+                if (zoom - l1.last == 1) (l1 :+ zoom, l2)
+                else if (!l2.isEmpty) (l1, l2 :+ zoom)
+                else (l1, l2 :+ zoom)
+              }
+              val minZoomAsync1 = asyncLevelsTuple._1.head
+              val maxZoomAsync1 = asyncLevelsTuple._1.last
+              val minZoomAsync2 = asyncLevelsTuple._2.head
+              val maxZoomAsync2 = asyncLevelsTuple._2.last
+              (wsClient
+                .url(s"$ratingsTileserverUrl/refresh")
+                .post {
+                  Json.toJson(extent).as[JsObject] +
+                  ("minzoom" -> Json.toJson(minZoomAsync1)) +
+                  ("maxzoom" -> Json.toJson(maxZoomAsync1))
+                }
+                )
+              if (!asyncLevelsTuple._2.isEmpty) {
+                (wsClient
+                  .url(s"$ratingsTileserverUrl/refresh")
+                  .post {
+                    Json.toJson(extent).as[JsObject] +
+                    ("minzoom" -> Json.toJson(minZoomAsync2)) +
+                    ("maxzoom" -> Json.toJson(maxZoomAsync2))
+                  }
+                  )
+              } else Future.successful()
+            }
+          }
+
+          // Run this portion synchronously -- i.e. wait for response
+          boundsFut.flatMap { extent =>
             apiMetrics.timer("synchronous-tile-rerendering").timeFuture {
               (wsClient
                 .url(s"$ratingsTileserverUrl/refresh")
@@ -102,36 +136,9 @@ class SegmentServiceImpl @Inject()
                   ("minzoom" -> Json.toJson(minZoom)) +
                   ("maxzoom" -> Json.toJson(maxZoom))
                 }
-              )
+                )
             }
           }
-          // Run this portion asynchronously
-          boundsFut.map { extent =>
-            apiMetrics.timer("background-tile-rerendering").timeFuture {
-            val minZoomAsync1 = asyncLevels.head
-            val maxZoomAsync1 = applyZoomLimits(minZoom-1)
-            val minZoomAsync2 = applyZoomLimits(maxZoom+1)
-            val maxZoomAsync2 = asyncLevels.last
-              (wsClient
-                .url(s"$ratingsTileserverUrl/refresh")
-                .post {
-                  Json.toJson(extent).as[JsObject] +
-                  ("minzoom" -> Json.toJson(minZoomAsync1)) +
-                  ("maxzoom" -> Json.toJson(maxZoomAsync1))
-                }
-              )
-            (wsClient
-                .url(s"$ratingsTileserverUrl/refresh")
-                .post {
-                  Json.toJson(extent).as[JsObject] +
-                  ("minzoom" -> Json.toJson(minZoomAsync2)) +
-                  ("maxzoom" -> Json.toJson(maxZoomAsync2))
-                }
-              )
-            }
-          }
-
-          syncResp
         }
         Future.sequence(Seq(miniSegmentsFuture, ratingsFuture)).map( p => segment)
     }) flatMap identity

@@ -25,7 +25,7 @@ import Route
 import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 import Animation exposing (px)
-import Views.Messages as Messages exposing (Msg(AddMessage))
+import Views.Messages as Messages exposing (Msg(..))
 
 
 -- MODEL --
@@ -36,6 +36,7 @@ type alias Model =
     , listEmail : String
     , menu : Menu.Model
     , mapLayer : MapLayer
+    , zoom : Float
     , switchStyle : Animation.State
     , errorsStyle : Animation.State
     , anchors : OrderedDict String Point
@@ -63,6 +64,14 @@ init session =
             session.user
                 |> Maybe.map .token
 
+        zoomLevel =
+            case session.user of
+                Nothing ->
+                    4.0
+
+                Just _ ->
+                    11.0
+
         loadSegments =
             Request.Map.getSegments session.apiUrl maybeAuthToken
                 |> Http.toTask
@@ -70,16 +79,17 @@ init session =
         handleLoadError _ =
             pageLoadError Page.Home "Homepage is currently unavailable."
     in
-        Task.map initModel loadSegments
+        Task.map (initModel zoomLevel) loadSegments
             |> Task.mapError handleLoadError
 
 
-initModel : List Segment -> Model
-initModel segments =
+initModel : Float -> List Segment -> Model
+initModel zoom segments =
     { errors = Messages.initModel
     , listEmail = ""
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
+    , zoom = zoom
     , switchStyle = Animation.style styles.closed
     , errorsStyle = Animation.style styles.closed
     , anchors = OrdDict.empty
@@ -105,6 +115,8 @@ styles =
 
 { id, class, classList } =
     mapNamespace
+
+
 g : Namespace String class id msg
 g =
     globalNamespace
@@ -209,6 +221,7 @@ subscriptions model =
         [ Ports.removedAnchor RemoveAnchorPoint
         , Ports.setAnchor (DropAnchorPoint True)
         , Ports.moveAnchor (DropAnchorPoint False)
+        , Ports.zoomLevel ZoomLevel
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
         , Animation.subscription AnimateErrors [ model.errorsStyle ]
@@ -223,6 +236,7 @@ subscriptions model =
 type Msg
     = ErrorMsg Messages.Msg
     | SetLayer MapLayer
+    | ZoomLevel Float
     | ShowLogin
     | ChangeEmailList String
     | EmailListSignup
@@ -235,7 +249,7 @@ type Msg
     | RemoveAnchorPoint String
     | ReceiveRoute String String Int (Result Http.Error CycleRoute)
     | MenuMsg Menu.Msg
-    | ReceiveSegment (Result Http.Error Segment)
+    | ReceiveSegment Int (Result Http.Error Segment)
 
 
 type ExternalMsg
@@ -297,6 +311,9 @@ update session msg model =
                     { model | mapLayer = layer }
                         => Ports.setLayer stringLayer
                         => NoOp
+
+            ZoomLevel zoom ->
+                { model | zoom = zoom } => Cmd.none => NoOp
 
             ShowLogin ->
                 model => Cmd.none => Unauthorized
@@ -859,10 +876,23 @@ update session msg model =
                                             apiUrl
                                             maybeAuthToken
                                             createSegmentForm
+                                            model.zoom
+
+                                    loadMsg =
+                                        { type_ = Messages.Loading
+                                        , message = "We're processing you're rating"
+                                        }
+
+                                    msgKey =
+                                        errors.nextKey
+
+                                    ( newErrors, errorCmd ) =
+                                        Messages.update (AddMessage loadMsg) errors
                                 in
                                     { model
                                         | anchors = OrdDict.empty
                                         , cycleRoutes = OrdDict.empty
+                                        , errors = newErrors
                                         , switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
@@ -872,7 +902,10 @@ update session msg model =
                                                 [ Animation.to styles.closed ]
                                                 model.errorsStyle
                                     }
-                                        => Http.send ReceiveSegment req
+                                        => Cmd.batch
+                                            [ Http.send (ReceiveSegment msgKey) req
+                                            , Cmd.map ErrorMsg errorCmd
+                                            ]
 
                     cmd =
                         Cmd.batch
@@ -882,7 +915,7 @@ update session msg model =
                 in
                     { newModel | menu = menuModel } => cmd => NoOp
 
-            ReceiveSegment (Err error) ->
+            ReceiveSegment loadingMsgKey (Err error) ->
                 let
                     responseCode =
                         case error of
@@ -908,18 +941,40 @@ update session msg model =
                                    }
 
                     ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                        [ RemoveMessage loadingMsgKey
+                        , AddMessage errorMsg
+                        ]
+                            |> List.foldl
+                                (\message ( prevErr, prevCmd ) ->
+                                    let
+                                        ( nextErr, nextCmd ) =
+                                            Messages.update message prevErr
+                                    in
+                                        nextErr => Cmd.batch [ prevCmd, nextCmd ]
+                                )
+                                ( errors, Cmd.none )
                 in
                     { model | errors = newErrors }
                         => Cmd.map ErrorMsg errorCmd
                         => externalMsg
 
-            ReceiveSegment (Ok segment) ->
+            ReceiveSegment loadingMsgKey (Ok segment) ->
                 let
                     segments =
                         segment :: model.segments
+
+                    layer =
+                        toString model.mapLayer
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (RemoveMessage loadingMsgKey) errors
                 in
-                    { model | segments = segments } => Cmd.none => NoOp
+                    { model | segments = segments, errors = newErrors }
+                        => Cmd.batch
+                            [ Ports.refreshLayer layer
+                            , Cmd.map ErrorMsg errorCmd
+                            ]
+                        => NoOp
 
 
 removeRoute : String -> String -> OrderedDict String CycleRoute -> OrderedDict String CycleRoute
