@@ -478,6 +478,19 @@ messagesCss =
                         , border3 (px 1) solid (rgb 235 204 204)
                         , color (rgb 132 53 52)
                         ]
+                    , withClass LoadingMessage
+                        [ backgroundColor (rgb 217 237 247)
+                        , border3 (px 1) solid (rgb 202 234 244)
+                        , color (rgb 49 114 150)
+                        , children
+                            [ li
+                                [ listStyle none
+                                , position absolute
+                                , right zero
+                                , top (px -5)
+                                ]
+                            ]
+                        ]
                     , children
                         [ div
                             []
