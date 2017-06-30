@@ -16,37 +16,37 @@ let showingLayer;
 let cursorClass;
 
 let surfaceLayer = {
-  "id": "SurfaceQuality",
-  "type": "line",
-  "source": {
-    type: "vector",
-    tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
-  },
-  "source-layer": "surface_mini_segments",
-  "paint": {
-    "line-color": {
-      "type": "identity",
-      "property": "colour"
+    "id": "SurfaceQuality",
+    "type": "line",
+    "source": {
+        type: "vector",
+        tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
     },
-    "line-width": 2
-  }
+    "source-layer": "surface_mini_segments",
+    "paint": {
+        "line-color": {
+            "type": "identity",
+            "property": "colour"
+        },
+        "line-width": 2
+    }
 };
 
 let trafficLayer = {
-  "id": "TrafficSafety",
-  "type": "line",
-  "source": {
-    type: "vector",
-    tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
-  },
-  "source-layer": "traffic_mini_segments",
-  "paint": {
-    "line-color": {
-      "type": "identity",
-      "property": "colour"
+    "id": "TrafficSafety",
+    "type": "line",
+    "source": {
+        type: "vector",
+        tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
     },
-    "line-width": 2
-  }
+    "source-layer": "traffic_mini_segments",
+    "paint": {
+        "line-color": {
+            "type": "identity",
+            "property": "colour"
+        },
+        "line-width": 2
+    }
 };
 
 // STORE SESSION
@@ -141,16 +141,16 @@ app.ports.refreshLayer.subscribe(function(layer) {
     map.removeLayer(layer);
     map.removeSource(layer);
     if (layer === "SurfaceQuality") {
-      let dirtySurfaceLayer = Object.assign({}, surfaceLayer);
-      dirtySurfaceLayer.dirty = Math.random();
-      dirtySurfaceLayer.source.tiles[0] = dirtySurfaceLayer.source.tiles[0] + "?dirty=" + Math.random()
-      map.addLayer(dirtySurfaceLayer);
+        let dirtySurfaceLayer = Object.assign({}, surfaceLayer);
+        dirtySurfaceLayer.dirty = Math.random();
+        dirtySurfaceLayer.source.tiles[0] += "?dirty=" + Math.random();
+        map.addLayer(dirtySurfaceLayer);
     }
     else {
-      let dirtyTrafficLayer= Object.assign({}, trafficLayer);
-      dirtyTrafficLayer.dirty = Math.random();
-      dirtySurfaceLayer.source.tiles[0] + "?dirty=" + Math.random()
-      map.addLayer(dirtyTrafficLayer);
+        let dirtyTrafficLayer= Object.assign({}, trafficLayer);
+        dirtyTrafficLayer.dirty = Math.random();
+        dirtyTrafficLayer.source.tiles[0] += "?dirty=" + Math.random();
+        map.addLayer(dirtyTrafficLayer);
     }
 });
 
