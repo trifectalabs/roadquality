@@ -135,6 +135,9 @@ app.ports.setLayer.subscribe(function(layer) {
 
 app.ports.refreshLayer.subscribe(function(layer) {
     let mapLayer = map.getLayer(layer);
+    let sourceLayer = map["sourceLayer"];
+    delete map["sourceLayer"];
+    map["source-layer"] = sourceLayer;
     map.removeLayer(layer);
     map.addLayer(mapLayer);
 });
