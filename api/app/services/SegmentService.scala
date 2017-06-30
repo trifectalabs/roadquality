@@ -103,8 +103,6 @@ class SegmentServiceImpl @Inject()
               }
               val minZoomAsync1 = asyncLevelsTuple._1.head
               val maxZoomAsync1 = asyncLevelsTuple._1.last
-              val minZoomAsync2 = asyncLevelsTuple._2.head
-              val maxZoomAsync2 = asyncLevelsTuple._2.last
               Future.sequence {
                 Seq((wsClient
                   .url(s"$ratingsTileserverUrl/refresh")
@@ -115,6 +113,8 @@ class SegmentServiceImpl @Inject()
                   }
                   ),
                 if (!asyncLevelsTuple._2.isEmpty) {
+                  val minZoomAsync2 = asyncLevelsTuple._2.head
+                  val maxZoomAsync2 = asyncLevelsTuple._2.last
                   (wsClient
                     .url(s"$ratingsTileserverUrl/refresh")
                     .post {
