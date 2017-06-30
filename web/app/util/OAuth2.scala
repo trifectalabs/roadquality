@@ -78,9 +78,9 @@ class OAuth2 @Inject() (configuration: Configuration, ws: WSClient, userDao: Use
         val firstName = (response.json \ "athlete" \ "firstname").as[String]
         val lastName = (response.json \ "athlete" \ "lastname").as[String]
         val email = (response.json \ "athlete" \ "email").as[String]
-        val city = (response.json \ "athlete" \ "city").as[String]
-        val province = (response.json \ "athlete" \ "state").as[String]
-        val country = (response.json \ "athlete" \ "country").as[String]
+        val city = (response.json \ "athlete" \ "city").asOpt[String]
+        val province = (response.json \ "athlete" \ "state").asOpt[String]
+        val country = (response.json \ "athlete" \ "country").asOpt[String]
         val sex = (response.json \ "athlete" \ "sex").asOpt[String]
 
         StravaUserData(
@@ -100,8 +100,8 @@ case class StravaUserData(
   firstName: String,
   lastName: String,
   email: String,
-  city: String,
-  province: String,
-  country: String,
+  city: Option[String],
+  province: Option[String],
+  country: Option[String],
   stravaToken: String,
   sex: Option[String])

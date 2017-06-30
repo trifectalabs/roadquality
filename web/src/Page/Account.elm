@@ -27,8 +27,6 @@ initModel =
 
 { id, class, classList } =
     accountNamespace
-
-
 view : Session -> Model -> Html Msg
 view session model =
     case session.user of
@@ -40,10 +38,22 @@ view session model =
                 birthday =
                     user.birthdate
                         |> Maybe.map (format "%B %e, %Y")
-                        |> Maybe.withDefault "You were never born"
+                        |> Maybe.withDefault "Unknown"
 
                 sex =
                     user.sex
+                        |> Maybe.withDefault "Unknown"
+
+                city =
+                    user.city
+                        |> Maybe.withDefault "Unknown"
+
+                province =
+                    user.province
+                        |> Maybe.withDefault "Unknown"
+
+                country =
+                    user.country
                         |> Maybe.withDefault "Unknown"
             in
                 div
@@ -53,9 +63,9 @@ view session model =
                     , div [] [ span [] [ text "First Name" ], text user.firstName ]
                     , div [] [ span [] [ text "Last Name" ], text user.lastName ]
                     , div [] [ span [] [ text "Email" ], text user.email ]
-                    , div [] [ span [] [ text "City" ], text user.city ]
-                    , div [] [ span [] [ text "Province" ], text user.province ]
-                    , div [] [ span [] [ text "Country" ], text user.country ]
+                    , div [] [ span [] [ text "City" ], text city ]
+                    , div [] [ span [] [ text "Province" ], text province ]
+                    , div [] [ span [] [ text "Country" ], text country ]
                     , div [] [ span [] [ text "Birthday" ], text birthday ]
                     , div [] [ span [] [ text "Sex" ], text sex ]
                     , div [] [ span [] [ text "Role" ], text user.role ]

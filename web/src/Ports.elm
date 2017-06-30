@@ -10,7 +10,7 @@ port storeSession : Maybe String -> Cmd msg
 port onSessionChange : (Value -> msg) -> Sub msg
 
 
-port up : Maybe ( String, String, String ) -> Cmd msg
+port up : Maybe ( Maybe String, Maybe String, Maybe String ) -> Cmd msg
 
 
 port down : () -> Cmd msg

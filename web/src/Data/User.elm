@@ -20,9 +20,9 @@ type alias User =
     , lastName : String
     , email : String
     , photo : UserPhoto
-    , city : String
-    , province : String
-    , country : String
+    , city : Maybe String
+    , province : Maybe String
+    , country : Maybe String
     , birthdate : Maybe Date
     , sex : Maybe String
     , stravaToken : String
@@ -45,9 +45,9 @@ decoder =
         |> required "lastName" Decode.string
         |> required "email" Decode.string
         |> optional "photo" UserPhoto.decoder missingPhoto
-        |> required "city" Decode.string
-        |> required "province" Decode.string
-        |> required "country" Decode.string
+        |> optional "city" (Decode.nullable Decode.string) Nothing
+        |> optional "province" (Decode.nullable Decode.string) Nothing
+        |> optional "country" (Decode.nullable Decode.string) Nothing
         |> optional "birthdate" (Decode.nullable decodeDate) Nothing
         |> optional "sex" (Decode.nullable Decode.string) Nothing
         |> required "stravaToken" Decode.string
@@ -65,9 +65,9 @@ encode user =
         , "lastName" => Encode.string user.lastName
         , "email" => Encode.string user.email
         , "photo" => UserPhoto.encode user.photo
-        , "city" => Encode.string user.city
-        , "province" => Encode.string user.province
-        , "country" => Encode.string user.country
+        , "city" => EncodeExtra.maybe Encode.string user.city
+        , "province" => EncodeExtra.maybe Encode.string user.province
+        , "country" => EncodeExtra.maybe Encode.string user.country
         , "birthdate" => EncodeExtra.maybe encodeDate user.birthdate
         , "sex" => EncodeExtra.maybe Encode.string user.sex
         , "stravaToken" => Encode.string user.stravaToken
