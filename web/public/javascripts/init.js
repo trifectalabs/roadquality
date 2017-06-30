@@ -15,6 +15,40 @@ let popup;
 let showingLayer;
 let cursorClass;
 
+let surfaceLayer = {
+  "id": "SurfaceQuality",
+  "type": "line",
+  "source": {
+    type: "vector",
+    tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
+  },
+  "source-layer": "surface_mini_segments",
+  "paint": {
+    "line-color": {
+      "type": "identity",
+      "property": "colour"
+    },
+    "line-width": 2
+  }
+};
+
+let trafficLayer = {
+  "id": "TrafficSafety",
+  "type": "line",
+  "source": {
+    type: "vector",
+    tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
+  },
+  "source-layer": "traffic_mini_segments",
+  "paint": {
+    "line-color": {
+      "type": "identity",
+      "property": "colour"
+    },
+    "line-width": 2
+  }
+};
+
 // STORE SESSION
 app.ports.storeSession.subscribe(function(session) {
     localStorage.session = session;
@@ -86,22 +120,7 @@ function setupMap(coords) {
 
     showingLayer = "SurfaceQuality";
     map.on("load", function () {
-        map.addLayer({
-            "id": "SurfaceQuality",
-            "type": "line",
-            "source": {
-                type: "vector",
-                tiles: ["https://tiles.roadquality.org/surface_quality/{z}/{x}/{y}.pbf"]
-            },
-            "source-layer": "surface_mini_segments",
-            "paint": {
-                "line-color": {
-                    "type": "identity",
-                    "property": "colour"
-                },
-                "line-width": 2
-            }
-        });
+        map.addLayer(surfaceLayer);
     });
 }
 
@@ -113,33 +132,17 @@ app.ports.setLayer.subscribe(function(layer) {
         map.setLayoutProperty(layer, "visibility", "visible");
     } else if (layer === "TrafficSafety") {
         map.setLayoutProperty(showingLayer, "visibility", "none");
-        map.addLayer({
-            "id": "TrafficSafety",
-            "type": "line",
-            "source": {
-                type: "vector",
-                tiles: ["https://tiles.roadquality.org/traffic/{z}/{x}/{y}.pbf"]
-            },
-            "source-layer": "traffic_mini_segments",
-            "paint": {
-                "line-color": {
-                    "type": "identity",
-                    "property": "colour"
-                },
-                "line-width": 2
-            }
-        });
+        map.addLayer(trafficLayer);
     }
     showingLayer = layer;
 });
 
 app.ports.refreshLayer.subscribe(function(layer) {
-    let mapLayer = map.getLayer(layer);
-    let sourceLayer = map["sourceLayer"];
-    delete map["sourceLayer"];
-    map["source-layer"] = sourceLayer;
     map.removeLayer(layer);
-    map.addLayer(mapLayer);
+    if (layer === "SurfaceQuality")
+      map.addLayer(surfaceLayer);
+    else
+      map.addLayer(trafficLayer);
 });
 
 app.ports.routeCreate.subscribe(function() {
