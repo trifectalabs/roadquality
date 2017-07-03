@@ -2,12 +2,9 @@ let map;
 let canvas;
 let markerCount = 0;
 let markers = {};
-let startMarker = "startMarker";
 let startMarkerUnused = false;
 let unusedMarkers = [];
 let routes = {};
-let unusedRoutes = [];
-let polylines = {};
 let cursorOverPoint = null;
 let isDragging = false;
 let viewOnly = true;
@@ -205,7 +202,7 @@ function onMapClick(e) {
     let id;
     if (unusedMarkers.length > 0 || startMarkerUnused) {
         if (startMarkerUnused) {
-            id = startMarker;
+            id = "startMarker";
             startMarkerUnused = false;
         } else {
             id = unusedMarkers.pop();
@@ -220,7 +217,7 @@ function onMapClick(e) {
         map.getSource(id).setData(markers[id]);
     } else {
         if (markerCount === 0) {
-            id = startMarker;
+            id = "startMarker";
         } else {
             id = Math.random().toString(36).substr(2, 10);
         }
@@ -311,7 +308,7 @@ function onMapClick(e) {
 }
 
 function onMapRightClick(e) {
-    if (cursorOverPoint !== null && cursorOverPoint !== startMarker) {
+    if (cursorOverPoint !== null && cursorOverPoint !== "startMarker") {
         if (popup) {
             popup.remove();
         }
@@ -355,43 +352,29 @@ app.ports.removeAnchor.subscribe(function(pointId) {
 
 // PLOT ROUTE
 app.ports.displayRoute.subscribe(function(line) {
-    let lineId = line[0];
-    let [ firstPoint, secondPoint ] = lineId.split("_");
+    let firstPoint = line[0];
+    let id = line[1];
     let lineCoords = [];
-    for (let i = 0; i < line[1].length; i++) {
-        lineCoords.push([line[1][i][1], line[1][i][0]]);
+    for (let i = 0; i < line[2].length; i++) {
+        lineCoords.push([line[2][i][1], line[2][i][0]]);
     }
-
-    let id;
-    if (unusedRoutes.length > 0) {
-        id = unusedRoutes.pop();
-        routes[id].features = [{
+    let routeSource = {
+        "type": "FeatureCollection",
+        "features": [{
             "type": "Feature",
             "geometry": {
                 "type": "LineString",
                 "coordinates": lineCoords
             }
-        }];
-        map.getSource(id).setData(routes[id]);
-        polylines[lineId] = id;
+        }]
+    };
+    if (map.getSource(id)) {
+        map.getSource(id).setData(routeSource);
     } else {
-        id = Math.random().toString(36).substr(2, 10);
-        let routeSource = {
-            "type": "FeatureCollection",
-            "features": [{
-                "type": "Feature",
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": lineCoords
-                }
-            }]
-        };
         map.addSource(id, {
             "type": "geojson",
             "data": routeSource
         });
-        routes[id] = routeSource;
-        polylines[lineId] = id;
         map.addLayer({
             "id": id,
             "type": "line",
@@ -402,14 +385,13 @@ app.ports.displayRoute.subscribe(function(line) {
             }
         });
     }
+    routes[id] = routeSource;
     map.moveLayer(id, firstPoint);
 });
 
-app.ports.removeRoute.subscribe(function(route) {
-    id = polylines[route];
+app.ports.removeRoute.subscribe(function(id) {
     if (!routes[id]) return;
     routes[id].features = [];
-    unusedRoutes.push(id);
     map.getSource(id).setData(routes[id]);
 });
 
@@ -420,7 +402,7 @@ app.ports.clearRoute.subscribe(function() {
     map.off("contextmenu", onMapRightClick);
     for (let key in markers) {
         markers[key].features = [];
-        if (key === startMarker) {
+        if (key === "startMarker") {
             startMarkerUnused = true;
         } else {
             unusedMarkers.push(key);
@@ -428,11 +410,9 @@ app.ports.clearRoute.subscribe(function() {
         map.getSource(key).setData(markers[key]);
     }
     markerCount = 0;
-    for (let key in polylines) {
-        id = polylines[key];
-        routes[id].features = [];
-        unusedRoutes.push(id);
-        map.getSource(id).setData(routes[id]);
+    for (let key in routes) {
+        routes[key].features = [];
+        map.getSource(key).setData(routes[key]);
     }
 });
 

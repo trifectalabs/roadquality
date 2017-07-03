@@ -43,7 +43,7 @@ port removeAnchor : String -> Cmd msg
 port snapAnchor : ( String, Point ) -> Cmd msg
 
 
-port displayRoute : ( String, List ( Float, Float ) ) -> Cmd msg
+port displayRoute : ( String, String, List ( Float, Float ) ) -> Cmd msg
 
 
 port removeRoute : String -> Cmd msg
