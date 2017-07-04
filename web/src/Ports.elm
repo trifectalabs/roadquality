@@ -1,4 +1,4 @@
-port module Ports exposing (storeSession, onSessionChange, up, down, setLayer, refreshLayer, zoomLevel, routeCreate, addAnchor, setAnchor, moveAnchor, removedAnchor, removeAnchor, snapAnchor, displayRoute, removeRoute, clearRoute)
+port module Ports exposing (storeSession, onSessionChange, up, down, setLayer, refreshLayer, zoomLevel, routeCreate, addAnchor, setAnchor, moveAnchor, removedAnchor, removeAnchor, snapAnchor, displayRoute, removeRoute, clearRouting)
 
 import Data.Map exposing (Point)
 import Json.Encode exposing (Value)
@@ -52,4 +52,4 @@ port displayRoute : ( String, String, List ( Float, Float ) ) -> Cmd msg
 port removeRoute : String -> Cmd msg
 
 
-port clearRoute : () -> Cmd msg
+port clearRouting : List String -> Cmd msg

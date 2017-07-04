@@ -705,7 +705,7 @@ update msg model =
                         [ Animation.to styles.closed ]
                         model.style
             }
-                => Ports.clearRoute ()
+                => Cmd.none
                 => CloseMenu
 
         SaveSegment quickSave ->
@@ -729,7 +729,7 @@ update msg model =
                                         [ Animation.to styles.closed ]
                                         model.style
                             }
-                                => Ports.clearRoute ()
+                                => Cmd.none
                                 => Completed sRating tRating name description
 
                         _ ->
