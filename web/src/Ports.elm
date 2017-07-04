@@ -1,4 +1,4 @@
-port module Ports exposing (storeSession, onSessionChange, up, down, setLayer, refreshLayer, zoomLevel, routeCreate, setAnchor, moveAnchor, removedAnchor, removeAnchor, snapAnchor, displayRoute, removeRoute, clearRoute)
+port module Ports exposing (storeSession, onSessionChange, up, down, setLayer, refreshLayer, zoomLevel, routeCreate, addAnchor, setAnchor, moveAnchor, removedAnchor, removeAnchor, snapAnchor, displayRoute, removeRoute, clearRoute)
 
 import Data.Map exposing (Point)
 import Json.Encode exposing (Value)
@@ -28,7 +28,10 @@ port zoomLevel : (Float -> msg) -> Sub msg
 port routeCreate : () -> Cmd msg
 
 
-port setAnchor : (( String, Float, Float ) -> msg) -> Sub msg
+port addAnchor : ( String, Float, Float ) -> Cmd msg
+
+
+port setAnchor : (( Float, Float ) -> msg) -> Sub msg
 
 
 port moveAnchor : (( String, Float, Float ) -> msg) -> Sub msg
