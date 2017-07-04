@@ -234,8 +234,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Ports.removedAnchor RemoveAnchorPoint
-        , Ports.setAnchor (DropAnchorPoint True)
-        , Ports.moveAnchor (DropAnchorPoint False)
+        , Ports.setAnchor DropAnchorPoint
+        , Ports.moveAnchor MoveAnchorPoint
         , Ports.zoomLevel ZoomLevel
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
@@ -258,7 +258,8 @@ type Msg
     | EmailListSignupResult (Result Http.Error String)
     | AnimateSwitcher Animation.Msg
     | AnimateErrors Animation.Msg
-    | DropAnchorPoint Bool ( String, Float, Float )
+    | DropAnchorPoint ( Float, Float )
+    | MoveAnchorPoint ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
@@ -286,6 +287,9 @@ update session msg model =
 
         mapRouteKeys =
             model.mapRouteKeys
+
+        startAnchorUnused =
+            model.startAnchorUnused
 
         unusedAnchors =
             model.unusedAnchors
@@ -394,26 +398,68 @@ update session msg model =
                     => Cmd.none
                     => NoOp
 
-            DropAnchorPoint new ( pointId, lat, lng ) ->
+            DropAnchorPoint ( lng, lat ) ->
                 let
-                    ( anchorCount, handler ) =
-                        if new == True then
-                            ( List.length anchors.order + 1
-                            , NewAnchorPoint pointId
-                            )
-                        else
-                            ( List.length anchors.order
-                            , ChangeAnchorPoint pointId
-                            )
-
                     newMenu =
-                        Menu.anchorCountUpdate anchorCount menu
+                        Menu.anchorCountUpdate (List.length anchors.order + 1) menu
+
+                    ( ( ( pointId, nextSeed ), newUnusedAnchors ), nextStartAnchor ) =
+                        if (startAnchorUnused == True) then
+                            "startMarker" => model.keySeed => unusedAnchors => False
+                        else if (List.length <| Fifo.toList unusedAnchors) > 0 then
+                            Fifo.remove unusedAnchors
+                                |> (\( maybeKey, nextUnused ) ->
+                                        case maybeKey of
+                                            Nothing ->
+                                                generateNewKey model.keySeed => nextUnused => startAnchorUnused
+
+                                            Just key ->
+                                                key => model.keySeed => nextUnused => startAnchorUnused
+                                   )
+                        else if List.length anchors.order == 0 then
+                            "startMarker" => model.keySeed => unusedAnchors => startAnchorUnused
+                        else
+                            generateNewKey model.keySeed => unusedAnchors => startAnchorUnused
 
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
 
                     cmd =
-                        Http.send handler req
+                        Cmd.batch
+                            [ Http.send (NewAnchorPoint pointId) req
+                            , Ports.addAnchor ( pointId, lng, lat )
+                            ]
+
+                    currentAnchor =
+                        Dict.get pointId anchors.dict
+                            -- Impossible Values
+                            |> Maybe.withDefault { lat = 1000.0, lng = 1000.0 }
+                in
+                    if
+                        ((abs <| currentAnchor.lat - lat) < 0.0001)
+                            && ((abs <| currentAnchor.lng - lng) < 0.0001)
+                    then
+                        model => Cmd.none => NoOp
+                    else
+                        { model
+                            | startAnchorUnused = nextStartAnchor
+                            , unusedAnchors = newUnusedAnchors
+                            , keySeed = nextSeed
+                            , menu = newMenu
+                        }
+                            => cmd
+                            => NoOp
+
+            MoveAnchorPoint ( pointId, lat, lng ) ->
+                let
+                    newMenu =
+                        Menu.anchorCountUpdate (List.length anchors.order) menu
+
+                    req =
+                        snap apiUrl maybeAuthToken ( lat, lng )
+
+                    cmd =
+                        Http.send (ChangeAnchorPoint pointId) req
 
                     currentAnchor =
                         Dict.get pointId anchors.dict
@@ -780,6 +826,12 @@ update session msg model =
                     newAnchors =
                         OrdDict.remove pointId anchors
 
+                    ( nextStartAnchor, newUnusedAnchors ) =
+                        if (pointId == "startMarker") then
+                            True => unusedAnchors
+                        else
+                            startAnchorUnused => Fifo.insert pointId unusedAnchors
+
                     newMenu =
                         Menu.anchorCountUpdate (anchorCount - 1) menu
 
@@ -794,6 +846,8 @@ update session msg model =
                         | anchors = newAnchors
                         , cycleRoutes = newCycleRoutes
                         , mapRouteKeys = newMapRouteKeys
+                        , startAnchorUnused = nextStartAnchor
+                        , unusedAnchors = newUnusedAnchors
                         , unusedRoutes = newUnusedRoutes
                         , menu = newMenu
                     }
@@ -919,22 +973,58 @@ update session msg model =
                                     => Cmd.none
 
                             Menu.CloseMenu ->
-                                { model
-                                    | anchors = OrdDict.empty
-                                    , cycleRoutes = OrdDict.empty
-                                    , switchStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.closed ]
-                                            model.switchStyle
-                                    , errorsStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.closed ]
-                                            model.errorsStyle
-                                }
-                                    => Cmd.none
+                                let
+                                    ( nextStartAnchor, filteredAnchors ) =
+                                        if List.member "startMarker" anchors.order then
+                                            True => List.filter (\key -> key /= "startMarker") anchors.order
+                                        else
+                                            False => anchors.order
+
+                                    newUnusedAnchors =
+                                        Fifo.toList unusedAnchors
+                                            |> List.append filteredAnchors
+                                            |> Fifo.fromList
+
+                                    newUnusedRoutes =
+                                        Fifo.toList unusedRoutes
+                                            |> List.append cycleRoutes.order
+                                            |> Fifo.fromList
+                                in
+                                    { model
+                                        | anchors = OrdDict.empty
+                                        , cycleRoutes = OrdDict.empty
+                                        , startAnchorUnused = nextStartAnchor
+                                        , unusedAnchors = newUnusedAnchors
+                                        , unusedRoutes = newUnusedRoutes
+                                        , switchStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.switchStyle
+                                        , errorsStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.errorsStyle
+                                    }
+                                        => Cmd.none
 
                             Menu.Completed sRating tRating name desc ->
                                 let
+                                    ( nextStartAnchor, filteredAnchors ) =
+                                        if List.member "startMarker" anchors.order then
+                                            True => List.filter (\key -> key /= "startMarker") anchors.order
+                                        else
+                                            False => anchors.order
+
+                                    newUnusedAnchors =
+                                        Fifo.toList unusedAnchors
+                                            |> List.append filteredAnchors
+                                            |> Fifo.fromList
+
+                                    newUnusedRoutes =
+                                        Fifo.toList unusedRoutes
+                                            |> List.append cycleRoutes.order
+                                            |> Fifo.fromList
+
                                     polylines =
                                         model.cycleRoutes
                                             |> OrdDict.orderedValues
@@ -971,6 +1061,9 @@ update session msg model =
                                     { model
                                         | anchors = OrdDict.empty
                                         , cycleRoutes = OrdDict.empty
+                                        , startAnchorUnused = nextStartAnchor
+                                        , unusedAnchors = newUnusedAnchors
+                                        , unusedRoutes = newUnusedRoutes
                                         , errors = newErrors
                                         , switchStyle =
                                             Animation.interrupt

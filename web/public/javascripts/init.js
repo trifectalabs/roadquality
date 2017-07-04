@@ -1,9 +1,6 @@
 let map;
 let canvas;
-let markerCount = 0;
 let markers = {};
-let startMarkerUnused = false;
-let unusedMarkers = [];
 let routes = {};
 let cursorOverPoint = null;
 let isDragging = false;
@@ -199,45 +196,55 @@ function onDropMarker(e) {
 
 function onMapClick(e) {
     if (cursorOverPoint !== null || isDragging) return;
-    let id;
-    if (unusedMarkers.length > 0 || startMarkerUnused) {
-        if (startMarkerUnused) {
-            id = "startMarker";
-            startMarkerUnused = false;
-        } else {
-            id = unusedMarkers.pop();
-        }
-        markers[id].features = [{
+
+    app.ports.setAnchor.send([e.lngLat.lng, e.lngLat.lat]);
+
+    // Shift LngLat for map pan to compensate for open sidebar menu
+    let mapBounds = map.getBounds();
+    let mapMinX = mapBounds.getWest();
+    let mapMaxX = mapBounds.getEast();
+    let windowMinX = 0;
+    let windowMaxX = window.innerWidth;
+    let mapPosX = e.lngLat.lng;
+    let mapPosY = e.lngLat.lat;
+    let windowPosX = windowMaxX / (mapMaxX - mapMinX) * (mapPosX - mapMinX);
+    let shiftedWindowPosX = windowPosX - 200;
+    let shiftedMapPosX = mapMinX + (mapMaxX - mapMinX) / windowMaxX * shiftedWindowPosX;
+    let shiftedLngLat = [shiftedMapPosX, mapPosY];
+
+    // Calculate pan duration based on distance to pan
+    let maxDistX = (window.innerWidth - 400) / 2;
+    let posX = Math.abs(e.originalEvent.x - 400 - maxDistX);
+    let panX = 0.25 + (0.6 / maxDistX) * (posX - 400);
+    let maxDistY = window.innerHeight / 2;
+    let posY = Math.abs(e.originalEvent.y - maxDistY);
+    let panY = 0.25 + (0.6 / maxDistY) * posY;
+    let panDuration = Math.max(panX, panY) * 1000;
+
+    map.panTo(shiftedLngLat, { duration: panDuration });
+}
+
+app.ports.addAnchor.subscribe(function(anchor) {
+    let id = anchor[0];
+    let coords = [anchor[1], anchor[2]];
+    let markerSource = {
+        "type": "FeatureCollection",
+        "features": [{
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [e.lngLat.lng, e.lngLat.lat]
+                "coordinates": coords
             }
-        }];
+        }]
+    };
+    if (map.getSource(id)) {
         map.getSource(id).setData(markers[id]);
     } else {
-        if (markerCount === 0) {
-            id = "startMarker";
-        } else {
-            id = Math.random().toString(36).substr(2, 10);
-        }
-        let markerSource = {
-            "type": "FeatureCollection",
-            "features": [{
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [e.lngLat.lng, e.lngLat.lat]
-                }
-            }]
-        };
         map.addSource(id, {
             "type": "geojson",
             "data": markerSource
         });
-        markers[id] = markerSource;
-
-        if (markerCount === 0) {
+        if (id === "startMarker") {
             map.addLayer({
                 "id": id,
                 "type": "circle",
@@ -263,6 +270,8 @@ function onMapClick(e) {
         }
     }
 
+    markers[id] = markerSource;
+
     map.on("mouseenter", id, function() {
         removeClass(canvas, cursorClass);
         cursorClass = "grab-cursor";
@@ -279,33 +288,7 @@ function onMapClick(e) {
         cursorOverPoint = null;
         map.dragPan.enable();
     });
-
-    // Shift LngLat for map pan to compensate for open sidebar menu
-    let mapBounds = map.getBounds();
-    let mapMinX = mapBounds.getWest();
-    let mapMaxX = mapBounds.getEast();
-    let windowMinX = 0;
-    let windowMaxX = window.innerWidth;
-    let mapPosX = e.lngLat.lng;
-    let mapPosY = e.lngLat.lat;
-    let windowPosX = windowMaxX / (mapMaxX - mapMinX) * (mapPosX - mapMinX);
-    let shiftedWindowPosX = windowPosX - 200;
-    let shiftedMapPosX = mapMinX + (mapMaxX - mapMinX) / windowMaxX * shiftedWindowPosX;
-    let shiftedLngLat = [shiftedMapPosX, mapPosY];
-
-    // Calculate pan duration based on distance to pan
-    let maxDistX = (window.innerWidth - 400) / 2;
-    let posX = Math.abs(e.originalEvent.x - 400 - maxDistX);
-    let panX = 0.25 + (0.6 / maxDistX) * (posX - 400);
-    let maxDistY = window.innerHeight / 2;
-    let posY = Math.abs(e.originalEvent.y - maxDistY);
-    let panY = 0.25 + (0.6 / maxDistY) * posY;
-    let panDuration = Math.max(panX, panY) * 1000;
-    map.panTo(shiftedLngLat, { duration: panDuration });
-
-    markerCount++;
-    app.ports.setAnchor.send([id, e.lngLat.lat, e.lngLat.lng]);
-}
+});
 
 function onMapRightClick(e) {
     if (cursorOverPoint !== null && cursorOverPoint !== "startMarker") {
@@ -324,9 +307,7 @@ function removeMarker(key) {
         popup.remove();
     }
     markers[key].features = [];
-    unusedMarkers.push(key);
     map.getSource(key).setData(markers[key]);
-    markerCount--;
     app.ports.removedAnchor.send(key);
 }
 
@@ -402,14 +383,8 @@ app.ports.clearRoute.subscribe(function() {
     map.off("contextmenu", onMapRightClick);
     for (let key in markers) {
         markers[key].features = [];
-        if (key === "startMarker") {
-            startMarkerUnused = true;
-        } else {
-            unusedMarkers.push(key);
-        }
         map.getSource(key).setData(markers[key]);
     }
-    markerCount = 0;
     for (let key in routes) {
         routes[key].features = [];
         map.getSource(key).setData(routes[key]);
