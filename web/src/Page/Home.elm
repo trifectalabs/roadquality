@@ -450,7 +450,7 @@ update session msg model =
                             => cmd
                             => NoOp
 
-            MoveAnchorPoint ( pointId, lat, lng ) ->
+            MoveAnchorPoint ( pointId, lng, lat ) ->
                 let
                     newMenu =
                         Menu.anchorCountUpdate (List.length anchors.order) menu
@@ -989,6 +989,11 @@ update session msg model =
                                         Fifo.toList unusedRoutes
                                             |> List.append cycleRoutes.order
                                             |> Fifo.fromList
+
+                                    sourcesToClear =
+                                        cycleRoutes.order
+                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
+                                            |> List.append anchors.order
                                 in
                                     { model
                                         | anchors = OrdDict.empty
@@ -1005,7 +1010,7 @@ update session msg model =
                                                 [ Animation.to styles.closed ]
                                                 model.errorsStyle
                                     }
-                                        => Cmd.none
+                                        => Ports.clearRouting sourcesToClear
 
                             Menu.Completed sRating tRating name desc ->
                                 let
@@ -1024,6 +1029,9 @@ update session msg model =
                                         Fifo.toList unusedRoutes
                                             |> List.append cycleRoutes.order
                                             |> Fifo.fromList
+
+                                    sourcesToClear =
+                                        cycleRoutes.order ++ anchors.order
 
                                     polylines =
                                         model.cycleRoutes
@@ -1077,6 +1085,7 @@ update session msg model =
                                         => Cmd.batch
                                             [ Http.send (ReceiveSegment msgKey) req
                                             , Cmd.map ErrorMsg errorCmd
+                                            , Ports.clearRouting sourcesToClear
                                             ]
 
                     cmd =

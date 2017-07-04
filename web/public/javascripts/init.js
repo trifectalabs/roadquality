@@ -1,13 +1,29 @@
 let map;
 let canvas;
-let markers = {};
-let routes = {};
 let cursorOverPoint = null;
 let isDragging = false;
 let viewOnly = true;
 let popup;
 let showingLayer;
 let cursorClass;
+
+let emptySource = {
+    "type": "FeatureCollection",
+    "features": []
+};
+
+let markerSource = function(coords) {
+    return {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": coords
+            }
+        }]
+    };
+}
 
 let surfaceLayer = {
     "id": "SurfaceQuality",
@@ -88,7 +104,7 @@ function setupMap(coords) {
 
     let center, zoom;
     if (coords) {
-        center = [ coords.lng, coords.lat ];
+        center = [coords.lng, coords.lat];
         zoom = 11;
     } else {
         center = [-75.93432, 51.46046];
@@ -139,9 +155,8 @@ app.ports.refreshLayer.subscribe(function(layer) {
         dirtySurfaceLayer.dirty = Math.random();
         dirtySurfaceLayer.source.tiles[0] += "?dirty=" + Math.random();
         map.addLayer(dirtySurfaceLayer);
-    }
-    else {
-        let dirtyTrafficLayer= Object.assign({}, trafficLayer);
+    } else {
+        let dirtyTrafficLayer = Object.assign({}, trafficLayer);
         dirtyTrafficLayer.dirty = Math.random();
         dirtyTrafficLayer.source.tiles[0] += "?dirty=" + Math.random();
         map.addLayer(dirtyTrafficLayer);
@@ -181,15 +196,14 @@ function onMoveMarker(e) {
     removeClass(canvas, cursorClass);
     cursorClass = "grabbing-cursor";
     addClass(canvas, cursorClass);
-    let coords = e.lngLat;
-    markers[cursorOverPoint].features[0].geometry.coordinates = [coords.lng, coords.lat];
-    map.getSource(cursorOverPoint).setData(markers[cursorOverPoint]);
+    let coords = [e.lngLat.lng, e.lngLat.lat];
+    map.getSource(cursorOverPoint).setData(markerSource(coords));
 }
 
 function onDropMarker(e) {
     if (!isDragging) return;
     let coords = e.lngLat;
-    app.ports.moveAnchor.send([cursorOverPoint, coords.lat, coords.lng]);
+    app.ports.moveAnchor.send([cursorOverPoint, coords.lng, coords.lat]);
     isDragging = false;
     map.off("mousemove", onMoveMarker);
 }
@@ -227,22 +241,12 @@ function onMapClick(e) {
 app.ports.addAnchor.subscribe(function(anchor) {
     let id = anchor[0];
     let coords = [anchor[1], anchor[2]];
-    let markerSource = {
-        "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": coords
-            }
-        }]
-    };
     if (map.getSource(id)) {
-        map.getSource(id).setData(markers[id]);
+        map.getSource(id).setData(markerSource(coords));
     } else {
         map.addSource(id, {
             "type": "geojson",
-            "data": markerSource
+            "data": markerSource(coords)
         });
         if (id === "startMarker") {
             map.addLayer({
@@ -269,8 +273,6 @@ app.ports.addAnchor.subscribe(function(anchor) {
             });
         }
     }
-
-    markers[id] = markerSource;
 
     map.on("mouseenter", id, function() {
         removeClass(canvas, cursorClass);
@@ -306,8 +308,7 @@ function removeMarker(key) {
     if (popup) {
         popup.remove();
     }
-    markers[key].features = [];
-    map.getSource(key).setData(markers[key]);
+    map.getSource(key).setData(emptySource);
     app.ports.removedAnchor.send(key);
 }
 
@@ -322,9 +323,8 @@ app.ports.down.subscribe(function() {
 // SNAP ANCHOR
 app.ports.snapAnchor.subscribe(function(values) {
     let pointId = values[0];
-    let point = values[1];
-    markers[pointId].features[0].geometry.coordinates = [point.lng, point.lat];
-    map.getSource(pointId).setData(markers[pointId]);
+    let coords = [values[1].lng, values[1].lat];
+    map.getSource(pointId).setData(markerSource(coords));
 });
 
 app.ports.removeAnchor.subscribe(function(pointId) {
@@ -366,28 +366,21 @@ app.ports.displayRoute.subscribe(function(line) {
             }
         });
     }
-    routes[id] = routeSource;
     map.moveLayer(id, firstPoint);
 });
 
 app.ports.removeRoute.subscribe(function(id) {
-    if (!routes[id]) return;
-    routes[id].features = [];
-    map.getSource(id).setData(routes[id]);
+    if (!map.getSource(id)) return;
+    map.getSource(id).setData(emptySource);
 });
 
 // CLEAR ROUTE
-app.ports.clearRoute.subscribe(function() {
+app.ports.clearRouting.subscribe(function(sources) {
     viewOnly = true;
     map.off("click", onMapClick);
     map.off("contextmenu", onMapRightClick);
-    for (let key in markers) {
-        markers[key].features = [];
-        map.getSource(key).setData(markers[key]);
-    }
-    for (let key in routes) {
-        routes[key].features = [];
-        map.getSource(key).setData(routes[key]);
+    for (let i = 0; i < sources.length; i++) {
+        map.getSource(sources[i]).setData(emptySource);
     }
 });
 
