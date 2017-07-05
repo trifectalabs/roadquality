@@ -31,6 +31,7 @@ import Random exposing (Seed)
 import Random.String exposing (string)
 import Random.Char exposing (english)
 import Time exposing (Time)
+import Json.Encode as Encode
 
 
 -- MODEL --
@@ -235,7 +236,7 @@ subscriptions model =
     Sub.batch
         [ Ports.removedAnchor RemoveAnchorPoint
         , Ports.setAnchor DropAnchorPoint
-        , Ports.moveAnchor MoveAnchorPoint
+        , Ports.movedAnchor MoveAnchorPoint
         , Ports.zoomLevel ZoomLevel
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
@@ -424,10 +425,30 @@ update session msg model =
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
 
+                    paint =
+                        if pointId == "startMarker" then
+                            Encode.object
+                                [ "circle-radius" => Encode.int 7
+                                , "circle-color" => Encode.string "#40B34F"
+                                , "circle-stroke-color" => Encode.string "#FFFFFF"
+                                , "circle-stroke-width" => Encode.int 2
+                                ]
+                        else
+                            Encode.object
+                                [ "circle-radius" => Encode.int 4
+                                , "circle-color" => Encode.string "#FFFFFF"
+                                , "circle-stroke-width" => Encode.int 2
+                                ]
+
                     cmd =
                         Cmd.batch
                             [ Http.send (NewAnchorPoint pointId) req
-                            , Ports.addAnchor ( pointId, lng, lat )
+                            , Ports.addSource
+                                ( pointId
+                                , Just "circle"
+                                , Just paint
+                                , [ ( lng, lat ) ]
+                                )
                             ]
 
                     currentAnchor =
@@ -509,7 +530,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor pointId
+                            [ Ports.hideSources [ pointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -559,7 +580,12 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.snapAnchor ( pointId, point )
+                            [ Ports.addSource
+                                ( pointId
+                                , Nothing
+                                , Nothing
+                                , [ ( point.lng, point.lat ) ]
+                                )
                             , addCmd
                             ]
                 in
@@ -600,7 +626,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor pointId
+                            [ Ports.hideSources [ pointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -719,7 +745,12 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.snapAnchor ( pointId, point )
+                            [ Ports.addSource
+                                ( pointId
+                                , Nothing
+                                , Nothing
+                                , [ ( point.lng, point.lat ) ]
+                                )
                             , deleteAddCmd
                             ]
 
@@ -889,7 +920,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor endPointId
+                            [ Ports.hideSources [ endPointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -924,6 +955,12 @@ update session msg model =
 
                     newMapRouteKeys =
                         Dict.insert routeKey mapKey mapRouteKeys
+
+                    paint =
+                        Encode.object
+                            [ "line-opacity" => Encode.float 0.5
+                            , "line-width" => Encode.int 5
+                            ]
                 in
                     { model
                         | cycleRoutes = newCycleRoutes
@@ -931,7 +968,8 @@ update session msg model =
                         , unusedRoutes = newUnusedRoutes
                         , keySeed = nextSeed
                     }
-                        => Ports.displayRoute ( startPointId, mapKey, line )
+                        => Ports.addSource
+                            ( mapKey, Just "line", Just paint, line )
                         => NoOp
 
             MenuMsg subMsg ->
@@ -1010,7 +1048,7 @@ update session msg model =
                                                 [ Animation.to styles.closed ]
                                                 model.errorsStyle
                                     }
-                                        => Ports.clearRouting sourcesToClear
+                                        => Ports.hideSources sourcesToClear
 
                             Menu.Completed sRating tRating name desc ->
                                 let
@@ -1031,7 +1069,9 @@ update session msg model =
                                             |> Fifo.fromList
 
                                     sourcesToClear =
-                                        cycleRoutes.order ++ anchors.order
+                                        cycleRoutes.order
+                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
+                                            |> List.append anchors.order
 
                                     polylines =
                                         model.cycleRoutes
@@ -1085,7 +1125,7 @@ update session msg model =
                                         => Cmd.batch
                                             [ Http.send (ReceiveSegment msgKey) req
                                             , Cmd.map ErrorMsg errorCmd
-                                            , Ports.clearRouting sourcesToClear
+                                            , Ports.hideSources sourcesToClear
                                             ]
 
                     cmd =
@@ -1186,7 +1226,7 @@ removeRouteFromMap : Dict String String -> String -> String -> Cmd Msg
 removeRouteFromMap mapRouteKeys startPointId endPointId =
     cycleRouteKey startPointId endPointId
         |> (\routeKey -> Dict.get routeKey mapRouteKeys)
-        |> Maybe.map Ports.removeRoute
+        |> Maybe.map (\key -> Ports.hideSources [ key ])
         |> Maybe.withDefault Cmd.none
 
 

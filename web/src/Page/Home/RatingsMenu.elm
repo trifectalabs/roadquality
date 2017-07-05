@@ -675,7 +675,7 @@ update msg model =
                         [ Animation.to styles.open ]
                         model.style
             }
-                => Ports.routeCreate ()
+                => Ports.isRouting True
                 => OpenMenu
 
         AnimateMenu animMsg ->
@@ -705,7 +705,7 @@ update msg model =
                         [ Animation.to styles.closed ]
                         model.style
             }
-                => Cmd.none
+                => Ports.isRouting False
                 => CloseMenu
 
         SaveSegment quickSave ->
@@ -729,7 +729,7 @@ update msg model =
                                         [ Animation.to styles.closed ]
                                         model.style
                             }
-                                => Cmd.none
+                                => Ports.isRouting False
                                 => Completed sRating tRating name description
 
                         _ ->
