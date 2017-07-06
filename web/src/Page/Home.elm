@@ -26,6 +26,12 @@ import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 import Animation exposing (px)
 import Views.Messages as Messages exposing (Msg(..))
+import Fifo exposing (Fifo)
+import Random exposing (Seed)
+import Random.String exposing (string)
+import Random.Char exposing (english)
+import Time exposing (Time)
+import Json.Encode as Encode
 
 
 -- MODEL --
@@ -41,7 +47,12 @@ type alias Model =
     , errorsStyle : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
+    , mapRouteKeys : Dict String String
     , segments : List Segment
+    , startAnchorUnused : Bool
+    , unusedAnchors : Fifo String
+    , unusedRoutes : Fifo String
+    , keySeed : Seed
     }
 
 
@@ -79,12 +90,12 @@ init session =
         handleLoadError _ =
             pageLoadError Page.Home "Homepage is currently unavailable."
     in
-        Task.map (initModel zoomLevel) loadSegments
+        Task.map2 (initModel zoomLevel) Time.now loadSegments
             |> Task.mapError handleLoadError
 
 
-initModel : Float -> List Segment -> Model
-initModel zoom segments =
+initModel : Float -> Time -> List Segment -> Model
+initModel zoom now segments =
     { errors = Messages.initModel
     , listEmail = ""
     , menu = Menu.initModel
@@ -94,7 +105,12 @@ initModel zoom segments =
     , errorsStyle = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
+    , mapRouteKeys = Dict.empty
     , segments = segments
+    , startAnchorUnused = False
+    , unusedAnchors = Fifo.empty
+    , unusedRoutes = Fifo.empty
+    , keySeed = Random.initialSeed <| round now
     }
 
 
@@ -219,8 +235,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Ports.removedAnchor RemoveAnchorPoint
-        , Ports.setAnchor (DropAnchorPoint True)
-        , Ports.moveAnchor (DropAnchorPoint False)
+        , Ports.setAnchor DropAnchorPoint
+        , Ports.movedAnchor MoveAnchorPoint
         , Ports.zoomLevel ZoomLevel
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
@@ -243,7 +259,8 @@ type Msg
     | EmailListSignupResult (Result Http.Error String)
     | AnimateSwitcher Animation.Msg
     | AnimateErrors Animation.Msg
-    | DropAnchorPoint Bool ( String, Float, Float )
+    | DropAnchorPoint ( Float, Float )
+    | MoveAnchorPoint ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
     | ChangeAnchorPoint String (Result Http.Error Point)
     | RemoveAnchorPoint String
@@ -268,6 +285,18 @@ update session msg model =
 
         cycleRoutes =
             model.cycleRoutes
+
+        mapRouteKeys =
+            model.mapRouteKeys
+
+        startAnchorUnused =
+            model.startAnchorUnused
+
+        unusedAnchors =
+            model.unusedAnchors
+
+        unusedRoutes =
+            model.unusedRoutes
 
         menu =
             model.menu
@@ -370,26 +399,88 @@ update session msg model =
                     => Cmd.none
                     => NoOp
 
-            DropAnchorPoint new ( pointId, lat, lng ) ->
+            DropAnchorPoint ( lng, lat ) ->
                 let
-                    ( anchorCount, handler ) =
-                        if new == True then
-                            ( List.length anchors.order + 1
-                            , NewAnchorPoint pointId
-                            )
-                        else
-                            ( List.length anchors.order
-                            , ChangeAnchorPoint pointId
-                            )
-
                     newMenu =
-                        Menu.anchorCountUpdate anchorCount menu
+                        Menu.anchorCountUpdate (List.length anchors.order + 1) menu
+
+                    ( ( ( pointId, nextSeed ), newUnusedAnchors ), nextStartAnchor ) =
+                        if (startAnchorUnused == True) then
+                            "startMarker" => model.keySeed => unusedAnchors => False
+                        else if (List.length <| Fifo.toList unusedAnchors) > 0 then
+                            Fifo.remove unusedAnchors
+                                |> (\( maybeKey, nextUnused ) ->
+                                        case maybeKey of
+                                            Nothing ->
+                                                generateNewKey model.keySeed => nextUnused => startAnchorUnused
+
+                                            Just key ->
+                                                key => model.keySeed => nextUnused => startAnchorUnused
+                                   )
+                        else if List.length anchors.order == 0 then
+                            "startMarker" => model.keySeed => unusedAnchors => startAnchorUnused
+                        else
+                            generateNewKey model.keySeed => unusedAnchors => startAnchorUnused
+
+                    req =
+                        snap apiUrl maybeAuthToken ( lat, lng )
+
+                    paint =
+                        if pointId == "startMarker" then
+                            Encode.object
+                                [ "circle-radius" => Encode.int 7
+                                , "circle-color" => Encode.string "#40B34F"
+                                , "circle-stroke-color" => Encode.string "#FFFFFF"
+                                , "circle-stroke-width" => Encode.int 2
+                                ]
+                        else
+                            Encode.object
+                                [ "circle-radius" => Encode.int 4
+                                , "circle-color" => Encode.string "#FFFFFF"
+                                , "circle-stroke-width" => Encode.int 2
+                                ]
+
+                    cmd =
+                        Cmd.batch
+                            [ Http.send (NewAnchorPoint pointId) req
+                            , Ports.addSource
+                                ( pointId
+                                , Just "circle"
+                                , Just paint
+                                , [ ( lng, lat ) ]
+                                )
+                            ]
+
+                    currentAnchor =
+                        Dict.get pointId anchors.dict
+                            -- Impossible Values
+                            |> Maybe.withDefault { lat = 1000.0, lng = 1000.0 }
+                in
+                    if
+                        ((abs <| currentAnchor.lat - lat) < 0.0001)
+                            && ((abs <| currentAnchor.lng - lng) < 0.0001)
+                    then
+                        model => Cmd.none => NoOp
+                    else
+                        { model
+                            | startAnchorUnused = nextStartAnchor
+                            , unusedAnchors = newUnusedAnchors
+                            , keySeed = nextSeed
+                            , menu = newMenu
+                        }
+                            => cmd
+                            => NoOp
+
+            MoveAnchorPoint ( pointId, lng, lat ) ->
+                let
+                    newMenu =
+                        Menu.anchorCountUpdate (List.length anchors.order) menu
 
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
 
                     cmd =
-                        Http.send handler req
+                        Http.send (ChangeAnchorPoint pointId) req
 
                     currentAnchor =
                         Dict.get pointId anchors.dict
@@ -439,7 +530,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor pointId
+                            [ Ports.hideSources [ pointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -489,7 +580,12 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.snapAnchor ( pointId, point )
+                            [ Ports.addSource
+                                ( pointId
+                                , Nothing
+                                , Nothing
+                                , [ ( point.lng, point.lat ) ]
+                                )
                             , addCmd
                             ]
                 in
@@ -530,7 +626,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor pointId
+                            [ Ports.hideSources [ pointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -577,7 +673,7 @@ update session msg model =
                             |> List.head
 
                     deleteBeforeCmd =
-                        Maybe.map (\s -> removeRouteFromMap s pointId) start
+                        Maybe.map (\s -> removeRouteFromMap mapRouteKeys s pointId) start
                             |> Maybe.withDefault Cmd.none
 
                     addBeforeCmd =
@@ -587,7 +683,7 @@ update session msg model =
                             |> Maybe.withDefault Cmd.none
 
                     deleteAfterCmd =
-                        Maybe.map (\e -> removeRouteFromMap pointId e) end
+                        Maybe.map (\e -> removeRouteFromMap mapRouteKeys pointId e) end
                             |> Maybe.withDefault Cmd.none
 
                     addAfterCmd =
@@ -596,14 +692,17 @@ update session msg model =
                             end
                             |> Maybe.withDefault Cmd.none
 
-                    ( removedRoutes, deleteAddCmd ) =
+                    ( removedRoutes, removedRoutesMap, deleteAddCmd ) =
                         -- Moving first anchor with no routes, do nothing
                         if anchorIndex == 0 && anchorCount == 1 then
-                            ( Just cycleRoutes, Cmd.none )
+                            ( Just cycleRoutes, Just ( unusedRoutes, mapRouteKeys ), Cmd.none )
                             -- Delete route before, Delete/Add route before cmd
                         else if anchorIndex == (anchorCount - 1) then
                             ( Maybe.map
                                 (\s -> removeRoute s pointId cycleRoutes)
+                                start
+                            , Maybe.map
+                                (\s -> removeRouteMap s pointId ( unusedRoutes, mapRouteKeys ))
                                 start
                             , Cmd.batch [ deleteBeforeCmd, addBeforeCmd ]
                             )
@@ -611,6 +710,9 @@ update session msg model =
                         else if anchorIndex == 0 then
                             ( Maybe.map
                                 (\e -> removeRoute pointId e cycleRoutes)
+                                end
+                            , Maybe.map
+                                (\e -> removeRouteMap pointId e ( unusedRoutes, mapRouteKeys ))
                                 end
                             , Cmd.batch [ deleteAfterCmd, addAfterCmd ]
                             )
@@ -621,7 +723,15 @@ update session msg model =
                                 (\s e ->
                                     cycleRoutes
                                         |> removeRoute s pointId
-                                        |> removeRoute e pointId
+                                        |> removeRoute pointId e
+                                )
+                                start
+                                end
+                            , Maybe.map2
+                                (\s e ->
+                                    ( unusedRoutes, mapRouteKeys )
+                                        |> removeRouteMap s pointId
+                                        |> removeRouteMap pointId e
                                 )
                                 start
                                 end
@@ -635,16 +745,26 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.snapAnchor ( pointId, point )
+                            [ Ports.addSource
+                                ( pointId
+                                , Nothing
+                                , Nothing
+                                , [ ( point.lng, point.lat ) ]
+                                )
                             , deleteAddCmd
                             ]
 
                     newCycleRoutes =
                         Maybe.withDefault cycleRoutes removedRoutes
+
+                    ( newUnusedRoutes, newMapRouteKeys ) =
+                        Maybe.withDefault ( unusedRoutes, mapRouteKeys ) removedRoutesMap
                 in
                     { model
                         | anchors = newAnchors
                         , cycleRoutes = newCycleRoutes
+                        , mapRouteKeys = newMapRouteKeys
+                        , unusedRoutes = newUnusedRoutes
                     }
                         => cmd
                         => NoOp
@@ -692,24 +812,33 @@ update session msg model =
                             (\s -> removeRoute s pointId cycleRoutes)
                             start
 
+                    beforeRemovedMap =
+                        Maybe.map
+                            (\s -> removeRouteMap s pointId ( unusedRoutes, mapRouteKeys ))
+                            start
+
                     -- Delete route before cmd
                     removeFirstCmd =
-                        Maybe.map (\s -> removeRouteFromMap s pointId) start
+                        Maybe.map (\s -> removeRouteFromMap mapRouteKeys s pointId) start
                             |> Maybe.withDefault Cmd.none
 
                     -- Delete route after,
                     -- Delete route after cmd,
                     -- Route between before and after cmd
-                    ( afterRemoved, removeSecondCmd, addCmd ) =
+                    ( afterRemoved, afterRemovedMap, removeSecondCmd, addCmd ) =
                         if anchorIndex == (anchorCount - 1) then
-                            ( beforeRemoved, Cmd.none, Cmd.none )
+                            ( beforeRemoved, beforeRemovedMap, Cmd.none, Cmd.none )
                         else
                             ( Maybe.map2
                                 (\e routes -> removeRoute pointId e routes)
                                 end
                                 beforeRemoved
+                            , Maybe.map2
+                                (\e routes -> removeRouteMap pointId e routes)
+                                end
+                                beforeRemovedMap
                             , Maybe.map
-                                (\e -> removeRouteFromMap pointId e)
+                                (\e -> removeRouteFromMap mapRouteKeys pointId e)
                                 end
                                 |> Maybe.withDefault Cmd.none
                             , Maybe.map2
@@ -722,8 +851,17 @@ update session msg model =
                     newCycleRoutes =
                         Maybe.withDefault cycleRoutes afterRemoved
 
+                    ( newUnusedRoutes, newMapRouteKeys ) =
+                        Maybe.withDefault ( unusedRoutes, mapRouteKeys ) afterRemovedMap
+
                     newAnchors =
                         OrdDict.remove pointId anchors
+
+                    ( nextStartAnchor, newUnusedAnchors ) =
+                        if (pointId == "startMarker") then
+                            True => unusedAnchors
+                        else
+                            startAnchorUnused => Fifo.insert pointId unusedAnchors
 
                     newMenu =
                         Menu.anchorCountUpdate (anchorCount - 1) menu
@@ -738,6 +876,10 @@ update session msg model =
                     { model
                         | anchors = newAnchors
                         , cycleRoutes = newCycleRoutes
+                        , mapRouteKeys = newMapRouteKeys
+                        , startAnchorUnused = nextStartAnchor
+                        , unusedAnchors = newUnusedAnchors
+                        , unusedRoutes = newUnusedRoutes
                         , menu = newMenu
                     }
                         => cmd
@@ -778,7 +920,7 @@ update session msg model =
 
                     cmd =
                         Cmd.batch
-                            [ Ports.removeAnchor endPointId
+                            [ Ports.hideSources [ endPointId ]
                             , Cmd.map ErrorMsg errorCmd
                             ]
                 in
@@ -788,17 +930,46 @@ update session msg model =
 
             ReceiveRoute startPointId endPointId index (Ok route) ->
                 let
-                    key =
+                    routeKey =
                         cycleRouteKey startPointId endPointId
 
                     line =
                         Polyline.decode route.polyline
 
                     newCycleRoutes =
-                        OrdDict.insertAt index key route cycleRoutes
+                        OrdDict.insertAt index routeKey route cycleRoutes
+
+                    ( ( mapKey, nextSeed ), newUnusedRoutes ) =
+                        if (List.length <| Fifo.toList unusedRoutes) > 0 then
+                            Fifo.remove unusedRoutes
+                                |> (\( maybeKey, nextUnused ) ->
+                                        case maybeKey of
+                                            Nothing ->
+                                                generateNewKey model.keySeed => nextUnused
+
+                                            Just key ->
+                                                key => model.keySeed => nextUnused
+                                   )
+                        else
+                            generateNewKey model.keySeed => unusedRoutes
+
+                    newMapRouteKeys =
+                        Dict.insert routeKey mapKey mapRouteKeys
+
+                    paint =
+                        Encode.object
+                            [ "line-opacity" => Encode.float 0.5
+                            , "line-width" => Encode.int 5
+                            ]
                 in
-                    { model | cycleRoutes = newCycleRoutes }
-                        => Ports.displayRoute ( key, line )
+                    { model
+                        | cycleRoutes = newCycleRoutes
+                        , mapRouteKeys = newMapRouteKeys
+                        , unusedRoutes = newUnusedRoutes
+                        , keySeed = nextSeed
+                    }
+                        => Ports.addSource
+                            ( mapKey, Just "line", Just paint, line )
                         => NoOp
 
             MenuMsg subMsg ->
@@ -840,22 +1011,68 @@ update session msg model =
                                     => Cmd.none
 
                             Menu.CloseMenu ->
-                                { model
-                                    | anchors = OrdDict.empty
-                                    , cycleRoutes = OrdDict.empty
-                                    , switchStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.closed ]
-                                            model.switchStyle
-                                    , errorsStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.closed ]
-                                            model.errorsStyle
-                                }
-                                    => Cmd.none
+                                let
+                                    ( nextStartAnchor, filteredAnchors ) =
+                                        if List.member "startMarker" anchors.order then
+                                            True => List.filter (\key -> key /= "startMarker") anchors.order
+                                        else
+                                            False => anchors.order
+
+                                    newUnusedAnchors =
+                                        Fifo.toList unusedAnchors
+                                            |> List.append filteredAnchors
+                                            |> Fifo.fromList
+
+                                    newUnusedRoutes =
+                                        Fifo.toList unusedRoutes
+                                            |> List.append cycleRoutes.order
+                                            |> Fifo.fromList
+
+                                    sourcesToClear =
+                                        cycleRoutes.order
+                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
+                                            |> List.append anchors.order
+                                in
+                                    { model
+                                        | anchors = OrdDict.empty
+                                        , cycleRoutes = OrdDict.empty
+                                        , startAnchorUnused = nextStartAnchor
+                                        , unusedAnchors = newUnusedAnchors
+                                        , unusedRoutes = newUnusedRoutes
+                                        , switchStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.switchStyle
+                                        , errorsStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.errorsStyle
+                                    }
+                                        => Ports.hideSources sourcesToClear
 
                             Menu.Completed sRating tRating name desc ->
                                 let
+                                    ( nextStartAnchor, filteredAnchors ) =
+                                        if List.member "startMarker" anchors.order then
+                                            True => List.filter (\key -> key /= "startMarker") anchors.order
+                                        else
+                                            False => anchors.order
+
+                                    newUnusedAnchors =
+                                        Fifo.toList unusedAnchors
+                                            |> List.append filteredAnchors
+                                            |> Fifo.fromList
+
+                                    newUnusedRoutes =
+                                        Fifo.toList unusedRoutes
+                                            |> List.append cycleRoutes.order
+                                            |> Fifo.fromList
+
+                                    sourcesToClear =
+                                        cycleRoutes.order
+                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
+                                            |> List.append anchors.order
+
                                     polylines =
                                         model.cycleRoutes
                                             |> OrdDict.orderedValues
@@ -892,6 +1109,9 @@ update session msg model =
                                     { model
                                         | anchors = OrdDict.empty
                                         , cycleRoutes = OrdDict.empty
+                                        , startAnchorUnused = nextStartAnchor
+                                        , unusedAnchors = newUnusedAnchors
+                                        , unusedRoutes = newUnusedRoutes
                                         , errors = newErrors
                                         , switchStyle =
                                             Animation.interrupt
@@ -905,6 +1125,7 @@ update session msg model =
                                         => Cmd.batch
                                             [ Http.send (ReceiveSegment msgKey) req
                                             , Cmd.map ErrorMsg errorCmd
+                                            , Ports.hideSources sourcesToClear
                                             ]
 
                     cmd =
@@ -977,14 +1198,36 @@ update session msg model =
                         => NoOp
 
 
+generateNewKey : Seed -> ( String, Seed )
+generateNewKey seed =
+    Random.step (string 16 english) seed
+
+
 removeRoute : String -> String -> OrderedDict String CycleRoute -> OrderedDict String CycleRoute
 removeRoute startPointId endPointId cycleRoutes =
     OrdDict.remove (cycleRouteKey startPointId endPointId) cycleRoutes
 
 
-removeRouteFromMap : String -> String -> Cmd Msg
-removeRouteFromMap startPointId endPointId =
-    Ports.removeRoute <| cycleRouteKey startPointId endPointId
+removeRouteMap : String -> String -> ( Fifo String, Dict String String ) -> ( Fifo String, Dict String String )
+removeRouteMap startPointId endPointId ( unusedRoutes, mapRouteKeys ) =
+    let
+        routeKey =
+            cycleRouteKey startPointId endPointId
+
+        newUnusedRoutes =
+            Dict.get routeKey mapRouteKeys
+                |> Maybe.map (\mapKey -> Fifo.insert mapKey unusedRoutes)
+                |> Maybe.withDefault unusedRoutes
+    in
+        newUnusedRoutes => Dict.remove routeKey mapRouteKeys
+
+
+removeRouteFromMap : Dict String String -> String -> String -> Cmd Msg
+removeRouteFromMap mapRouteKeys startPointId endPointId =
+    cycleRouteKey startPointId endPointId
+        |> (\routeKey -> Dict.get routeKey mapRouteKeys)
+        |> Maybe.map (\key -> Ports.hideSources [ key ])
+        |> Maybe.withDefault Cmd.none
 
 
 addRoute : String -> Maybe AuthToken -> OrderedDict String CycleRoute -> OrderedDict String Point -> String -> String -> Cmd Msg
