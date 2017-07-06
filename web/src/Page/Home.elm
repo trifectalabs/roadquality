@@ -83,19 +83,15 @@ init session =
                 Just _ ->
                     11.0
 
-        loadSegments =
-            Request.Map.getSegments session.apiUrl maybeAuthToken
-                |> Http.toTask
-
         handleLoadError _ =
             pageLoadError Page.Home "Homepage is currently unavailable."
     in
-        Task.map2 (initModel zoomLevel) Time.now loadSegments
+        Task.map (initModel zoomLevel) Time.now
             |> Task.mapError handleLoadError
 
 
-initModel : Float -> Time -> List Segment -> Model
-initModel zoom now segments =
+initModel : Float -> Time -> Model
+initModel zoom now =
     { errors = Messages.initModel
     , listEmail = ""
     , menu = Menu.initModel
@@ -106,7 +102,7 @@ initModel zoom now segments =
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , mapRouteKeys = Dict.empty
-    , segments = segments
+    , segments = []
     , startAnchorUnused = False
     , unusedAnchors = Fifo.empty
     , unusedRoutes = Fifo.empty
@@ -238,6 +234,7 @@ subscriptions model =
         , Ports.setAnchor DropAnchorPoint
         , Ports.movedAnchor MoveAnchorPoint
         , Ports.zoomLevel ZoomLevel
+        , Ports.loadSegments LoadSegments
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
         , Animation.subscription AnimateErrors [ model.errorsStyle ]
@@ -267,6 +264,8 @@ type Msg
     | ReceiveRoute String String Int (Result Http.Error CycleRoute)
     | MenuMsg Menu.Msg
     | ReceiveSegment Int (Result Http.Error Segment)
+    | LoadSegments ( Point, Point )
+    | ReceiveSegments (Result Http.Error (List Segment))
 
 
 type ExternalMsg
@@ -1196,6 +1195,41 @@ update session msg model =
                             , Cmd.map ErrorMsg errorCmd
                             ]
                         => NoOp
+
+            LoadSegments ( southWest, northEast ) ->
+                let
+                    req =
+                        Request.Map.getBoundedSegments
+                            apiUrl
+                            maybeAuthToken
+                            southWest
+                            northEast
+                in
+                    case maybeAuthToken of
+                        Nothing ->
+                            model => Cmd.none => NoOp
+
+                        Just _ ->
+                            model => Http.send ReceiveSegments req => NoOp
+
+            ReceiveSegments (Err error) ->
+                let
+                    errorMsg =
+                        { type_ = Messages.Error
+                        , message = "There was a server error loading segments. Sorry!"
+                        }
+
+                    ( newErrors, errorCmd ) =
+                        Messages.update (AddMessage errorMsg) errors
+                in
+                    { model | errors = newErrors }
+                        => Cmd.map ErrorMsg errorCmd
+                        => NoOp
+
+            ReceiveSegments (Ok segments) ->
+                { model | segments = List.append segments model.segments }
+                    => Cmd.none
+                    => NoOp
 
 
 generateNewKey : Seed -> ( String, Seed )
