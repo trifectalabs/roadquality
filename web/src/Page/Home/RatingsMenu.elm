@@ -613,7 +613,7 @@ addName model =
             , div
                 [ class [ SegmentInfo ] ]
                 [ h3 [] [ text "Why save as a segment?" ]
-                , h4 [] [ text "If you save a rating as a segment it allows you to easily access it later to make another rating." ]
+                , h4 [] [ text "If you save a rating as a segment is allows you and others to easily access it later to make more ratings." ]
                 ]
             ]
 
