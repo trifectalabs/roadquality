@@ -318,6 +318,8 @@ function setupMap(coords) {
     map.on("load", function () {
         map.addLayer(Object.assign({}, surfaceLayer));
         map.addLayer(hiddenLayer);
+        let bounds = map.getBounds();
+        app.ports.loadSegments.send([bounds._sw, bounds._ne]);
     });
 }
 
