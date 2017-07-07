@@ -5,6 +5,7 @@ import Css.Elements exposing (..)
 import Css.File exposing (CssFileStructure, CssCompilerProgram)
 import Css.Namespace exposing (namespace)
 import Html.CssHelpers exposing (withNamespace, Namespace)
+import Alert.Stylesheets exposing (CssIds(AlertsContainer))
 
 
 port files : CssFileStructure -> Cmd msg
@@ -22,7 +23,7 @@ fileStructure =
                 , errorCss
                 , mapCss
                 , accountCss
-                , messagesCss
+                , Alert.Stylesheets.alertCss
                 ]
           )
         ]
@@ -81,6 +82,7 @@ type CssIds
     | SurfaceTypeInput
     | PathTypeInput
     | Content
+    | RQAlertContainer
     | MessagesContainer
     | EmailListBanner
 
@@ -448,65 +450,6 @@ errorCss =
         ]
 
 
-messagesCss : Stylesheet
-messagesCss =
-    (stylesheet << namespace messagesNamespace.name)
-        [ id MessagesContainer
-            [ width (px 500)
-            , position fixed
-            , top (px 55)
-            , property "left" "calc(50% - 250px)"
-            , children
-                [ div
-                    [ width (px 450)
-                    , marginTop (px 10)
-                    , padding4 (px 15) (px 35) (px 15) (px 15)
-                    , position relative
-                    , borderRadius (px 2)
-                    , withClass InfoMessage
-                        [ backgroundColor (rgb 217 237 247)
-                        , border3 (px 1) solid (rgb 202 234 244)
-                        , color (rgb 49 114 150)
-                        ]
-                    , withClass WarningMessage
-                        [ backgroundColor (rgb 252 248 227)
-                        , border3 (px 1) solid (rgb 251 241 215)
-                        , color (rgb 138 109 59)
-                        ]
-                    , withClass ErrorMessage
-                        [ backgroundColor (rgb 242 222 222)
-                        , border3 (px 1) solid (rgb 235 204 204)
-                        , color (rgb 132 53 52)
-                        ]
-                    , withClass LoadingMessage
-                        [ backgroundColor (rgb 217 237 247)
-                        , border3 (px 1) solid (rgb 202 234 244)
-                        , color (rgb 49 114 150)
-                        , children
-                            [ li
-                                [ listStyle none
-                                , position absolute
-                                , right zero
-                                , top (px -5)
-                                ]
-                            ]
-                        ]
-                    , children
-                        [ div
-                            []
-                        , svg
-                            [ position absolute
-                            , top (px 15)
-                            , right (px 15)
-                            , cursor pointer
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ]
-
-
 accountCss : Stylesheet
 accountCss =
     (stylesheet << namespace accountNamespace.name)
@@ -572,6 +515,14 @@ mapCss =
                     ]
                 ]
             ]
+        , id RQAlertContainer
+            [ width (px 500)
+            , position fixed
+            , top (px 55)
+            , property "left" "calc(50% - 250px)"
+            ]
+        , id AlertsContainer
+            [ width (pct 100) ]
         , id AddRatingButton
             [ position absolute
             , top (px 10)
