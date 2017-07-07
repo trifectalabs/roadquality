@@ -25,26 +25,26 @@ import Route
 import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 import Animation exposing (px)
-import Views.Messages as Messages exposing (Msg(..))
 import Fifo exposing (Fifo)
 import Random exposing (Seed)
 import Random.String exposing (string)
 import Random.Char exposing (english)
 import Time exposing (Time)
 import Json.Encode as Encode
+import Alert exposing (Msg(..))
 
 
 -- MODEL --
 
 
 type alias Model =
-    { errors : Messages.Model
+    { alerts : Alert.Model
     , listEmail : String
     , menu : Menu.Model
     , mapLayer : MapLayer
     , zoom : Float
     , switchStyle : Animation.State
-    , errorsStyle : Animation.State
+    , alertsStyle : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , mapRouteKeys : Dict String String
@@ -92,13 +92,13 @@ init session =
 
 initModel : Float -> Time -> Model
 initModel zoom now =
-    { errors = Messages.initModel
+    { alerts = Alert.initModel True
     , listEmail = ""
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
     , zoom = zoom
     , switchStyle = Animation.style styles.closed
-    , errorsStyle = Animation.style styles.closed
+    , alertsStyle = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , mapRouteKeys = Dict.empty
@@ -164,8 +164,13 @@ view session model =
                 , onClick addRatingCmd
                 ]
                 [ text "Add Rating" ]
-            , Messages.view (Animation.render model.errorsStyle) model.errors
-                |> Html.map ErrorMsg
+            , div
+                (List.concat
+                    [ Animation.render model.alertsStyle
+                    , [ id RQAlertContainer ]
+                    ]
+                )
+                [ Alert.view model.alerts |> Html.map AlertMsg ]
             , legend
             , div
                 (Animation.render model.switchStyle ++ [ id MapSwitcher ])
@@ -237,8 +242,8 @@ subscriptions model =
         , Ports.loadSegments LoadSegments
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
-        , Animation.subscription AnimateErrors [ model.errorsStyle ]
-        , Messages.subscriptions model.errors |> Sub.map ErrorMsg
+        , Animation.subscription AnimateAlerts [ model.alertsStyle ]
+        , Alert.subscriptions model.alerts |> Sub.map AlertMsg
         ]
 
 
@@ -247,7 +252,7 @@ subscriptions model =
 
 
 type Msg
-    = ErrorMsg Messages.Msg
+    = AlertMsg Alert.Msg
     | SetLayer MapLayer
     | ZoomLevel Float
     | ShowLogin
@@ -255,7 +260,7 @@ type Msg
     | EmailListSignup
     | EmailListSignupResult (Result Http.Error String)
     | AnimateSwitcher Animation.Msg
-    | AnimateErrors Animation.Msg
+    | AnimateAlerts Animation.Msg
     | DropAnchorPoint ( Float, Float )
     | MoveAnchorPoint ( String, Float, Float )
     | NewAnchorPoint String (Result Http.Error Point)
@@ -276,8 +281,8 @@ type ExternalMsg
 update : Session -> Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
 update session msg model =
     let
-        errors =
-            model.errors
+        alerts =
+            model.alerts
 
         anchors =
             model.anchors
@@ -311,13 +316,13 @@ update session msg model =
             addRoute apiUrl maybeAuthToken cycleRoutes
     in
         case msg of
-            ErrorMsg subMsg ->
+            AlertMsg subMsg ->
                 let
-                    ( newErrors, errorCmd ) =
-                        Messages.update subMsg errors
+                    ( newAlerts, alertsCmd ) =
+                        Alert.update subMsg alerts
                 in
-                    { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                    { model | alerts = newAlerts }
+                        => Cmd.map AlertMsg alertsCmd
                         => NoOp
 
             SetLayer layer ->
@@ -358,30 +363,34 @@ update session msg model =
 
             EmailListSignupResult (Err error) ->
                 let
-                    errorMsg =
+                    alertMsg =
                         { message = "Email list sign up failed"
-                        , type_ = Messages.Error
+                        , type_ = Alert.Error
+                        , untilRemove = 5000
+                        , icon = True
                         }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
                 in
-                    { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                    { model | alerts = newAlerts }
+                        => Cmd.map AlertMsg alertCmd
                         => NoOp
 
             EmailListSignupResult (Ok response) ->
                 let
-                    errorMsg =
+                    alertMsg =
                         { message = "We'll let you know when you can sign up!"
-                        , type_ = Messages.Info
+                        , type_ = Alert.Info
+                        , untilRemove = 5000
+                        , icon = True
                         }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
                 in
-                    { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                    { model | alerts = newAlerts }
+                        => Cmd.map AlertMsg alertCmd
                         => NoOp
 
             AnimateSwitcher animMsg ->
@@ -391,9 +400,9 @@ update session msg model =
                     => Cmd.none
                     => NoOp
 
-            AnimateErrors animMsg ->
+            AnimateAlerts animMsg ->
                 { model
-                    | errorsStyle = Animation.update animMsg model.errorsStyle
+                    | alertsStyle = Animation.update animMsg model.alertsStyle
                 }
                     => Cmd.none
                     => NoOp
@@ -507,33 +516,39 @@ update session msg model =
                             _ ->
                                 0
 
-                    ( externalMsg, errorMsg ) =
+                    ( externalMsg, alertMsg ) =
                         if responseCode == 401 then
                             Unauthorized
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You must login to place a point. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else if responseCode == 204 then
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You're trying to place a point outside the currently supported area. Whoops!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "There was a server error trying to place your point. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
 
                     cmd =
                         Cmd.batch
                             [ Ports.hideSources [ pointId ]
-                            , Cmd.map ErrorMsg errorCmd
+                            , Cmd.map AlertMsg alertCmd
                             ]
                 in
-                    { model | errors = newErrors }
+                    { model | alerts = newAlerts }
                         => cmd
                         => externalMsg
 
@@ -603,33 +618,39 @@ update session msg model =
                             _ ->
                                 0
 
-                    ( externalMsg, errorMsg ) =
+                    ( externalMsg, alertMsg ) =
                         if responseCode == 401 then
                             Unauthorized
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You must login to move a point. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else if responseCode == 204 then
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You're trying to move a point outside the currently supported area. Whoops!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "There was a server error trying to move your point. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
 
                     cmd =
                         Cmd.batch
                             [ Ports.hideSources [ pointId ]
-                            , Cmd.map ErrorMsg errorCmd
+                            , Cmd.map AlertMsg alertCmd
                             ]
                 in
-                    { model | errors = newErrors }
+                    { model | alerts = newAlerts }
                         => cmd
                         => externalMsg
 
@@ -897,33 +918,39 @@ update session msg model =
                             _ ->
                                 0
 
-                    ( externalMsg, errorMsg ) =
+                    ( externalMsg, alertMsg ) =
                         if responseCode == 401 then
                             Unauthorized
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You must login to creating your route. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else if responseCode == 204 then
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "We weren't able to find a path between those points. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "There was a server error creating your route. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
 
                     cmd =
                         Cmd.batch
                             [ Ports.hideSources [ endPointId ]
-                            , Cmd.map ErrorMsg errorCmd
+                            , Cmd.map AlertMsg alertCmd
                             ]
                 in
-                    { model | errors = newErrors }
+                    { model | alerts = newAlerts }
                         => cmd
                         => NoOp
 
@@ -983,18 +1010,20 @@ update session msg model =
 
                             Menu.Error error ->
                                 let
-                                    errorMsg =
-                                        { type_ = Messages.Error
+                                    alertMsg =
+                                        { type_ = Alert.Error
                                         , message = error
+                                        , untilRemove = 5000
+                                        , icon = True
                                         }
 
-                                    ( newErrors, errorCmd ) =
-                                        Messages.update
-                                            (AddMessage errorMsg)
-                                            errors
+                                    ( newAlerts, alertCmd ) =
+                                        Alert.update
+                                            (AddAlert alertMsg)
+                                            alerts
                                 in
-                                    { model | errors = newErrors }
-                                        => Cmd.map ErrorMsg errorCmd
+                                    { model | alerts = newAlerts }
+                                        => Cmd.map AlertMsg alertCmd
 
                             Menu.OpenMenu ->
                                 { model
@@ -1002,10 +1031,10 @@ update session msg model =
                                         Animation.interrupt
                                             [ Animation.to styles.switchOpen ]
                                             model.switchStyle
-                                    , errorsStyle =
+                                    , alertsStyle =
                                         Animation.interrupt
                                             [ Animation.to styles.msgOpen ]
-                                            model.errorsStyle
+                                            model.alertsStyle
                                 }
                                     => Cmd.none
 
@@ -1042,10 +1071,10 @@ update session msg model =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
                                                 model.switchStyle
-                                        , errorsStyle =
+                                        , alertsStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
-                                                model.errorsStyle
+                                                model.alertsStyle
                                     }
                                         => Ports.hideSources sourcesToClear
 
@@ -1095,15 +1124,17 @@ update session msg model =
                                             model.zoom
 
                                     loadMsg =
-                                        { type_ = Messages.Loading
+                                        { type_ = Alert.Loading
                                         , message = "We're processing your rating"
+                                        , untilRemove = 5000
+                                        , icon = True
                                         }
 
                                     msgKey =
-                                        errors.nextKey
+                                        alerts.nextKey
 
-                                    ( newErrors, errorCmd ) =
-                                        Messages.update (AddMessage loadMsg) errors
+                                    ( newAlerts, alertCmd ) =
+                                        Alert.update (AddAlert loadMsg) alerts
                                 in
                                     { model
                                         | anchors = OrdDict.empty
@@ -1111,19 +1142,19 @@ update session msg model =
                                         , startAnchorUnused = nextStartAnchor
                                         , unusedAnchors = newUnusedAnchors
                                         , unusedRoutes = newUnusedRoutes
-                                        , errors = newErrors
+                                        , alerts = newAlerts
                                         , switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
                                                 model.switchStyle
-                                        , errorsStyle =
+                                        , alertsStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
-                                                model.errorsStyle
+                                                model.alertsStyle
                                     }
                                         => Cmd.batch
                                             [ Http.send (ReceiveSegment msgKey) req
-                                            , Cmd.map ErrorMsg errorCmd
+                                            , Cmd.map AlertMsg alertCmd
                                             , Ports.hideSources sourcesToClear
                                             ]
 
@@ -1148,34 +1179,38 @@ update session msg model =
                             _ ->
                                 0
 
-                    ( externalMsg, errorMsg ) =
+                    ( externalMsg, alertMsg ) =
                         if responseCode == 401 then
                             Unauthorized
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "You must login to save a segment. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
                         else
                             NoOp
-                                => { type_ = Messages.Error
+                                => { type_ = Alert.Error
                                    , message = "There was a server error saving your segment. Sorry!"
+                                   , untilRemove = 5000
+                                   , icon = True
                                    }
 
-                    ( newErrors, errorCmd ) =
-                        [ RemoveMessage loadingMsgKey
-                        , AddMessage errorMsg
+                    ( newAlerts, alertCmd ) =
+                        [ RemoveAlert loadingMsgKey
+                        , AddAlert alertMsg
                         ]
                             |> List.foldl
                                 (\message ( prevErr, prevCmd ) ->
                                     let
                                         ( nextErr, nextCmd ) =
-                                            Messages.update message prevErr
+                                            Alert.update message prevErr
                                     in
                                         nextErr => Cmd.batch [ prevCmd, nextCmd ]
                                 )
-                                ( errors, Cmd.none )
+                                ( alerts, Cmd.none )
                 in
-                    { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                    { model | alerts = newAlerts }
+                        => Cmd.map AlertMsg alertCmd
                         => externalMsg
 
             ReceiveSegment loadingMsgKey (Ok segment) ->
@@ -1186,13 +1221,13 @@ update session msg model =
                     layer =
                         toString model.mapLayer
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (RemoveMessage loadingMsgKey) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (RemoveAlert loadingMsgKey) alerts
                 in
-                    { model | segments = segments, errors = newErrors }
+                    { model | segments = segments, alerts = newAlerts }
                         => Cmd.batch
                             [ Ports.refreshLayer layer
-                            , Cmd.map ErrorMsg errorCmd
+                            , Cmd.map AlertMsg alertCmd
                             ]
                         => NoOp
 
@@ -1214,16 +1249,18 @@ update session msg model =
 
             ReceiveSegments (Err error) ->
                 let
-                    errorMsg =
-                        { type_ = Messages.Error
+                    alertMsg =
+                        { type_ = Alert.Error
                         , message = "There was a server error loading segments. Sorry!"
+                        , untilRemove = 5000
+                        , icon = True
                         }
 
-                    ( newErrors, errorCmd ) =
-                        Messages.update (AddMessage errorMsg) errors
+                    ( newAlerts, alertCmd ) =
+                        Alert.update (AddAlert alertMsg) alerts
                 in
-                    { model | errors = newErrors }
-                        => Cmd.map ErrorMsg errorCmd
+                    { model | alerts = newAlerts }
+                        => Cmd.map AlertMsg alertCmd
                         => NoOp
 
             ReceiveSegments (Ok segments) ->
