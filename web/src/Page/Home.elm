@@ -412,8 +412,13 @@ update session msg model =
                     newMenu =
                         Menu.anchorCountUpdate (List.length anchors.order + 1) menu
 
+                    point =
+                        { lng = lng
+                        , lat = lat
+                        }
+
                     ( ( ( pointId, nextSeed ), newUnusedAnchors ), nextStartAnchor ) =
-                        if (startAnchorUnused == True) then
+                        if startAnchorUnused == True then
                             "startMarker" => model.keySeed => unusedAnchors => False
                         else if (List.length <| Fifo.toList unusedAnchors) > 0 then
                             Fifo.remove unusedAnchors
@@ -429,6 +434,9 @@ update session msg model =
                             "startMarker" => model.keySeed => unusedAnchors => startAnchorUnused
                         else
                             generateNewKey model.keySeed => unusedAnchors => startAnchorUnused
+
+                    newAnchors =
+                        OrdDict.insert pointId point anchors
 
                     req =
                         snap apiUrl maybeAuthToken ( lat, lng )
@@ -471,7 +479,8 @@ update session msg model =
                         model => Cmd.none => NoOp
                     else
                         { model
-                            | startAnchorUnused = nextStartAnchor
+                            | anchors = newAnchors
+                            , startAnchorUnused = nextStartAnchor
                             , unusedAnchors = newUnusedAnchors
                             , keySeed = nextSeed
                             , menu = newMenu

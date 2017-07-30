@@ -7,6 +7,9 @@ import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
 import com.trifectalabs.polyline.{ Polyline, LatLng }
 import db.dao.MapDao
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.ws._
+import play.api.libs.json._
+import play.api.Configuration
 
 trait RoutingService {
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute]
@@ -14,27 +17,50 @@ trait RoutingService {
   def snapPoint(point: Point): Future[Point]
 }
 
-class RoutingServiceImpl @Inject()(mapDao: MapDao)(implicit ec: ExecutionContext) extends RoutingService {
+class RoutingServiceImpl @Inject()(configuration: Configuration, ws: WSClient)(implicit ec: ExecutionContext) extends RoutingService {
+  lazy val osrmRoutingUri = configuration.getString("osrm.routing.uri").get
+  lazy val osrmNearestUri = configuration.getString("osrm.nearest.uri").get
 
   def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute] = {
-    mapDao.route(
-      Point(startLat, startLng),
-      Point(endLat, endLng)
-    )
+    val osrmUrl = s"$osrmRoutingUri/$startLng,$startLat;$endLng,$endLat"
+    ws.url(osrmUrl).get().map { res =>
+      val routes = (res.json \ "routes").as[List[JsValue]]
+      val polyline = (routes(0) \ "geometry").as[String]
+      val distance = (routes(0) \ "distance").as[Double]
+
+      MapRoute(
+        polyline = polyline,
+        distance = distance
+      )
+    }
   }
 
   def generateRoute(points: Seq[Point]): Future[MapRoute] = {
-    Future.sequence {
-      (points.init zip points.tail).map { case (p1, p2) =>
-        mapDao.route(p1, p2)
-      }
-    } map { b: Seq[MapRoute] =>
-      val pl = Polyline.encode(b.flatMap(p => Polyline.decode(p.polyline)).toList)
-    MapRoute(polyline = pl, distance = b.map(_.distance).sum ) }
+    val pointString = (points.foldLeft("")((str, p) => str + s";${p.lng},${p.lat}")).drop(1)
+    val osrmUrl = s"$osrmRoutingUri/$pointString"
+    ws.url(osrmUrl).get().map { res =>
+      val routes = (res.json \ "routes").as[List[JsValue]]
+      val polyline = (routes(0) \ "geometry").as[String]
+      val distance = (routes(0) \ "distance").as[Double]
+
+      MapRoute(
+        polyline = polyline,
+        distance = distance
+      )
+    }
   }
 
   def snapPoint(point: Point): Future[Point] = {
-    mapDao.snapPoint(point)
+    val pointString = s"${point.lng},${point.lat}"
+    val osrmUrl = s"$osrmNearestUri/$pointString"
+    ws.url(osrmUrl).get().map { res =>
+      val waypoints = (res.json \ "waypoints").as[List[JsValue]]
+      val location = (waypoints(0) \ "location").as[List[Double]]
+      Point(
+        lng = location(1),
+        lat = location(0)
+      )
+    }
   }
 
 }
