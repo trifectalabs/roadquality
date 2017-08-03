@@ -331,17 +331,6 @@
     "mapRoute": {
       "operations": [
         { "method": "GET",
-          "parameters": [
-            { "name": "startLat", "type": "double" },
-            { "name": "startLng", "type": "double" },
-            { "name": "endLat", "type": "double" },
-            { "name": "endLng", "type": "double" }
-          ],
-          "responses": {
-            "200": { "type": "mapRoute" }
-          }
-        },
-        { "method": "GET",
           "path": "/snap",
           "parameters": [
             { "name": "lat", "type": "double" },
@@ -351,8 +340,11 @@
             "200": { "type": "point" }
           }
         },
-        { "method": "POST",
-          "body": { "type": "[point]" },
+        { "method": "GET",
+          "path": "/:points",
+          "parameters": [
+            { "name": "points", "type": "string", "location": "path", "description": "Comma separated lnglat, semicolon separated points", "example": "-79.85386,43.263658;-79.855403,43.263368" }
+          ],
           "responses": {
             "200": { "type": "mapRoute" }
           }
