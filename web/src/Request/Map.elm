@@ -3,7 +3,6 @@ module Request.Map exposing (snap, makeRoute, saveSegment, getSegments, getBound
 import Http
 import HttpBuilder exposing (withExpect, withQueryParams, withBody)
 import Json.Decode as Decode
-import Json.Encode as Encode
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
 import Data.Map as Map exposing (CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
 import Util exposing ((=>))
@@ -28,16 +27,15 @@ snap apiUrl maybeToken ( lat, lng ) =
 makeRoute : String -> Maybe AuthToken -> List Point -> Http.Request CycleRoute
 makeRoute apiUrl maybeToken points =
     let
-        body =
+        pointString =
             points
-                |> List.map encodePoint
-                |> Encode.list
-                |> Http.jsonBody
+                |> List.map
+                    (\p -> String.join "," [ toString p.lng, toString p.lat ])
+                |> String.join ";"
     in
-        (apiUrl ++ "/mapRoutes")
-            |> HttpBuilder.post
+        (apiUrl ++ "/mapRoutes/" ++ pointString)
+            |> HttpBuilder.get
             |> withExpect (Http.expectJson decodeCycleRoute)
-            |> withBody body
             |> withAuthorization maybeToken
             |> HttpBuilder.toRequest
 

@@ -12,8 +12,7 @@ import play.api.libs.json._
 import play.api.Configuration
 
 trait RoutingService {
-  def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute]
-  def generateRoute(points: Seq[Point]): Future[MapRoute]
+  def generateRoute(points: String): Future[MapRoute]
   def snapPoint(point: Point): Future[Point]
 }
 
@@ -21,23 +20,8 @@ class RoutingServiceImpl @Inject()(configuration: Configuration, ws: WSClient)(i
   lazy val osrmRoutingUri = configuration.getString("osrm.routing.uri").get
   lazy val osrmNearestUri = configuration.getString("osrm.nearest.uri").get
 
-  def generateRoute(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Future[MapRoute] = {
-    val osrmUrl = s"$osrmRoutingUri/$startLng,$startLat;$endLng,$endLat"
-    ws.url(osrmUrl).get().map { res =>
-      val routes = (res.json \ "routes").as[List[JsValue]]
-      val polyline = (routes(0) \ "geometry").as[String]
-      val distance = (routes(0) \ "distance").as[Double]
-
-      MapRoute(
-        polyline = polyline,
-        distance = distance
-      )
-    }
-  }
-
-  def generateRoute(points: Seq[Point]): Future[MapRoute] = {
-    val pointString = (points.foldLeft("")((str, p) => str + s";${p.lng},${p.lat}")).drop(1)
-    val osrmUrl = s"$osrmRoutingUri/$pointString"
+  def generateRoute(points: String): Future[MapRoute] = {
+    val osrmUrl = s"$osrmRoutingUri/$points"
     ws.url(osrmUrl).get().map { res =>
       val routes = (res.json \ "routes").as[List[JsValue]]
       val polyline = (routes(0) \ "geometry").as[String]
