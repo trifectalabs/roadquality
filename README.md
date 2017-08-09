@@ -22,9 +22,8 @@ To compile web assets:
 To run OSRM locally:
 
     # Get OSM data
-    cd resources/maps
-    curl -LO http://download.geofabrik.de/north-america/canada/ontario-latest.osm.pbf
-    cd ..
+    cd resources/osrm && mkdir maps && cd maps
+    curl -LO http://download.geofabrik.de/north-america/canada/ontario-latest.osm.pbf && cd ..
 
     # Prepare data for routing
     docker run -t -v $(pwd)/maps:/data -v $(pwd)/profiles:/opt osrm/osrm-backend osrm-extract -p /opt/bicycle.lua /data/ontario-latest.osm.pbf
