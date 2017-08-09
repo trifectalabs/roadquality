@@ -17,11 +17,10 @@ trait RoutingService {
 }
 
 class RoutingServiceImpl @Inject()(configuration: Configuration, ws: WSClient)(implicit ec: ExecutionContext) extends RoutingService {
-  lazy val osrmRoutingUri = configuration.getString("osrm.routing.uri").get
-  lazy val osrmNearestUri = configuration.getString("osrm.nearest.uri").get
+  lazy val osrmUri = configuration.getString("osrm.uri").get
 
   def generateRoute(points: String): Future[MapRoute] = {
-    val osrmUrl = s"$osrmRoutingUri/$points"
+    val osrmUrl = s"$osrmUri/route/v1/cycling/$points"
     ws.url(osrmUrl).get().map { res =>
       val routes = (res.json \ "routes").as[List[JsValue]]
       val polyline = (routes(0) \ "geometry").as[String]
@@ -36,7 +35,7 @@ class RoutingServiceImpl @Inject()(configuration: Configuration, ws: WSClient)(i
 
   def snapPoint(point: Point): Future[Point] = {
     val pointString = s"${point.lng},${point.lat}"
-    val osrmUrl = s"$osrmNearestUri/$pointString"
+    val osrmUrl = s"$osrmUri/nearest/v1/cycling/$pointString"
     ws.url(osrmUrl).get().map { res =>
       val waypoints = (res.json \ "waypoints").as[List[JsValue]]
       val location = (waypoints(0) \ "location").as[List[Double]]
