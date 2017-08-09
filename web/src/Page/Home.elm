@@ -1087,7 +1087,7 @@ update session msg model =
                                     }
                                         => Ports.hideSources sourcesToClear
 
-                            Menu.Completed sRating tRating name desc ->
+                            Menu.Completed sRating tRating name desc quick ->
                                 let
                                     ( nextStartAnchor, filteredAnchors ) =
                                         if List.member "startMarker" anchors.order then
@@ -1121,9 +1121,12 @@ update session msg model =
                                         , polylines = polylines
                                         , surfaceRating = sRating
                                         , trafficRating = tRating
-                                        , surface = UnknownSurface
+                                        , surfaceType = UnknownSurface
                                         , pathType = UnknownPath
                                         }
+
+                                    hidden =
+                                        not quick
 
                                     req =
                                         saveSegment
@@ -1131,11 +1134,12 @@ update session msg model =
                                             maybeAuthToken
                                             createSegmentForm
                                             model.zoom
+                                            hidden
 
                                     loadMsg =
                                         { type_ = Alert.Loading
                                         , message = "We're processing your rating"
-                                        , untilRemove = 5000
+                                        , untilRemove = -1
                                         , icon = True
                                         }
 

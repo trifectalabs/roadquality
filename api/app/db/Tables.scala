@@ -18,8 +18,9 @@ object Tables {
     def description = column[Option[String]]("description")
     def polyline = column[String]("polyline")
     def createdBy = column[UUID]("created_by")
+    def hidden = column[Boolean]("hidden")
 
-    override def * = (id, name, description, polyline, createdBy) <> (Segment.tupled, Segment.unapply)
+    override def * = (id, name, description, polyline, createdBy, hidden) <> (Segment.tupled, Segment.unapply)
   }
 
   val segments = TableQuery[Segments]

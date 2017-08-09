@@ -34,11 +34,15 @@ class Segments @Inject() (segmentsDao: SegmentsDao, segmentService: SegmentServi
       }).getOrElse(Future(BadRequest))
 	}
 
-  def post(currentZoomLevel: Option[Int]) = Authenticated.async(parse.json[SegmentCreateForm]) { req =>
+  def post(currentZoomLevel: Option[Int], hidden: Option[Boolean]) = Authenticated.async(parse.json[SegmentCreateForm]) { req =>
     val segForm = req.body
+    val segHidden = hidden match {
+      case None => false
+      case Some(h) => h
+    }
 
     FormValidator.validateSegmentCreateForm(segForm) match {
-      case Nil => segmentService.createSegment(segForm, req.user.id, currentZoomLevel).map(s => Created(Json.toJson(s)))
+      case Nil => segmentService.createSegment(segForm, req.user.id, currentZoomLevel, segHidden).map(s => Created(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
 	}

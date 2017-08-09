@@ -1,10 +1,10 @@
-module Request.Map exposing (snap, makeRoute, saveSegment, getSegments, getBoundedSegments)
+module Request.Map exposing (snap, makeRoute, saveSegment, saveRating, getSegments, getBoundedSegments)
 
 import Http
 import HttpBuilder exposing (withExpect, withQueryParams, withBody)
 import Json.Decode as Decode
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
-import Data.Map as Map exposing (CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
+import Data.Map as Map exposing (..)
 import Util exposing ((=>))
 
 
@@ -40,8 +40,8 @@ makeRoute apiUrl maybeToken points =
             |> HttpBuilder.toRequest
 
 
-saveSegment : String -> Maybe AuthToken -> CreateSegmentForm -> Float -> Http.Request Segment
-saveSegment apiUrl maybeToken createSegmentForm zoom =
+saveSegment : String -> Maybe AuthToken -> CreateSegmentForm -> Float -> Bool -> Http.Request Segment
+saveSegment apiUrl maybeToken createSegmentForm zoom hidden =
     let
         body =
             createSegmentForm
@@ -56,7 +56,35 @@ saveSegment apiUrl maybeToken createSegmentForm zoom =
         (apiUrl ++ "/segments")
             |> HttpBuilder.post
             |> withExpect (Http.expectJson decodeSegment)
-            |> withQueryParams [ "currentZoomLevel" => zoomString ]
+            |> withQueryParams
+                [ "hidden" => (String.toLower <| toString hidden)
+                , "currentZoomLevel" => zoomString
+                ]
+            |> withBody body
+            |> withAuthorization maybeToken
+            |> HttpBuilder.toRequest
+
+
+saveRating : String -> Maybe AuthToken -> CreateRatingForm -> Int -> Float -> Http.Request Segment
+saveRating apiUrl maybeToken createRatingForm segmentId zoom =
+    let
+        body =
+            createRatingForm
+                |> encodeCreateRatingForm
+                |> Http.jsonBody
+
+        zoomString =
+            zoom
+                |> round
+                |> toString
+    in
+        (apiUrl ++ "/segmentRatings")
+            |> HttpBuilder.post
+            |> withExpect (Http.expectJson decodeSegment)
+            |> withQueryParams
+                [ "id" => toString segmentId
+                , "currentZoomLevel" => zoomString
+                ]
             |> withBody body
             |> withAuthorization maybeToken
             |> HttpBuilder.toRequest
