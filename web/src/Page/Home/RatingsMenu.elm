@@ -647,7 +647,7 @@ type Msg
 type ExternalMsg
     = OpenMenu
     | CloseMenu
-    | Completed Int Int String String
+    | Completed Int Int String String Bool
     | Error String
     | NoOp
 
@@ -730,7 +730,7 @@ update msg model =
                                         model.style
                             }
                                 => Ports.isRouting False
-                                => Completed sRating tRating name description
+                                => Completed sRating tRating name description quickSave
 
                         _ ->
                             model

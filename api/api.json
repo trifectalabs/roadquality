@@ -103,6 +103,11 @@
           "name": "created_by",
           "description": "The user who created the segment",
           "type" : "uuid"
+        },
+        {
+          "name": "hidden",
+          "description": "Whether a segment is user visible or not",
+          "type": "boolean"
         }
       ]
     },
@@ -132,7 +137,7 @@
           "type" : "integer"
         },
         {
-          "name": "surface",
+          "name": "surfaceType",
           "type" : "surfaceType"
         },
         {
@@ -165,7 +170,7 @@
           "required": false
         },
         {
-          "name": "surface",
+          "name": "surfaceType",
           "type" : "surfaceType",
           "required": false
         },
@@ -200,7 +205,7 @@
           "type" : "integer"
         },
         {
-          "name": "surface",
+          "name": "surfaceType",
           "type" : "surfaceType"
         },
         {
@@ -219,6 +224,31 @@
           "name": "deletedAt",
           "type" : "date-time-iso8601",
           "required": false
+        }
+      ]
+    },
+    "ratingCreateForm": {
+      "description": "Form the client uses to create a segment rating",
+      "fields": [
+        {
+          "name": "polylines",
+          "type" : "[string]"
+        },
+        {
+          "name": "surfaceRating",
+          "type" : "integer"
+        },
+        {
+          "name": "trafficRating",
+          "type" : "integer"
+        },
+        {
+          "name": "surfaceType",
+          "type" : "surfaceType"
+        },
+        {
+          "name": "pathType",
+          "type" : "pathType"
         }
       ]
     },
@@ -379,7 +409,8 @@
         { "method": "POST",
           "body": { "type": "segmentCreateForm" },
           "parameters": [
-            { "name": "currentZoomLevel", "type": "integer", "required": false }
+            { "name": "currentZoomLevel", "type": "integer", "required": false },
+            { "name": "hidden", "type": "boolean", "required": false }
           ],
           "responses": {
             "201": { "type": "segment" },
@@ -437,6 +468,17 @@
           ],
           "responses": {
             "200": { "type": "segmentRating" }
+          }
+        },
+        { "method": "POST",
+          "body": { "type": "ratingCreateForm" },
+          "parameters": [
+            { "name": "id", "type": "uuid", "required": true },
+            { "name": "currentZoomLevel", "type": "integer", "required": false }
+          ],
+          "responses": {
+            "201": { "type": "segment" },
+            "400": { "type": "string" }
           }
         },
         { "method": "DELETE",

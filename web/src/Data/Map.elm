@@ -1,4 +1,4 @@
-module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
+module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm, CreateRatingForm, encodeCreateRatingForm)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
@@ -118,7 +118,7 @@ type alias CreateSegmentForm =
     , polylines : List String
     , surfaceRating : Int
     , trafficRating : Int
-    , surface : SurfaceType
+    , surfaceType : SurfaceType
     , pathType : PathType
     }
 
@@ -131,6 +131,26 @@ encodeCreateSegmentForm form =
         , "polylines" => (Encode.list <| List.map Encode.string form.polylines)
         , "surfaceRating" => Encode.int form.surfaceRating
         , "trafficRating" => Encode.int form.trafficRating
-        , "surface" => (Encode.string <| surfaceTypeToString form.surface)
+        , "surfaceType" => (Encode.string <| surfaceTypeToString form.surfaceType)
+        , "pathType" => (Encode.string <| pathTypeToString form.pathType)
+        ]
+
+
+type alias CreateRatingForm =
+    { polylines : List String
+    , surfaceRating : Int
+    , trafficRating : Int
+    , surfaceType : SurfaceType
+    , pathType : PathType
+    }
+
+
+encodeCreateRatingForm : CreateRatingForm -> Value
+encodeCreateRatingForm form =
+    Encode.object
+        [ "polylines" => (Encode.list <| List.map Encode.string form.polylines)
+        , "surfaceRating" => Encode.int form.surfaceRating
+        , "trafficRating" => Encode.int form.trafficRating
+        , "surfaceType" => (Encode.string <| surfaceTypeToString form.surfaceType)
         , "pathType" => (Encode.string <| pathTypeToString form.pathType)
         ]

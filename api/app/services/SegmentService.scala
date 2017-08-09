@@ -20,12 +20,13 @@ import play.api.libs.json._
 import play.api.Configuration
 
 import scala.concurrent.{ExecutionContext, Future}
-import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm, SegmentRating, Segment }
+import com.trifectalabs.roadquality.v0.models._
 import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao }
 
 
 trait SegmentService {
-  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int] = None): Future[Segment]
+  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int] = None, hidden: Boolean): Future[Segment]
+  def createRating(ratingCreateForm: RatingCreateForm, segmentId: UUID, userId: UUID, currentZoomLevel: Option[Int] = None): Future[Segment]
   def handleEndpointOfSegment(miniSegmentSplit: MiniSegmentSplit, segmentId: UUID): Future[Option[MiniSegmentToSegment]]
   def newOverlappingMiniSegments(polyline: String, segmentId: UUID): Future[Seq[MiniSegmentToSegment]]
 }
@@ -36,9 +37,31 @@ class SegmentServiceImpl @Inject()
   implicit def latLng2Point(latLng: LatLng): Point = Point(lat = latLng.lat, lng = latLng.lng)
   lazy val ratingsTileserverUrl = configuration.getString("ratings.tileserver.url").get
 
-  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int]): Future[Segment] = {
+  def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int] = None,
+    hidden: Boolean): Future[Segment] = {
     val segmentId = UUID.randomUUID()
     val polyline = joinPolylines(segmentCreateForm.polylines)
+    segmentsDao.create(segmentId, segmentCreateForm.name, segmentCreateForm.description, polyline, userId, hidden)
+      .flatMap(segment =>
+        processRating(segment, currentZoomLevel, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
+          segmentCreateForm.pathType,segmentCreateForm.surfaceType)
+    )
+  }
+
+  def createRating(ratingCreateForm: RatingCreateForm, segmentId: UUID, userId: UUID,
+    currentZoomLevel: Option[Int] = None): Future[Segment] = {
+    val polyline = joinPolylines(ratingCreateForm.polylines)
+    segmentsDao.getById(segmentId).flatMap(segment =>
+      processRating(segment, currentZoomLevel, ratingCreateForm.trafficRating, ratingCreateForm.surfaceRating,
+        ratingCreateForm.pathType, ratingCreateForm.surfaceType)
+    )
+  }
+
+  private def processRating(segment: Segment, currentZoomLevel: Option[Int], trafficRating: Int, surfaceRating: Int,
+    pathType: PathType, surfaceType: SurfaceType): Future[Segment] = {
+    val segmentId = segment.id
+    val polyline = segment.polyline
+    val userId = segment.createdBy
     val segmentPoints: Seq[Point] = Polyline.decode(polyline).map(latLng2Point)
 
     val startSplitsFutOpt: Future[Option[MiniSegmentSplit]] =
@@ -51,8 +74,6 @@ class SegmentServiceImpl @Inject()
       startSplitsOpt <- startSplitsFutOpt
       endSplitsOpt <- endSplitsFutOpt
 			existingMiniSegments <- newOverlapMiniSegmentsFut
-      segment <- segmentsDao.create(segmentId, segmentCreateForm.name,
-        segmentCreateForm.description, polyline, userId)
       } yield {
         val savedMiniSegments: Future[Seq[MiniSegmentToSegment]] = {
           (startSplitsOpt, endSplitsOpt) match {
@@ -88,8 +109,8 @@ class SegmentServiceImpl @Inject()
           for {
             rating <- ratingsDao.insert(
               SegmentRating(
-                UUID.randomUUID(), segmentId, userId, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
-                segmentCreateForm.surface, segmentCreateForm.pathType, DateTime.now(), DateTime.now()))
+                UUID.randomUUID(), segmentId, userId, trafficRating, surfaceRating,
+                surfaceType, pathType, DateTime.now(), DateTime.now()))
             extent <- ratingsDao.getBoundsFromRatings(rating.createdAt)
             // Run this portion synchronously after async reqs have fired
             syncTiles <- apiMetrics.timer("synchronous-tile-rerendering").timeFuture {

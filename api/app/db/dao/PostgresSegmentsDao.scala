@@ -31,7 +31,11 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
 
   override def getByBoundingBox(xmin: Double, ymin: Double, xmax: Double, ymax: Double): Future[Seq[Segment]] = {
    // @&& - intersection
-   db.run(segments.filter(s => lineFromEncodedPolyline(s.polyline) @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326))).result)
+   db.run(
+    segments
+      .filter(_.hidden === false)
+      .filter(s => lineFromEncodedPolyline(s.polyline) @&& makeEnvelope(xmin, ymin, xmax, ymax, Some(4326)))
+      .result)
   }
 
   override def delete(id: UUID): Future[Unit] = {
@@ -39,13 +43,14 @@ class PostgresSegmentsDao @Inject() (protected val dbConfigProvider: DatabaseCon
   }
 
   override def create(id: UUID, name: Option[String], description: Option[String],
-    polyline: String, userId: UUID): Future[Segment] = {
+    polyline: String, userId: UUID, hidden: Boolean): Future[Segment] = {
     val segment = Segment(
       id = id,
       name = name,
       description = description,
       polyline = polyline,
-      createdBy = userId)
+      createdBy = userId,
+      hidden = hidden)
 
     db.run((segments += segment).map(_ => segment))
   }
