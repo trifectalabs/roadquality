@@ -647,7 +647,7 @@ type Msg
 type ExternalMsg
     = OpenMenu
     | CloseMenu
-    | Completed Int Int String String Bool
+    | Completed Int Int (Maybe String) (Maybe String) Bool
     | Error String
     | NoOp
 
@@ -715,9 +715,9 @@ update msg model =
                 let
                     ( name, description ) =
                         if quickSave == True then
-                            ( "", "" )
+                            ( Nothing, Nothing )
                         else
-                            ( model.name, model.description )
+                            ( Just model.name, Just model.description )
                 in
                     case
                         ( model.surfaceRating, model.trafficRating )

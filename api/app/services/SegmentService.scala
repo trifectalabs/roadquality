@@ -26,7 +26,7 @@ import db.dao.{ SegmentsDao, MapDao, SegmentRatingsDao }
 
 trait SegmentService {
   def createSegment(segmentCreateForm: SegmentCreateForm, userId: UUID, currentZoomLevel: Option[Int] = None, hidden: Boolean): Future[Segment]
-  def createRating(ratingCreateForm: RatingCreateForm, segmentId: UUID, userId: UUID, currentZoomLevel: Option[Int] = None): Future[Segment]
+  def createRating(segmentCreateForm: SegmentCreateForm, segmentId: UUID, userId: UUID, currentZoomLevel: Option[Int] = None): Future[Segment]
   def handleEndpointOfSegment(miniSegmentSplit: MiniSegmentSplit, segmentId: UUID): Future[Option[MiniSegmentToSegment]]
   def newOverlappingMiniSegments(polyline: String, segmentId: UUID): Future[Seq[MiniSegmentToSegment]]
 }
@@ -48,12 +48,12 @@ class SegmentServiceImpl @Inject()
     )
   }
 
-  def createRating(ratingCreateForm: RatingCreateForm, segmentId: UUID, userId: UUID,
+  def createRating(segmentCreateForm: SegmentCreateForm, segmentId: UUID, userId: UUID,
     currentZoomLevel: Option[Int] = None): Future[Segment] = {
-    val polyline = joinPolylines(ratingCreateForm.polylines)
+    val polyline = joinPolylines(segmentCreateForm.polylines)
     segmentsDao.getById(segmentId).flatMap(segment =>
-      processRating(segment, currentZoomLevel, ratingCreateForm.trafficRating, ratingCreateForm.surfaceRating,
-        ratingCreateForm.pathType, ratingCreateForm.surfaceType)
+      processRating(segment, currentZoomLevel, segmentCreateForm.trafficRating, segmentCreateForm.surfaceRating,
+        segmentCreateForm.pathType, segmentCreateForm.surfaceType)
     )
   }
 

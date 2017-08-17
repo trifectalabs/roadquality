@@ -8,11 +8,11 @@ let showingLayer;
 let cursorClass;
 let tileServerUrl;
 
-if (location.host === "localhost:9000") {
-    tileServerUrl = "http://localhost:8080"
-} else {
+// if (location.host === "localhost:9000") {
+//     tileServerUrl = "http://localhost:8080"
+// } else {
     tileServerUrl = "https://tiles.roadquality.org"
-}
+// }
 
 let surfaceLayer = {
     "id": "SurfaceQuality",

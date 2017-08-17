@@ -22,17 +22,6 @@ package com.trifectalabs.roadquality.v0.models {
   )
 
   /**
-   * Form the client uses to create a segment rating
-   */
-  case class RatingCreateForm(
-    polylines: Seq[String],
-    surfaceRating: Int,
-    trafficRating: Int,
-    surfaceType: com.trifectalabs.roadquality.v0.models.SurfaceType,
-    pathType: com.trifectalabs.roadquality.v0.models.PathType
-  )
-
-  /**
    * A segment of road which will be rated and tagged
    * 
    * @param createdBy The user who created the segment
@@ -428,34 +417,6 @@ package com.trifectalabs.roadquality.v0.models {
       new play.api.libs.json.Writes[com.trifectalabs.roadquality.v0.models.Point] {
         def writes(obj: com.trifectalabs.roadquality.v0.models.Point) = {
           jsObjectPoint(obj)
-        }
-      }
-    }
-
-    implicit def jsonReadsRoadqualityRatingCreateForm: play.api.libs.json.Reads[RatingCreateForm] = {
-      (
-        (__ \ "polylines").read[Seq[String]] and
-        (__ \ "surfaceRating").read[Int] and
-        (__ \ "trafficRating").read[Int] and
-        (__ \ "surfaceType").read[com.trifectalabs.roadquality.v0.models.SurfaceType] and
-        (__ \ "pathType").read[com.trifectalabs.roadquality.v0.models.PathType]
-      )(RatingCreateForm.apply _)
-    }
-
-    def jsObjectRatingCreateForm(obj: com.trifectalabs.roadquality.v0.models.RatingCreateForm): play.api.libs.json.JsObject = {
-      play.api.libs.json.Json.obj(
-        "polylines" -> play.api.libs.json.Json.toJson(obj.polylines),
-        "surfaceRating" -> play.api.libs.json.JsNumber(obj.surfaceRating),
-        "trafficRating" -> play.api.libs.json.JsNumber(obj.trafficRating),
-        "surfaceType" -> play.api.libs.json.JsString(obj.surfaceType.toString),
-        "pathType" -> play.api.libs.json.JsString(obj.pathType.toString)
-      )
-    }
-
-    implicit def jsonWritesRoadqualityRatingCreateForm: play.api.libs.json.Writes[RatingCreateForm] = {
-      new play.api.libs.json.Writes[com.trifectalabs.roadquality.v0.models.RatingCreateForm] {
-        def writes(obj: com.trifectalabs.roadquality.v0.models.RatingCreateForm) = {
-          jsObjectRatingCreateForm(obj)
         }
       }
     }
@@ -889,11 +850,11 @@ package com.trifectalabs.roadquality.v0 {
 
       override def post(
         id: _root_.java.util.UUID,
-        ratingCreateForm: com.trifectalabs.roadquality.v0.models.RatingCreateForm,
+        segmentCreateForm: com.trifectalabs.roadquality.v0.models.SegmentCreateForm,
         currentZoomLevel: _root_.scala.Option[Int] = None,
         requestHeaders: Seq[(String, String)] = Nil
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.roadquality.v0.models.Segment] = {
-        val payload = play.api.libs.json.Json.toJson(ratingCreateForm)
+        val payload = play.api.libs.json.Json.toJson(segmentCreateForm)
 
         val queryParameters = Seq(
           Some("id" -> id.toString),
@@ -1185,7 +1146,7 @@ package com.trifectalabs.roadquality.v0 {
 
     def post(
       id: _root_.java.util.UUID,
-      ratingCreateForm: com.trifectalabs.roadquality.v0.models.RatingCreateForm,
+      segmentCreateForm: com.trifectalabs.roadquality.v0.models.SegmentCreateForm,
       currentZoomLevel: _root_.scala.Option[Int] = None,
       requestHeaders: Seq[(String, String)] = Nil
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[com.trifectalabs.roadquality.v0.models.Segment]

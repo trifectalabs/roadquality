@@ -1,8 +1,9 @@
-module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm, CreateRatingForm, encodeCreateRatingForm)
+module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 import Json.Encode as Encode exposing (Value)
+import Json.Encode.Extra as EncodeExtra
 import Util exposing ((=>))
 
 
@@ -113,8 +114,8 @@ decodeSegment =
 
 
 type alias CreateSegmentForm =
-    { name : String
-    , description : String
+    { name : Maybe String
+    , description : Maybe String
     , polylines : List String
     , surfaceRating : Int
     , trafficRating : Int
@@ -126,29 +127,9 @@ type alias CreateSegmentForm =
 encodeCreateSegmentForm : CreateSegmentForm -> Value
 encodeCreateSegmentForm form =
     Encode.object
-        [ "name" => Encode.string form.name
-        , "description" => Encode.string form.description
+        [ "name" => EncodeExtra.maybe Encode.string form.name
+        , "description" => EncodeExtra.maybe Encode.string form.description
         , "polylines" => (Encode.list <| List.map Encode.string form.polylines)
-        , "surfaceRating" => Encode.int form.surfaceRating
-        , "trafficRating" => Encode.int form.trafficRating
-        , "surfaceType" => (Encode.string <| surfaceTypeToString form.surfaceType)
-        , "pathType" => (Encode.string <| pathTypeToString form.pathType)
-        ]
-
-
-type alias CreateRatingForm =
-    { polylines : List String
-    , surfaceRating : Int
-    , trafficRating : Int
-    , surfaceType : SurfaceType
-    , pathType : PathType
-    }
-
-
-encodeCreateRatingForm : CreateRatingForm -> Value
-encodeCreateRatingForm form =
-    Encode.object
-        [ "polylines" => (Encode.list <| List.map Encode.string form.polylines)
         , "surfaceRating" => Encode.int form.surfaceRating
         , "trafficRating" => Encode.int form.trafficRating
         , "surfaceType" => (Encode.string <| surfaceTypeToString form.surfaceType)
