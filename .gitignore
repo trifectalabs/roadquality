@@ -8,4 +8,4 @@ web/public/stylesheets/main.css
 .ensime
 .ensime_cache/
 .vscode/
-*.osm.pbf
+resources/osrm/maps

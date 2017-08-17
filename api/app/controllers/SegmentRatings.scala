@@ -5,7 +5,7 @@ import models.{ FormValidator, FormError }
 import java.util.UUID
 import javax.inject.Inject
 
-import com.trifectalabs.roadquality.v0.models.{ RatingCreateForm }
+import com.trifectalabs.roadquality.v0.models.{ SegmentCreateForm }
 import com.trifectalabs.roadquality.v0.models.json._
 import db.dao.SegmentRatingsDao
 import play.api.libs.json.Json
@@ -22,11 +22,11 @@ class SegmentRatings @Inject()(ratingsDao: SegmentRatingsDao, segmentService: Se
     ratingsDao.getById(id).map(s => Ok(Json.toJson(s)))
   }
 
-  def post(id: UUID, currentZoomLevel: Option[Int]) = Authenticated.async(parse.json[RatingCreateForm]) { req =>
-    val ratingForm = req.body
+  def post(id: UUID, currentZoomLevel: Option[Int]) = Authenticated.async(parse.json[SegmentCreateForm]) { req =>
+    val segForm = req.body
 
-    FormValidator.validateRatingCreateForm(ratingForm) match {
-      case Nil => segmentService.createRating(ratingForm, id, req.user.id, currentZoomLevel).map(s => Created(Json.toJson(s)))
+    FormValidator.validateSegmentCreateForm(segForm) match {
+      case Nil => segmentService.createRating(segForm, id, req.user.id, currentZoomLevel).map(s => Created(Json.toJson(s)))
       case errors => Future(BadRequest(Json.toJson(errors)))
     }
   }

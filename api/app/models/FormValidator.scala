@@ -25,18 +25,6 @@ object FormValidator {
     ).flatten
   }
 
-  def validateRatingCreateForm(ratingForm: RatingCreateForm): Seq[FormError] = {
-  { ratingForm.polylines.flatMap { polyline =>
-      Polyline.decode(polyline).map { p =>
-          if (p.lat > 180 || p.lat < -180 || p.lng > 180 || p.lng < -180) Some(FormError(s"$p out of bounds"))
-          else None
-      }
-    } :+
-      (if (ratingForm.surfaceRating > 5 || ratingForm.surfaceRating < 0) Some(FormError(s"Surface Rating > 5 or < 0")) else None) :+
-      (if (ratingForm.trafficRating > 5 || ratingForm.trafficRating < 0) Some(FormError(s"Traffic Rating > 5 or < 0")) else None)
-    }.flatten
-  }
-
   def validateRatingUpdate(rating: Double): Seq[FormError] = {
     Seq((if (rating > 5 || rating < 0) Some(FormError(s"Rating > 5 or < 0")) else None)).flatten
   }

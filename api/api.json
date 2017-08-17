@@ -227,31 +227,6 @@
         }
       ]
     },
-    "ratingCreateForm": {
-      "description": "Form the client uses to create a segment rating",
-      "fields": [
-        {
-          "name": "polylines",
-          "type" : "[string]"
-        },
-        {
-          "name": "surfaceRating",
-          "type" : "integer"
-        },
-        {
-          "name": "trafficRating",
-          "type" : "integer"
-        },
-        {
-          "name": "surfaceType",
-          "type" : "surfaceType"
-        },
-        {
-          "name": "pathType",
-          "type" : "pathType"
-        }
-      ]
-    },
     "versionInfo": {
       "plural": "info",
       "fields": [
@@ -471,7 +446,7 @@
           }
         },
         { "method": "POST",
-          "body": { "type": "ratingCreateForm" },
+          "body": { "type": "segmentCreateForm" },
           "parameters": [
             { "name": "id", "type": "uuid", "required": true },
             { "name": "currentZoomLevel", "type": "integer", "required": false }

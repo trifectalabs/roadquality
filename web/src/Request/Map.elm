@@ -65,12 +65,12 @@ saveSegment apiUrl maybeToken createSegmentForm zoom hidden =
             |> HttpBuilder.toRequest
 
 
-saveRating : String -> Maybe AuthToken -> CreateRatingForm -> Int -> Float -> Http.Request Segment
-saveRating apiUrl maybeToken createRatingForm segmentId zoom =
+saveRating : String -> Maybe AuthToken -> CreateSegmentForm -> Int -> Float -> Http.Request Segment
+saveRating apiUrl maybeToken createSegmentForm segmentId zoom =
     let
         body =
-            createRatingForm
-                |> encodeCreateRatingForm
+            createSegmentForm
+                |> encodeCreateSegmentForm
                 |> Http.jsonBody
 
         zoomString =
