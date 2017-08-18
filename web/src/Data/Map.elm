@@ -1,7 +1,7 @@
 module Data.Map exposing (MapLayer(..), CycleRoute, decodeCycleRoute, Point, decodePoint, encodePoint, SurfaceType(..), PathType(..), Segment, decodeSegment, CreateSegmentForm, encodeCreateSegmentForm)
 
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as Pipeline exposing (decode, required)
+import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as EncodeExtra
 import Util exposing ((=>))
@@ -96,8 +96,8 @@ pathTypeToString pathType =
 
 type alias Segment =
     { id : String
-    , name : String
-    , description : String
+    , name : Maybe String
+    , description : Maybe String
     , polyline : String
     , createdBy : String
     }
@@ -107,8 +107,8 @@ decodeSegment : Decoder Segment
 decodeSegment =
     decode Segment
         |> required "id" Decode.string
-        |> required "name" Decode.string
-        |> required "description" Decode.string
+        |> optional "name" (Decode.nullable Decode.string) Nothing
+        |> optional "description" (Decode.nullable Decode.string) Nothing
         |> required "polyline" Decode.string
         |> required "created_by" Decode.string
 
