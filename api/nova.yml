@@ -35,6 +35,7 @@ environments:
           - MAPS_DB_PASSWORD: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.maps.db.password get)"
           - MAPS_DB_URL: "$(/usr/local/bin/kms-s3 -k arn:aws:kms:us-east-1:149114439547:key/ceb9f320-49f4-4146-92b5-5a5d0d664dfa -s s3://trifecta-kms/roadquality.maps.db.url get)"
           - RATINGS_TILESERVER_URL: "https://tiles.roadquality.org"
+          - OSRM_URI: "http://routing.rq.org"
         deployment_group: roadquality-api-ProductionDeploymentGroup-1ILX4DBI4UOQ8
         InstanceSecurityGroups: sg-eb2f1c95
         ElbSecurityGroups: sg-a52a19db
