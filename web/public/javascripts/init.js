@@ -310,6 +310,10 @@ function setupMap(coords) {
     map.touchZoomRotate.disableRotation();
     map.on("mousedown", mouseDown);
     map.on("mouseup", mouseUp);
+    map.on("move", getBounds);
+    map.on("moveend", function() { if (!viewOnly) {
+        app.ports.loadSegments.send(null);
+    }});
     map.on("zoomend", function() { app.ports.zoomLevel.send(map.getZoom()); });
 
     showingLayer = "SurfaceQuality";
@@ -318,9 +322,13 @@ function setupMap(coords) {
     map.on("load", function () {
         map.addLayer(Object.assign({}, surfaceLayer));
         map.addLayer(hiddenLayer);
-        let bounds = map.getBounds();
-        app.ports.loadSegments.send([bounds._sw, bounds._ne]);
+        getBounds();
     });
+}
+
+function getBounds() {
+    let bounds = map.getBounds();
+    app.ports.mapBounds.send([[bounds._sw, bounds._ne], viewOnly]);
 }
 
 function makeSource(geomType, coords) {

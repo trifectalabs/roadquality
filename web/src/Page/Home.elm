@@ -1,6 +1,7 @@
 module Page.Home exposing (view, subscriptions, update, Model, Msg, ExternalMsg(..), init)
 
 import Dict exposing (Dict)
+import Set exposing (Set)
 import OrderedDict as OrdDict exposing (OrderedDict)
 import List.Extra exposing (elemIndex)
 import Data.Map exposing (MapLayer(..), CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
@@ -43,12 +44,14 @@ type alias Model =
     , menu : Menu.Model
     , mapLayer : MapLayer
     , zoom : Float
+    , mapBounds : Maybe ( Point, Point )
     , switchStyle : Animation.State
     , alertsStyle : Animation.State
     , anchors : OrderedDict String Point
     , cycleRoutes : OrderedDict String CycleRoute
     , mapRouteKeys : Dict String String
-    , segments : List Segment
+    , segments : Dict String Segment
+    , visibleSegments : Set String
     , startAnchorUnused : Bool
     , unusedAnchors : Fifo String
     , unusedRoutes : Fifo String
@@ -97,12 +100,14 @@ initModel zoom now =
     , menu = Menu.initModel
     , mapLayer = SurfaceQuality
     , zoom = zoom
+    , mapBounds = Nothing
     , switchStyle = Animation.style styles.closed
     , alertsStyle = Animation.style styles.closed
     , anchors = OrdDict.empty
     , cycleRoutes = OrdDict.empty
     , mapRouteKeys = Dict.empty
-    , segments = []
+    , segments = Dict.empty
+    , visibleSegments = Set.empty
     , startAnchorUnused = False
     , unusedAnchors = Fifo.empty
     , unusedRoutes = Fifo.empty
@@ -239,6 +244,7 @@ subscriptions model =
         , Ports.setAnchor DropAnchorPoint
         , Ports.movedAnchor MoveAnchorPoint
         , Ports.zoomLevel ZoomLevel
+        , Ports.mapBounds MapBounds
         , Ports.loadSegments LoadSegments
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
@@ -255,6 +261,7 @@ type Msg
     = AlertMsg Alert.Msg
     | SetLayer MapLayer
     | ZoomLevel Float
+    | MapBounds ( ( Point, Point ), Bool )
     | ShowLogin
     | ChangeEmailList String
     | EmailListSignup
@@ -269,7 +276,7 @@ type Msg
     | ReceiveRoute String String Int (Result Http.Error CycleRoute)
     | MenuMsg Menu.Msg
     | ReceiveSegment Int (Result Http.Error Segment)
-    | LoadSegments ( Point, Point )
+    | LoadSegments ()
     | ReceiveSegments (Result Http.Error (List Segment))
 
 
@@ -301,6 +308,15 @@ update session msg model =
 
         unusedRoutes =
             model.unusedRoutes
+
+        mapBounds =
+            model.mapBounds
+
+        segments =
+            model.segments
+
+        visibleSegments =
+            model.visibleSegments
 
         menu =
             model.menu
@@ -347,6 +363,40 @@ update session msg model =
 
             ZoomLevel zoom ->
                 { model | zoom = zoom } => Cmd.none => NoOp
+
+            MapBounds ( bounds, viewOnly ) ->
+                let
+                    newBounds =
+                        Just bounds
+
+                    display =
+                        segmentsToDisplay newBounds segments visibleSegments
+
+                    displayIds =
+                        Set.fromList <| List.map .id display
+
+                    hide =
+                        segmentsToHide newBounds segments visibleSegments
+
+                    hideIds =
+                        Set.fromList <| List.map .id hide
+
+                    newVisibleSegments =
+                        Set.diff visibleSegments hideIds
+                            |> Set.union displayIds
+                in
+                    if viewOnly then
+                        { model | mapBounds = newBounds } => Cmd.none => NoOp
+                    else
+                        { model
+                            | mapBounds = newBounds
+                            , visibleSegments = newVisibleSegments
+                        }
+                            => Cmd.batch
+                                [ hideSegments hide
+                                , displaySegments display
+                                ]
+                            => NoOp
 
             ShowLogin ->
                 model => Cmd.none => Unauthorized
@@ -1045,7 +1095,18 @@ update session msg model =
                                             [ Animation.to styles.msgOpen ]
                                             model.alertsStyle
                                 }
-                                    => Cmd.none
+                                    => (model.mapBounds
+                                            |> Maybe.map
+                                                (\( southWest, northEast ) ->
+                                                    Request.Map.getBoundedSegments
+                                                        apiUrl
+                                                        maybeAuthToken
+                                                        southWest
+                                                        northEast
+                                                )
+                                            |> Maybe.map (Http.send ReceiveSegments)
+                                            |> Maybe.withDefault Cmd.none
+                                       )
 
                             Menu.CloseMenu ->
                                 let
@@ -1069,6 +1130,7 @@ update session msg model =
                                         cycleRoutes.order
                                             |> List.filterMap (\key -> Dict.get key mapRouteKeys)
                                             |> List.append anchors.order
+                                            |> List.append (Set.toList visibleSegments)
                                 in
                                     { model
                                         | anchors = OrdDict.empty
@@ -1076,6 +1138,7 @@ update session msg model =
                                         , startAnchorUnused = nextStartAnchor
                                         , unusedAnchors = newUnusedAnchors
                                         , unusedRoutes = newUnusedRoutes
+                                        , visibleSegments = Set.empty
                                         , switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
@@ -1229,7 +1292,7 @@ update session msg model =
             ReceiveSegment loadingMsgKey (Ok segment) ->
                 let
                     segments =
-                        segment :: model.segments
+                        Dict.insert segment.id segment model.segments
 
                     layer =
                         toString model.mapLayer
@@ -1244,21 +1307,27 @@ update session msg model =
                             ]
                         => NoOp
 
-            LoadSegments ( southWest, northEast ) ->
+            LoadSegments () ->
                 let
                     req =
-                        Request.Map.getBoundedSegments
-                            apiUrl
-                            maybeAuthToken
-                            southWest
-                            northEast
+                        model.mapBounds
+                            |> Maybe.map
+                                (\( southWest, northEast ) ->
+                                    Request.Map.getBoundedSegments
+                                        apiUrl
+                                        maybeAuthToken
+                                        southWest
+                                        northEast
+                                )
+                            |> Maybe.map (Http.send ReceiveSegments)
+                            |> Maybe.withDefault Cmd.none
                 in
                     case maybeAuthToken of
                         Nothing ->
                             model => Cmd.none => NoOp
 
                         Just _ ->
-                            model => Http.send ReceiveSegments req => NoOp
+                            model => req => NoOp
 
             ReceiveSegments (Err error) ->
                 let
@@ -1276,10 +1345,30 @@ update session msg model =
                         => Cmd.map AlertMsg alertCmd
                         => NoOp
 
-            ReceiveSegments (Ok segments) ->
-                { model | segments = List.append segments model.segments }
-                    => Cmd.none
-                    => NoOp
+            ReceiveSegments (Ok someSegments) ->
+                let
+                    newSegments =
+                        List.foldl
+                            (\seg acc -> Dict.insert seg.id seg acc)
+                            segments
+                            someSegments
+
+                    addSegments =
+                        segmentsToDisplay mapBounds newSegments visibleSegments
+                            |> displaySegments
+
+                    newVisibleSegments =
+                        List.foldl
+                            (\seg acc -> Set.insert seg.id acc)
+                            visibleSegments
+                            someSegments
+                in
+                    { model
+                        | segments = newSegments
+                        , visibleSegments = newVisibleSegments
+                    }
+                        => addSegments
+                        => NoOp
 
 
 generateNewKey : Seed -> ( String, Seed )
@@ -1331,3 +1420,65 @@ addRoute apiUrl maybeAuthToken cycleRoutes anchors startPointId endPointId =
         Http.send
             (ReceiveRoute startPointId endPointId routeIndex)
             (makeRoute apiUrl maybeAuthToken points)
+
+
+withinMapBounds : Maybe ( Point, Point ) -> Segment -> Bool
+withinMapBounds mapBounds segment =
+    case mapBounds of
+        Nothing ->
+            True
+
+        Just ( southWest, northEast ) ->
+            Polyline.decode segment.polyline
+                |> List.foldl
+                    (\( lat, lng ) within ->
+                        ((lat <= northEast.lat)
+                            && (lng <= northEast.lng)
+                            && (lat >= southWest.lat)
+                            && (lng >= southWest.lng)
+                        )
+                            || within
+                    )
+                    False
+
+
+segmentsToDisplay : Maybe ( Point, Point ) -> Dict String Segment -> Set String -> List Segment
+segmentsToDisplay mapBounds segments visibleSegments =
+    Dict.values segments
+        |> List.filter (\seg -> not <| Set.member seg.id visibleSegments)
+        |> List.filter (withinMapBounds mapBounds)
+
+
+segmentsToHide : Maybe ( Point, Point ) -> Dict String Segment -> Set String -> List Segment
+segmentsToHide mapBounds segments visibleSegments =
+    Dict.values segments
+        |> List.filter (\seg -> Set.member seg.id visibleSegments)
+        |> List.filter (\seg -> not <| withinMapBounds mapBounds seg)
+
+
+displaySegments : List Segment -> Cmd Msg
+displaySegments segments =
+    let
+        paint =
+            Encode.object
+                [ "line-width" => Encode.int 2
+                ]
+    in
+        segments
+            |> List.map
+                (\seg ->
+                    Ports.addSource
+                        ( seg.id
+                        , Just "line"
+                        , Just paint
+                        , Polyline.decode seg.polyline
+                        )
+                )
+            |> Cmd.batch
+
+
+hideSegments : List Segment -> Cmd Msg
+hideSegments segments =
+    segments
+        |> List.map .id
+        |> Ports.hideSources
