@@ -65,7 +65,7 @@ saveSegment apiUrl maybeToken createSegmentForm zoom hidden =
             |> HttpBuilder.toRequest
 
 
-saveRating : String -> Maybe AuthToken -> CreateSegmentForm -> Int -> Float -> Http.Request Segment
+saveRating : String -> Maybe AuthToken -> CreateSegmentForm -> String -> Float -> Http.Request Segment
 saveRating apiUrl maybeToken createSegmentForm segmentId zoom =
     let
         body =
@@ -82,7 +82,7 @@ saveRating apiUrl maybeToken createSegmentForm segmentId zoom =
             |> HttpBuilder.post
             |> withExpect (Http.expectJson decodeSegment)
             |> withQueryParams
-                [ "id" => toString segmentId
+                [ "id" => segmentId
                 , "currentZoomLevel" => zoomString
                 ]
             |> withBody body

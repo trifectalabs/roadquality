@@ -8,7 +8,7 @@ import Data.Map exposing (MapLayer(..), CycleRoute, Point, Segment, SurfaceType(
 import Data.AuthToken exposing (AuthToken)
 import Data.Session as Session exposing (Session)
 import Data.UserPhoto as UserPhoto
-import Request.Map exposing (snap, makeRoute, saveSegment)
+import Request.Map exposing (snap, makeRoute, saveSegment, saveRating)
 import Request.User exposing (emailListSignUp)
 import Ports
 import Http
@@ -198,7 +198,7 @@ view session model =
                         [ text "Traffic Safety" ]
                     ]
                 ]
-            , Menu.view model.menu |> Html.map MenuMsg
+            , Menu.view model.menu model.segments |> Html.map MenuMsg
             , accountView session
             , signUpBanner model.listEmail (session.user == Nothing)
             ]
@@ -512,8 +512,9 @@ update session msg model =
                             , Ports.addSource
                                 ( pointId
                                 , Just "circle"
-                                , Just paint
                                 , [ ( lng, lat ) ]
+                                , Just paint
+                                , Nothing
                                 )
                             ]
 
@@ -656,8 +657,9 @@ update session msg model =
                             [ Ports.addSource
                                 ( pointId
                                 , Nothing
-                                , Nothing
                                 , [ ( point.lng, point.lat ) ]
+                                , Nothing
+                                , Nothing
                                 )
                             , addCmd
                             ]
@@ -827,8 +829,9 @@ update session msg model =
                             [ Ports.addSource
                                 ( pointId
                                 , Nothing
-                                , Nothing
                                 , [ ( point.lng, point.lat ) ]
+                                , Nothing
+                                , Nothing
                                 )
                             , deleteAddCmd
                             ]
@@ -1054,7 +1057,7 @@ update session msg model =
                         , keySeed = nextSeed
                     }
                         => Ports.addSource
-                            ( mapKey, Just "line", Just paint, line )
+                            ( mapKey, Just "line", line, Just paint, Nothing )
                         => NoOp
 
             MenuMsg subMsg ->
@@ -1150,7 +1153,82 @@ update session msg model =
                                     }
                                         => Ports.hideSources sourcesToClear
 
-                            Menu.Completed sRating tRating name desc quick ->
+                            Menu.ShowSegments show ->
+                                if show == True then
+                                    model
+                                        => (model.mapBounds
+                                                |> Maybe.map
+                                                    (\( southWest, northEast ) ->
+                                                        Request.Map.getBoundedSegments
+                                                            apiUrl
+                                                            maybeAuthToken
+                                                            southWest
+                                                            northEast
+                                                    )
+                                                |> Maybe.map (Http.send ReceiveSegments)
+                                                |> Maybe.withDefault Cmd.none
+                                           )
+                                else
+                                    { model | visibleSegments = Set.empty }
+                                        => Ports.hideSources (Set.toList visibleSegments)
+
+                            Menu.SaveRating sRating tRating segmentId ->
+                                let
+                                    polylines =
+                                        Dict.get segmentId model.segments
+                                            |> Maybe.map (\s -> [ s.polyline ])
+                                            |> Maybe.withDefault []
+
+                                    createSegmentForm =
+                                        { name = Nothing
+                                        , description = Nothing
+                                        , polylines = polylines
+                                        , surfaceRating = sRating
+                                        , trafficRating = tRating
+                                        , surfaceType = UnknownSurface
+                                        , pathType = UnknownPath
+                                        }
+
+                                    req =
+                                        saveRating
+                                            apiUrl
+                                            maybeAuthToken
+                                            createSegmentForm
+                                            segmentId
+                                            model.zoom
+
+                                    loadMsg =
+                                        { type_ = Alert.Loading
+                                        , message = "We're processing your rating"
+                                        , untilRemove = -1
+                                        , icon = True
+                                        }
+
+                                    msgKey =
+                                        alerts.nextKey
+
+                                    ( newAlerts, alertCmd ) =
+                                        Alert.update (AddAlert loadMsg) alerts
+                                in
+                                    { model
+                                        | visibleSegments = Set.empty
+                                        , alerts = newAlerts
+                                        , switchStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.switchStyle
+                                        , alertsStyle =
+                                            Animation.interrupt
+                                                [ Animation.to styles.closed ]
+                                                model.alertsStyle
+                                    }
+                                        => Cmd.batch
+                                            [ Http.send (ReceiveSegment msgKey) req
+                                            , Cmd.map AlertMsg alertCmd
+                                            , Ports.hideSources <| Set.toList visibleSegments
+                                            ]
+
+                            Menu.CreateSegment sRating tRating name desc quick ->
                                 let
                                     ( nextStartAnchor, filteredAnchors ) =
                                         if List.member "startMarker" anchors.order then
@@ -1461,7 +1539,26 @@ displaySegments segments =
     let
         paint =
             Encode.object
-                [ "line-width" => Encode.int 2
+                [ "line-width" => Encode.int 4
+                , "line-color" => Encode.string "rgb(176, 215, 51)"
+                ]
+
+        hoverPaint =
+            Encode.object
+                [ "line-width" => Encode.int 4
+                , "line-color" => Encode.string "rgb(100, 175, 60)"
+                ]
+
+        activePaint =
+            Encode.object
+                [ "line-width" => Encode.int 4
+                , "line-color" => Encode.string "rgb(2, 126, 51)"
+                ]
+
+        selectedPaint =
+            Encode.object
+                [ "line-width" => Encode.int 4
+                , "line-color" => Encode.string "rgb(22, 146, 71)"
                 ]
     in
         segments
@@ -1470,8 +1567,9 @@ displaySegments segments =
                     Ports.addSource
                         ( seg.id
                         , Just "line"
-                        , Just paint
                         , Polyline.decode seg.polyline
+                        , Just paint
+                        , Just ( hoverPaint, activePaint, selectedPaint )
                         )
                 )
             |> Cmd.batch

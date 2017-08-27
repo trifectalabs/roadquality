@@ -1,7 +1,7 @@
 module Page.Home.RatingsMenu exposing (view, subscriptions, update, anchorCountUpdate, Model, Msg(..), ExternalMsg(..), initModel)
 
 import Html exposing (..)
-import Html.Attributes as Attr exposing (type_, value, for, title, name, checked, placeholder)
+import Html.Attributes as Attr exposing (type_, value, for, title, name, checked, placeholder, disabled)
 import Html.Events exposing (onClick, onInput, onMouseEnter, onMouseLeave)
 import Svg exposing (svg, polygon, line, polyline)
 import Svg.Attributes exposing (xmlSpace, width, height, viewBox, fill, stroke, strokeWidth, strokeLinecap, strokeLinejoin, points, x1, x2, y1, y2)
@@ -10,13 +10,15 @@ import Html.CssHelpers exposing (Namespace)
 import Animation exposing (px, percent)
 import Util exposing ((=>))
 import Ports
+import Data.Map exposing (RoutingMode(..), Segment)
+import Dict exposing (Dict)
 
 
 -- MODEL --
 
 
 type MenuStep
-    = NeedAnchorsPlaced
+    = NoSegmentSelected
     | AddSurfaceRating
     | AddTrafficRating
     | AddName
@@ -24,6 +26,8 @@ type MenuStep
 
 type alias Model =
     { step : MenuStep
+    , routingMode : RoutingMode
+    , selectedSegment : Maybe String
     , style : Animation.State
     , ratingHover : Maybe Int
     , surfaceRating : Maybe Int
@@ -41,7 +45,9 @@ type alias Styles =
 
 initModel : Model
 initModel =
-    { step = NeedAnchorsPlaced
+    { step = NoSegmentSelected
+    , routingMode = SegmentsMode
+    , selectedSegment = Nothing
     , style = Animation.style styles.closed
     , ratingHover = Nothing
     , surfaceRating = Nothing
@@ -73,14 +79,20 @@ g =
     globalNamespace
 
 
-view : Model -> Html Msg
-view model =
-    div
-        (Animation.render model.style ++ [ id SaveRatingControl ])
-        [ menuClose model.step
-        , ratingsControl model
-        , menuProgress model
-        ]
+view : Model -> Dict String Segment -> Html Msg
+view model segments =
+    let
+        segment =
+            model.selectedSegment
+                |> Maybe.map (\segId -> Dict.get segId segments)
+                |> Maybe.withDefault Nothing
+    in
+        div
+            (Animation.render model.style ++ [ id SaveRatingControl ])
+            [ menuClose model.step
+            , ratingsControl model segment
+            , menuProgress model
+            ]
 
 
 menuClose : MenuStep -> Html Msg
@@ -168,7 +180,7 @@ menuProgress model =
 
         ( leftAction, rightAction ) =
             case model.step of
-                NeedAnchorsPlaced ->
+                NoSegmentSelected ->
                     ( nothing, nothing )
 
                 AddSurfaceRating ->
@@ -207,7 +219,7 @@ progressDots : MenuStep -> Html Msg
 progressDots step =
     div [ class [ ProgressDots ] ]
         [ span
-            [ classList [ ( Active, step == NeedAnchorsPlaced ) ] ]
+            [ classList [ ( Active, step == NoSegmentSelected ) ] ]
             [ text "⬤" ]
         , span
             [ classList [ ( Active, step == AddSurfaceRating ) ] ]
@@ -219,20 +231,20 @@ progressDots step =
         ]
 
 
-ratingsControl : Model -> Html Msg
-ratingsControl model =
+ratingsControl : Model -> Maybe Segment -> Html Msg
+ratingsControl model maybeSegment =
     case model.step of
-        NeedAnchorsPlaced ->
-            needAnchorsPlaced
+        NoSegmentSelected ->
+            noSegmentSelected model
 
         AddSurfaceRating ->
-            addSurfaceRating model
+            addSurfaceRating model maybeSegment
 
         AddTrafficRating ->
-            addTrafficRating model
+            addTrafficRating model maybeSegment
 
         AddName ->
-            addName model
+            addName model maybeSegment
 
 
 star : String -> String -> Html msg
@@ -316,20 +328,41 @@ blackString =
     "rgb(44, 44, 44)"
 
 
-needAnchorsPlaced : Html Msg
-needAnchorsPlaced =
-    div [ class [ RatingsMenu ] ]
-        [ div [] []
-        , h2 []
-            [ text "Start by selecting your route on the "
-            , span [] [ text "map" ]
-            , text "."
+noSegmentSelected : Model -> Html Msg
+noSegmentSelected model =
+    let
+        heading =
+            case model.routingMode of
+                SegmentsMode ->
+                    h2 []
+                        [ text "Start by selecting a segment on the "
+                        , span [] [ text "map" ]
+                        , text ", or "
+                        , span
+                            [ onClick <| SetRoutingMode CreateMode ]
+                            [ text "draw your own" ]
+                        , text " segment to rate."
+                        ]
+
+                CreateMode ->
+                    h2 []
+                        [ text "Start by selecting your route on the "
+                        , span [] [ text "map" ]
+                        , text ", or rate an "
+                        , span
+                            [ onClick <| SetRoutingMode SegmentsMode ]
+                            [ text "existing segment" ]
+                        , text "."
+                        ]
+    in
+        div [ class [ RatingsMenu ] ]
+            [ div [] []
+            , heading
             ]
-        ]
 
 
-addSurfaceRating : Model -> Html Msg
-addSurfaceRating model =
+addSurfaceRating : Model -> Maybe Segment -> Html Msg
+addSurfaceRating model maybeSegment =
     let
         selectedRating =
             case ( model.surfaceRating, model.ratingHover ) of
@@ -439,8 +472,8 @@ addSurfaceRating model =
             ]
 
 
-addTrafficRating : Model -> Html Msg
-addTrafficRating model =
+addTrafficRating : Model -> Maybe Segment -> Html Msg
+addTrafficRating model maybeSegment =
     let
         selectedRating =
             case ( model.trafficRating, model.ratingHover ) of
@@ -550,8 +583,8 @@ addTrafficRating model =
             ]
 
 
-addName : Model -> Html Msg
-addName model =
+addName : Model -> Maybe Segment -> Html Msg
+addName model maybeSegment =
     let
         activeStar modelRating rating =
             case modelRating of
@@ -563,6 +596,71 @@ addName model =
                         star whiteString whiteString
                     else
                         star "transparent" whiteString
+
+        name =
+            case maybeSegment of
+                Nothing ->
+                    input
+                        [ class [ SegmentNameInput ]
+                        , type_ "text"
+                        , onInput ChangeName
+                        , value model.name
+                        , placeholder "Name"
+                        ]
+                        []
+
+                Just segment ->
+                    input
+                        [ class [ SegmentNameInput ]
+                        , type_ "text"
+                        , value <| Maybe.withDefault "" segment.name
+                        , disabled True
+                        ]
+                        []
+
+        description =
+            case maybeSegment of
+                Nothing ->
+                    textarea
+                        [ class [ SegmentDescriptionInput ]
+                        , onInput ChangeDescription
+                        , value model.description
+                        , placeholder "Description"
+                        ]
+                        []
+
+                Just segment ->
+                    textarea
+                        [ class [ SegmentDescriptionInput ]
+                        , value <| Maybe.withDefault "" segment.description
+                        , disabled True
+                        ]
+                        []
+
+        saveSegment =
+            case maybeSegment of
+                Nothing ->
+                    div
+                        [ g.class [ PrimaryButton ]
+                        , class [ SaveButton ]
+                        , onClick <| SaveSegment False
+                        ]
+                        [ text "Save as Segment" ]
+
+                Just _ ->
+                    span [] []
+
+        info =
+            case maybeSegment of
+                Nothing ->
+                    div
+                        [ class [ SegmentInfo ] ]
+                        [ h3 [] [ text "Why save as a segment?" ]
+                        , h4 [] [ text "If you save a rating as a segment is allows you and others to easily access it later to make more ratings." ]
+                        ]
+
+                Just _ ->
+                    span [] []
     in
         div []
             [ div [ class [ RatingsSummary ] ]
@@ -589,32 +687,10 @@ addName model =
                     ]
                     [ text "Quick Save" ]
                 ]
-            , input
-                [ class [ SegmentNameInput ]
-                , type_ "text"
-                , onInput ChangeName
-                , value model.name
-                , placeholder "Name"
-                ]
-                []
-            , textarea
-                [ class [ SegmentDescriptionInput ]
-                , onInput ChangeDescription
-                , value model.description
-                , placeholder "Description"
-                ]
-                []
-            , div
-                [ g.class [ PrimaryButton ]
-                , class [ SaveButton ]
-                , onClick <| SaveSegment False
-                ]
-                [ text "Save as Segment" ]
-            , div
-                [ class [ SegmentInfo ] ]
-                [ h3 [] [ text "Why save as a segment?" ]
-                , h4 [] [ text "If you save a rating as a segment is allows you and others to easily access it later to make more ratings." ]
-                ]
+            , name
+            , description
+            , saveSegment
+            , info
             ]
 
 
@@ -624,7 +700,10 @@ addName model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Animation.subscription AnimateMenu [ model.style ]
+    Sub.batch
+        [ Animation.subscription AnimateMenu [ model.style ]
+        , Ports.selectSegment SelectSegment
+        ]
 
 
 
@@ -635,6 +714,8 @@ type Msg
     = SetMenuStep MenuStep
     | ShowMenu
     | AnimateMenu Animation.Msg
+    | SetRoutingMode RoutingMode
+    | SelectSegment (Maybe String)
     | ChangeRatingHover (Maybe Int)
     | ChangeSurfaceRating (Maybe Int)
     | ChangeTrafficRating (Maybe Int)
@@ -647,7 +728,9 @@ type Msg
 type ExternalMsg
     = OpenMenu
     | CloseMenu
-    | Completed Int Int (Maybe String) (Maybe String) Bool
+    | ShowSegments Bool
+    | SaveRating Int Int String
+    | CreateSegment Int Int (Maybe String) (Maybe String) Bool
     | Error String
     | NoOp
 
@@ -655,8 +738,8 @@ type ExternalMsg
 anchorCountUpdate : Int -> Model -> Model
 anchorCountUpdate anchorCount model =
     if anchorCount < 2 then
-        { model | step = NeedAnchorsPlaced }
-    else if anchorCount == 2 && model.step == NeedAnchorsPlaced then
+        { model | step = NoSegmentSelected }
+    else if anchorCount == 2 && model.step == NoSegmentSelected then
         { model | step = AddSurfaceRating }
     else
         model
@@ -675,13 +758,48 @@ update msg model =
                         [ Animation.to styles.open ]
                         model.style
             }
-                => Ports.isRouting True
+                => (Ports.isRouting <| toString SegmentsMode)
                 => OpenMenu
 
         AnimateMenu animMsg ->
             { model | style = Animation.update animMsg model.style }
                 => Cmd.none
                 => NoOp
+
+        SetRoutingMode routingMode ->
+            let
+                externalMsg =
+                    case routingMode of
+                        SegmentsMode ->
+                            ShowSegments True
+
+                        CreateMode ->
+                            ShowSegments False
+            in
+                { model | routingMode = routingMode } => Cmd.none => externalMsg
+
+        SelectSegment segment ->
+            case ( model.step, segment ) of
+                ( NoSegmentSelected, Just segId ) ->
+                    { model
+                        | step = AddSurfaceRating
+                        , selectedSegment = segment
+                    }
+                        => Cmd.none
+                        => NoOp
+
+                ( _, Nothing ) ->
+                    { model
+                        | step = NoSegmentSelected
+                        , selectedSegment = segment
+                    }
+                        => Cmd.none
+                        => NoOp
+
+                _ ->
+                    { model | selectedSegment = segment }
+                        => Cmd.none
+                        => NoOp
 
         ChangeRatingHover rating ->
             { model | ratingHover = rating } => Cmd.none => NoOp
@@ -705,12 +823,33 @@ update msg model =
                         [ Animation.to styles.closed ]
                         model.style
             }
-                => Ports.isRouting False
+                => Ports.isRouting ""
                 => CloseMenu
 
         SaveSegment quickSave ->
             if quickSave == False && model.name == "" then
                 model => Cmd.none => Error "Add a name to save your segment."
+            else if model.selectedSegment /= Nothing then
+                case
+                    ( model.surfaceRating, model.trafficRating, model.selectedSegment )
+                of
+                    ( Just sRating, Just tRating, Just segmentId ) ->
+                        { model
+                            | style =
+                                Animation.interrupt
+                                    [ Animation.to styles.closed ]
+                                    model.style
+                        }
+                            => Ports.isRouting ""
+                            => SaveRating
+                                sRating
+                                tRating
+                                segmentId
+
+                    _ ->
+                        model
+                            => Cmd.none
+                            => Error "There was a client error saving your segment. Sorry!"
             else
                 let
                     ( name, description ) =
@@ -729,8 +868,13 @@ update msg model =
                                         [ Animation.to styles.closed ]
                                         model.style
                             }
-                                => Ports.isRouting False
-                                => Completed sRating tRating name description quickSave
+                                => Ports.isRouting ""
+                                => CreateSegment
+                                    sRating
+                                    tRating
+                                    name
+                                    description
+                                    quickSave
 
                         _ ->
                             model

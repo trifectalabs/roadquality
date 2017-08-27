@@ -254,6 +254,7 @@ generalCss =
             ]
         , class "default-cursor" [ cursor default |> important ]
         , class "move-cursor" [ cursor move |> important ]
+        , class "pointer-cursor" [ cursor pointer |> important ]
         , class "grab-cursor"
             [ cursor grab |> important
             , property "cursor" "-webkit-grab" |> important
@@ -581,12 +582,22 @@ mapCss =
             , zIndex (int 3)
             , descendants
                 [ h2
-                    [ width (px 250)
+                    [ width (px 260)
                     , fontSize (px 24)
                     , fontWeight (int 400)
                     , margin4 (px 10) zero (px 25) zero
                     , children
-                        [ span [ fontWeight (int 700) ] ]
+                        [ span
+                            [ fontWeight (int 700)
+                            , color rgbTrifectaGreen
+                            , lastOfType
+                                [ color rgbBlack
+                                , cursor pointer
+                                , hover
+                                    [ color rgbTrifectaBrightGreen ]
+                                ]
+                            ]
+                        ]
                     ]
                 , class CloseMenu
                     [ position absolute

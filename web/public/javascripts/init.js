@@ -1,12 +1,19 @@
 let map;
 let canvas;
 let cursorOverPoint = null;
+let cursorOverSegment = null;
+let selectedSegment = null;
 let isDragging = false;
 let viewOnly = true;
+let segmentMode = true;
 let popup;
 let showingLayer;
 let cursorClass;
 let tileServerUrl;
+let paintDict = {};
+let hoverPaintDict = {};
+let activePaintDict = {};
+let selectedPaintDict = {};
 
 if (location.host === "localhost:9000") {
     tileServerUrl = "http://localhost:8080"
@@ -116,14 +123,27 @@ app.ports.refreshLayer.subscribe(function(layer) {
     }
 });
 
-app.ports.isRouting.subscribe(function(isRouting) {
-    viewOnly = !isRouting;
-    if (isRouting) {
+app.ports.isRouting.subscribe(function(routing) {
+    viewOnly = routing === "";
+    if (routing === "SegmentsMode") {
+        map.on("mousedown", segmentMouseDown);
+        map.on("click", segmentClick);
+    } else if (routing === "CreateMode") {
         map.on("click", click);
         map.on("contextmenu", contextMenu);
-    } else {
+    } else if (routing === "") {
+        map.off("mousedown", segmentMouseDown);
+        map.off("click", segmentClick);
         map.off("click", click);
         map.off("contextmenu", contextMenu);
+        for (let property in paintDict[selectedSegment]) {
+            map.setPaintProperty(
+                selectedSegment,
+                property,
+                paintDict[selectedSegment][property]
+            );
+        }
+        selectedSegment = null;
     }
 });
 
@@ -140,15 +160,18 @@ app.ports.hideSources.subscribe(function(keys) {
 app.ports.addSource.subscribe(function(values) {
     let key = values[0];
     let layerType = values[1];
-    let paint = values[2];
     let coords = [];
     let geomType;
-    if (values[3].length === 1) {
-        coords = [values[3][0][0], values[3][0][1]];
+    let paint = values[3];
+    let hoverPaint = values[4][0] || null;
+    let activePaint = values[4][1] || null;
+    let selectedPaint = values[4][2] || null;
+    if (values[2].length === 1) {
+        coords = [values[2][0][0], values[2][0][1]];
         geomType = "Point";
     } else {
-        for (let i = 0; i < values[3].length; i++) {
-            coords.push([values[3][i][1], values[3][i][0]]);
+        for (let i = 0; i < values[2].length; i++) {
+            coords.push([values[2][i][1], values[2][i][0]]);
         }
         geomType = "LineString";
     }
@@ -169,6 +192,14 @@ app.ports.addSource.subscribe(function(values) {
         if (geomType === "Point") {
             map.on("mouseenter", key, mouseEnter(key));
             map.on("mouseleave", key, mouseLeave);
+        }
+        if (hoverPaint || activePaint || selectedPaint) {
+            paintDict[key] = paint;
+            hoverPaintDict[key] = hoverPaint;
+            activePaintDict[key] = activePaint;
+            selectedPaintDict[key] = selectedPaint;
+            map.on("mouseenter", key, mouseEnterSegment(key));
+            map.on("mouseleave", key, mouseLeaveSegment(key));
         }
     }
     if (geomType === "LineString") map.moveLayer(key, "startMarker");
@@ -276,6 +307,68 @@ function mouseLeave() {
     map.dragPan.enable();
 }
 
+function segmentClick(e) {
+    previousSelection = selectedSegment;
+    selectedSegment = cursorOverSegment;
+    app.ports.selectSegment.send(selectedSegment);
+    if (selectedSegment) {
+        for (let property in selectedPaintDict[selectedSegment]) {
+            map.setPaintProperty(
+                selectedSegment,
+                property,
+                selectedPaintDict[selectedSegment][property]
+            );
+        }
+    }
+    if (previousSelection) {
+        for (let property in paintDict[previousSelection]) {
+            map.setPaintProperty(
+                previousSelection,
+                property,
+                paintDict[previousSelection][property]
+            );
+        }
+    }
+}
+
+function mouseEnterSegment(key) {
+    return function() {
+        cursorOverSegment = key;
+        removeClass(canvas, cursorClass);
+        cursorClass = "pointer-cursor";
+        addClass(canvas, cursorClass);
+        for (let property in hoverPaintDict[key]) {
+            map.setPaintProperty(key, property, hoverPaintDict[key][property]);
+        }
+    }
+}
+
+function segmentMouseDown(e) {
+    if (!cursorOverSegment) return;
+    let paint = activePaintDict[cursorOverSegment]
+    for (let property in paint) {
+        map.setPaintProperty(cursorOverSegment, property, paint[property]);
+    }
+}
+
+function mouseLeaveSegment(key) {
+    return function() {
+        cursorOverSegment = null;
+        removeClass(canvas, cursorClass);
+        cursorClass = "default-cursor";
+        addClass(canvas, cursorClass);
+        let paint;
+        if (key === selectedSegment) {
+            paint = selectedPaintDict[key];
+        } else {
+            paint = paintDict[key];
+        }
+        for (let property in paint) {
+            map.setPaintProperty(key, property, paint[property]);
+        }
+    }
+}
+
 // HELPER FUNCTIONS
 
 function setupMap(coords) {
@@ -311,9 +404,9 @@ function setupMap(coords) {
     map.on("mousedown", mouseDown);
     map.on("mouseup", mouseUp);
     map.on("move", getBounds);
-    map.on("moveend", function() { if (!viewOnly) {
-        app.ports.loadSegments.send(null);
-    }});
+    map.on("moveend", function() {
+        if (!viewOnly) app.ports.loadSegments.send(null);
+    });
     map.on("zoomend", function() { app.ports.zoomLevel.send(map.getZoom()); });
 
     showingLayer = "SurfaceQuality";
