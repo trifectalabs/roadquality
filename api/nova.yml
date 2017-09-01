@@ -15,7 +15,7 @@ logs:
 environments:
   - name: roadquality-app
     aws_region: us-east-1
-    aws_profile: default
+    aws_profile: trifecta
     deploy_arn: arn:aws:iam::149114439547:role/trifecta-codedeploy
     deployment_bucket: roadquality-deploys
     deployment_application_id: roadquality-api-RoadqualityApiApplicationStack-1ABZQ6WXR1IV
