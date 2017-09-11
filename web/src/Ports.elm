@@ -25,7 +25,7 @@ port refreshLayer : String -> Cmd msg
 port zoomLevel : (Float -> msg) -> Sub msg
 
 
-port mapBounds : (( ( Point, Point ), Bool ) -> msg) -> Sub msg
+port mapBounds : (( ( Point, Point ), Bool, Bool ) -> msg) -> Sub msg
 
 
 port isRouting : String -> Cmd msg

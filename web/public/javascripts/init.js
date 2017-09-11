@@ -5,7 +5,7 @@ let cursorOverSegment = null;
 let selectedSegment = null;
 let isDragging = false;
 let viewOnly = true;
-let segmentMode = true;
+let segmentMode = false;
 let popup;
 let showingLayer;
 let cursorClass;
@@ -124,13 +124,16 @@ app.ports.refreshLayer.subscribe(function(layer) {
 });
 
 app.ports.isRouting.subscribe(function(routing) {
-    viewOnly = routing === "";
-    if (routing === "SegmentsMode") {
+    if (routing === "SegmentsMode" && !segmentMode) {
         map.on("mousedown", segmentMouseDown);
         map.on("click", segmentClick);
-    } else if (routing === "CreateMode") {
+        map.off("click", click);
+        map.off("contextmenu", contextMenu);
+    } else if (routing === "CreateMode" && segmentMode) {
         map.on("click", click);
         map.on("contextmenu", contextMenu);
+        map.off("mousedown", segmentMouseDown);
+        map.off("click", segmentClick);
     } else if (routing === "") {
         map.off("mousedown", segmentMouseDown);
         map.off("click", segmentClick);
@@ -145,6 +148,8 @@ app.ports.isRouting.subscribe(function(routing) {
         }
         selectedSegment = null;
     }
+    viewOnly = routing === "";
+    segmentMode = routing === "SegmentsMode";
 });
 
 app.ports.hideSources.subscribe(function(keys) {
@@ -163,9 +168,12 @@ app.ports.addSource.subscribe(function(values) {
     let coords = [];
     let geomType;
     let paint = values[3];
-    let hoverPaint = values[4][0] || null;
-    let activePaint = values[4][1] || null;
-    let selectedPaint = values[4][2] || null;
+    let hoverPaint, activePaint, selectedPaint;
+    if (values[4]) {
+        hoverPaint = values[4][0];
+        activePaint = values[4][1];
+        selectedPaint = values[4][2];
+    }
     if (values[2].length === 1) {
         coords = [values[2][0][0], values[2][0][1]];
         geomType = "Point";
@@ -405,7 +413,7 @@ function setupMap(coords) {
     map.on("mouseup", mouseUp);
     map.on("move", getBounds);
     map.on("moveend", function() {
-        if (!viewOnly) app.ports.loadSegments.send(null);
+        if (!viewOnly && segmentMode) app.ports.loadSegments.send(null);
     });
     map.on("zoomend", function() { app.ports.zoomLevel.send(map.getZoom()); });
 
@@ -421,7 +429,7 @@ function setupMap(coords) {
 
 function getBounds() {
     let bounds = map.getBounds();
-    app.ports.mapBounds.send([[bounds._sw, bounds._ne], viewOnly]);
+    app.ports.mapBounds.send([[bounds._sw, bounds._ne], viewOnly, segmentMode]);
 }
 
 function makeSource(geomType, coords) {
