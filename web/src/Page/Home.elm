@@ -261,7 +261,7 @@ type Msg
     = AlertMsg Alert.Msg
     | SetLayer MapLayer
     | ZoomLevel Float
-    | MapBounds ( ( Point, Point ), Bool )
+    | MapBounds ( ( Point, Point ), Bool, Bool )
     | ShowLogin
     | ChangeEmailList String
     | EmailListSignup
@@ -277,7 +277,7 @@ type Msg
     | MenuMsg Menu.Msg
     | ReceiveSegment Int (Result Http.Error Segment)
     | LoadSegments ()
-    | ReceiveSegments (Result Http.Error (List Segment))
+    | ReceiveSegments Bool (Result Http.Error (List Segment))
 
 
 type ExternalMsg
@@ -364,7 +364,7 @@ update session msg model =
             ZoomLevel zoom ->
                 { model | zoom = zoom } => Cmd.none => NoOp
 
-            MapBounds ( bounds, viewOnly ) ->
+            MapBounds ( bounds, viewOnly, segmentMode ) ->
                 let
                     newBounds =
                         Just bounds
@@ -385,7 +385,7 @@ update session msg model =
                         Set.diff visibleSegments hideIds
                             |> Set.union displayIds
                 in
-                    if viewOnly then
+                    if viewOnly || not segmentMode then
                         { model | mapBounds = newBounds } => Cmd.none => NoOp
                     else
                         { model
@@ -1107,7 +1107,7 @@ update session msg model =
                                                         southWest
                                                         northEast
                                                 )
-                                            |> Maybe.map (Http.send ReceiveSegments)
+                                            |> Maybe.map (Http.send <| ReceiveSegments True)
                                             |> Maybe.withDefault Cmd.none
                                        )
 
@@ -1165,7 +1165,7 @@ update session msg model =
                                                             southWest
                                                             northEast
                                                     )
-                                                |> Maybe.map (Http.send ReceiveSegments)
+                                                |> Maybe.map (Http.send <| ReceiveSegments True)
                                                 |> Maybe.withDefault Cmd.none
                                            )
                                 else
@@ -1397,7 +1397,7 @@ update session msg model =
                                         southWest
                                         northEast
                                 )
-                            |> Maybe.map (Http.send ReceiveSegments)
+                            |> Maybe.map (Http.send <| ReceiveSegments False)
                             |> Maybe.withDefault Cmd.none
                 in
                     case maybeAuthToken of
@@ -1407,7 +1407,7 @@ update session msg model =
                         Just _ ->
                             model => req => NoOp
 
-            ReceiveSegments (Err error) ->
+            ReceiveSegments _ (Err error) ->
                 let
                     alertMsg =
                         { type_ = Alert.Error
@@ -1423,7 +1423,7 @@ update session msg model =
                         => Cmd.map AlertMsg alertCmd
                         => NoOp
 
-            ReceiveSegments (Ok someSegments) ->
+            ReceiveSegments alterMode (Ok someSegments) ->
                 let
                     newSegments =
                         List.foldl
@@ -1440,12 +1440,41 @@ update session msg model =
                             (\seg acc -> Set.insert seg.id acc)
                             visibleSegments
                             someSegments
+
+                    ( newMenu, menuCmd ) =
+                        if alterMode then
+                            Menu.visibleSegmentsUpdate newVisibleSegments menu
+                        else
+                            ( menu, Cmd.none )
+
+                    ( newAlerts, alertCmd ) =
+                        if alterMode && Set.size newVisibleSegments == 0 then
+                            let
+                                alertMsg =
+                                    { type_ = Alert.Info
+                                    , message = "Looks like there's no segments in this area. Try making your own!"
+                                    , untilRemove = 5000
+                                    , icon = True
+                                    }
+                            in
+                                Alert.update (AddAlert alertMsg) alerts
+                        else
+                            ( alerts, Cmd.none )
+
+                    cmd =
+                        Cmd.batch
+                            [ addSegments
+                            , menuCmd |> Cmd.map MenuMsg
+                            , alertCmd |> Cmd.map AlertMsg
+                            ]
                 in
                     { model
                         | segments = newSegments
                         , visibleSegments = newVisibleSegments
+                        , menu = newMenu
+                        , alerts = newAlerts
                     }
-                        => addSegments
+                        => cmd
                         => NoOp
 
 

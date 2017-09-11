@@ -1,4 +1,4 @@
-module Page.Home.RatingsMenu exposing (view, subscriptions, update, anchorCountUpdate, Model, Msg(..), ExternalMsg(..), initModel)
+module Page.Home.RatingsMenu exposing (view, subscriptions, update, anchorCountUpdate, visibleSegmentsUpdate, Model, Msg(..), ExternalMsg(..), initModel)
 
 import Html exposing (..)
 import Html.Attributes as Attr exposing (type_, value, for, title, name, checked, placeholder, disabled)
@@ -12,6 +12,7 @@ import Util exposing ((=>))
 import Ports
 import Data.Map exposing (RoutingMode(..), Segment)
 import Dict exposing (Dict)
+import Set exposing (Set)
 
 
 -- MODEL --
@@ -19,6 +20,7 @@ import Dict exposing (Dict)
 
 type MenuStep
     = NoSegmentSelected
+    | PartialSegment
     | AddSurfaceRating
     | AddTrafficRating
     | AddName
@@ -183,6 +185,9 @@ menuProgress model =
                 NoSegmentSelected ->
                     ( nothing, nothing )
 
+                PartialSegment ->
+                    ( nothing, nothing )
+
                 AddSurfaceRating ->
                     case model.surfaceRating of
                         Nothing ->
@@ -236,6 +241,9 @@ ratingsControl model maybeSegment =
     case model.step of
         NoSegmentSelected ->
             noSegmentSelected model
+
+        PartialSegment ->
+            partialSegment model
 
         AddSurfaceRating ->
             addSurfaceRating model maybeSegment
@@ -359,6 +367,18 @@ noSegmentSelected model =
             [ div [] []
             , heading
             ]
+
+
+partialSegment : Model -> Html Msg
+partialSegment model =
+    div [ class [ RatingsMenu ] ]
+        [ div [] []
+        , h2 []
+            [ text "Finish drawing your segment by placing more points on the "
+            , span [] [ text "map" ]
+            , text "."
+            ]
+        ]
 
 
 addSurfaceRating : Model -> Maybe Segment -> Html Msg
@@ -737,12 +757,24 @@ type ExternalMsg
 
 anchorCountUpdate : Int -> Model -> Model
 anchorCountUpdate anchorCount model =
-    if anchorCount < 2 then
+    if anchorCount < 1 then
         { model | step = NoSegmentSelected }
-    else if anchorCount == 2 && model.step == NoSegmentSelected then
+    else if anchorCount < 2 then
+        { model | step = PartialSegment }
+    else if anchorCount == 2 && model.step == PartialSegment then
         { model | step = AddSurfaceRating }
     else
         model
+
+
+visibleSegmentsUpdate : Set String -> Model -> ( Model, Cmd Msg )
+visibleSegmentsUpdate visibleSegments model =
+    if Set.size visibleSegments == 0 then
+        { model | routingMode = CreateMode }
+            => (Ports.isRouting <| toString CreateMode)
+    else
+        { model | routingMode = SegmentsMode }
+            => (Ports.isRouting <| toString SegmentsMode)
 
 
 update : Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
@@ -776,7 +808,9 @@ update msg model =
                         CreateMode ->
                             ShowSegments False
             in
-                { model | routingMode = routingMode } => Cmd.none => externalMsg
+                { model | routingMode = routingMode }
+                    => (Ports.isRouting <| toString routingMode)
+                    => externalMsg
 
         SelectSegment segment ->
             case ( model.step, segment ) of
