@@ -116,10 +116,12 @@ app.ports.refreshLayer.subscribe(function(layer) {
         let dirtySurfaceLayer = Object.assign({}, surfaceLayer);
         dirtySurfaceLayer.source.tiles[0] += "?dirty=" + Math.random();
         map.addLayer(dirtySurfaceLayer);
+        map.moveLayer(layer, "TrafficSafety");
     } else {
         let dirtyTrafficLayer = Object.assign({}, trafficLayer);
         dirtyTrafficLayer.source.tiles[0] += "?dirty=" + Math.random();
         map.addLayer(dirtyTrafficLayer);
+        map.moveLayer(layer, "SurfaceQuality");
     }
 });
 
@@ -210,7 +212,9 @@ app.ports.addSource.subscribe(function(values) {
             map.on("mouseleave", key, mouseLeaveSegment(key));
         }
     }
-    if (geomType === "LineString") map.moveLayer(key, "startMarker");
+    if (geomType === "LineString" && !hoverPaint) {
+        map.moveLayer(key, "startMarker");
+    }
 });
 
 // EVENT HANDLERS
