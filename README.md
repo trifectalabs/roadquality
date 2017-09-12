@@ -31,3 +31,9 @@ To run OSRM locally:
 
     # Run routing server
     docker run -t -i -p 5000:5000 -v $(pwd)/maps:/data osrm/osrm-backend osrm-routed /data/ontario-latest.osrm
+
+To run trex locally:
+
+    # find docker ip address (172.16.123.1 on macOS)
+    sudo ifconfig lo0 alias 172.16.123.1 # macOS only
+    docker run -e TREX_DATASOURCE_URL=postgresql://trifecta@172.16.123.1/maps -p 8080:8080 --name trex kiambogo/roadquality_tileserver:0.2.2
