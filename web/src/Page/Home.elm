@@ -1286,16 +1286,13 @@ update session msg model =
                                         , pathType = UnknownPath
                                         }
 
-                                    hidden =
-                                        not quick
-
                                     req =
                                         saveSegment
                                             apiUrl
                                             maybeAuthToken
                                             createSegmentForm
                                             model.zoom
-                                            hidden
+                                            quick
 
                                     loadMsg =
                                         { type_ = Alert.Loading
