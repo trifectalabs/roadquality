@@ -64,6 +64,12 @@ init val location =
             else
                 "https://api.roadquality.org"
 
+        webUrl =
+            if location.host == "localhost:9000" then
+                "http://localhost:9000"
+            else
+                "https://roadquality.org"
+
         tokenInUrl =
             location
                 |> Url.parsePath
@@ -85,7 +91,11 @@ init val location =
         ( model, routeCmd ) =
             setRoute route
                 { pageState = Loaded <| initialPage route
-                , session = { user = decodeUserFromJson val, apiUrl = apiUrl }
+                , session =
+                    { user = decodeUserFromJson val
+                    , apiUrl = apiUrl
+                    , webUrl = webUrl
+                    }
                 }
 
         cmd =
@@ -389,6 +399,7 @@ updatePage page msg model =
                                         | session =
                                             { user = Just user
                                             , apiUrl = session.apiUrl
+                                            , webUrl = session.webUrl
                                             }
                                         , pageState = Loaded (Login pageModel)
                                     }
@@ -414,6 +425,7 @@ updatePage page msg model =
                                         | session =
                                             { user = Just user
                                             , apiUrl = session.apiUrl
+                                            , webUrl = session.webUrl
                                             }
                                         , pageState =
                                             Loaded (Register pageModel)

@@ -6,7 +6,7 @@ import Util exposing ((=>))
 
 
 type alias Session =
-    { user : Maybe User, apiUrl : String }
+    { user : Maybe User, apiUrl : String, webUrl : String }
 
 
 attempt : String -> (AuthToken -> Cmd msg) -> Session -> ( List String, Cmd msg )

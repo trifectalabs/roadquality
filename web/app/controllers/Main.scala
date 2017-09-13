@@ -40,10 +40,12 @@ class Main @Inject() (jwtUtil: JwtUtil, wsClient: WSClient, config: Configuratio
       .post(Json.toJson(signup))) map { resp =>
         if (resp.status == 200) {
           webMetrics.counter("email_signups") += 1
-          Accepted("")
+          Ok(s"Signed up ${signup.email_address}")
+        } else if (resp.status == 400) {
+          BadRequest(Json.parse(resp.body)("title"))
+        } else {
+          InternalServerError("Something went wrong.")
         }
-        else
-          InternalServerError("")
       }
   }
 
