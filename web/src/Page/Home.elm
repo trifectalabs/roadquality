@@ -408,17 +408,37 @@ update session msg model =
                 model
                     => Http.send
                         EmailListSignupResult
-                        (emailListSignUp "https://roadquality.org" model.listEmail)
+                        (emailListSignUp session.webUrl model.listEmail)
                     => NoOp
 
             EmailListSignupResult (Err error) ->
                 let
+                    ( code, message ) =
+                        case error of
+                            Http.BadPayload _ response ->
+                                ( response.status.code, response.body )
+
+                            Http.BadStatus response ->
+                                ( response.status.code, response.body )
+
+                            _ ->
+                                ( 0, "" )
+
                     alertMsg =
-                        { message = "Email list sign up failed"
-                        , type_ = Alert.Error
-                        , untilRemove = 5000
-                        , icon = True
-                        }
+                        case ( code, message ) of
+                            ( 400, "\"Member Exists\"" ) ->
+                                { message = "You already signed up!"
+                                , type_ = Alert.Info
+                                , untilRemove = 5000
+                                , icon = True
+                                }
+
+                            _ ->
+                                { message = "Email list sign up failed"
+                                , type_ = Alert.Error
+                                , untilRemove = 5000
+                                , icon = True
+                                }
 
                     ( newAlerts, alertCmd ) =
                         Alert.update (AddAlert alertMsg) alerts
