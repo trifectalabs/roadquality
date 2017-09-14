@@ -3,7 +3,6 @@ module Page.Account exposing (view, update, Model, Msg, initModel)
 import Html exposing (..)
 import Data.Session as Session exposing (Session)
 import Date.Format exposing (format)
-import Data.User exposing (userIdToHtml)
 import Data.UserPhoto as UserPhoto
 import Stylesheets exposing (accountNamespace, CssIds(..), CssClasses(..))
 
@@ -27,6 +26,8 @@ initModel =
 
 { id, class, classList } =
     accountNamespace
+
+
 view : Session -> Model -> Html Msg
 view session model =
     case session.user of
@@ -35,40 +36,39 @@ view session model =
 
         Just user ->
             let
-                birthday =
+                name =
+                    String.join " " [ user.firstName, user.lastName ]
+
+                location =
+                    Maybe.map3
+                        (\city province country ->
+                            String.join ", " [ city, province, country ]
+                        )
+                        user.city
+                        user.province
+                        user.country
+                        |> Maybe.withDefault "Not Specified"
+
+                birthdate =
                     user.birthdate
                         |> Maybe.map (format "%B %e, %Y")
-                        |> Maybe.withDefault "Unknown"
+                        |> Maybe.withDefault "Not Specified"
 
                 sex =
                     user.sex
-                        |> Maybe.withDefault "Unknown"
-
-                city =
-                    user.city
-                        |> Maybe.withDefault "Unknown"
-
-                province =
-                    user.province
-                        |> Maybe.withDefault "Unknown"
-
-                country =
-                    user.country
-                        |> Maybe.withDefault "Unknown"
+                        |> Maybe.withDefault "Not Specified"
             in
                 div
-                    [ id Content, class [ Account ] ]
-                    [ img [ UserPhoto.src user.photo ] []
-                    , div [] [ span [] [ text "Id" ], userIdToHtml user.id ]
-                    , div [] [ span [] [ text "First Name" ], text user.firstName ]
-                    , div [] [ span [] [ text "Last Name" ], text user.lastName ]
-                    , div [] [ span [] [ text "Email" ], text user.email ]
-                    , div [] [ span [] [ text "City" ], text city ]
-                    , div [] [ span [] [ text "Province" ], text province ]
-                    , div [] [ span [] [ text "Country" ], text country ]
-                    , div [] [ span [] [ text "Birthday" ], text birthday ]
-                    , div [] [ span [] [ text "Sex" ], text sex ]
-                    , div [] [ span [] [ text "Role" ], text user.role ]
+                    [ id Content, class [ CenterContent ] ]
+                    [ h2 [] [ text "Account" ]
+                    , div []
+                        [ img [ UserPhoto.src user.photo ] []
+                        , h3 [] [ text name ]
+                        , div [] [ span [] [ text "Email" ], span [] [ text user.email ] ]
+                        , div [] [ span [] [ text "Location" ], span [] [ text location ] ]
+                        , div [] [ span [] [ text "Birthdate" ], span [] [ text birthdate ] ]
+                        , div [] [ span [] [ text "Sex" ], span [] [ text sex ] ]
+                        ]
                     ]
 
 

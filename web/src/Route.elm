@@ -15,6 +15,7 @@ type Route
     | Logout
     | Register
     | Account
+    | About
 
 
 route : Parser (Route -> a) a
@@ -25,6 +26,7 @@ route =
         , Url.map Logout (s "logout")
         , Url.map Register (s "register")
         , Url.map Account (s "account")
+        , Url.map About (s "about")
         ]
 
 
@@ -56,6 +58,9 @@ routeToString page =
 
                 Account ->
                     [ "account" ]
+
+                About ->
+                    [ "about" ]
     in
         "#/" ++ (String.join "/" pieces)
 

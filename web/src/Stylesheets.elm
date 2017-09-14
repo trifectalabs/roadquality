@@ -23,6 +23,7 @@ fileStructure =
                 , errorCss
                 , mapCss
                 , accountCss
+                , aboutCss
                 , Alert.Stylesheets.alertCss
                 ]
           )
@@ -62,6 +63,11 @@ errorNamespace =
 accountNamespace : Namespace String class id msg
 accountNamespace =
     withNamespace "account"
+
+
+aboutNamespace : Namespace String class id msg
+aboutNamespace =
+    withNamespace "about"
 
 
 messagesNamespace : Namespace String class id msg
@@ -113,6 +119,7 @@ type CssClasses
     | Brand
     | Nav
     | NavItem
+    | NavBox
     | NavLink
     | LogoFont
     | Attribution
@@ -124,7 +131,7 @@ type CssClasses
     | NotFound
     | ServerError
     | Login
-    | Account
+    | CenterContent
       -- Account
     | GoToAccount
       -- Messages
@@ -344,41 +351,49 @@ frameCss =
                     , padding4 (px 15) (px 15) (px 15) (px 40)
                     , margin zero
                     ]
-                , ul
-                    [ withClass Nav
-                        [ listStyle none
-                        , float right
-                        , padding4 zero (px 25) zero zero
-                        , margin zero
-                        , children
-                            [ class NavItem
-                                [ display inlineBlock
-                                , padding2 (px 20) (px 15)
-                                , fontSize (px 16)
-                                , withClass Active
-                                    [ children
-                                        [ class NavLink
-                                            [ textDecoration none
-                                            , color (rgb 22 146 72)
-                                            ]
-                                        ]
-                                    ]
-                                , children
-                                    [ class NavLink
-                                        [ textDecoration none
-                                        , color (rgb 80 80 80)
-                                        , hover
-                                            [ color (rgb 22 146 72) ]
-                                        ]
+                ]
+            ]
+        , ul
+            [ withClass Nav
+                [ listStyle none
+                , float right
+                , padding4 zero (px 25) zero zero
+                , margin zero
+                , children
+                    [ class NavItem
+                        [ display inlineBlock
+                        , padding2 (px 20) (px 15)
+                        , fontSize (px 16)
+                        , withClass Active
+                            [ children
+                                [ class NavLink
+                                    [ textDecoration none
+                                    , color (rgb 22 146 72)
                                     ]
                                 ]
                             ]
+                        , children
+                            [ class NavLink
+                                [ textDecoration none
+                                , color (rgb 80 80 80)
+                                , hover
+                                    [ color (rgb 22 146 72) ]
+                                ]
+                            ]
+                        ]
+                    , class NavBox
+                        [ display inlineBlock
+                        , paddingTop (px 6)
                         ]
                     ]
                 ]
             ]
         , footer
             [ borderTop3 (px 1) solid (rgb 225 225 225)
+            , children
+                [ div
+                    [ display inlineBlock ]
+                ]
             , descendants
                 [ class LogoFont
                     [ display inlineBlock
@@ -403,10 +418,10 @@ loginCss : Stylesheet
 loginCss =
     (stylesheet << namespace loginNamespace.name)
         [ class Login
-            [ children
+            [ display inlineBlock
+            , children
                 [ a
-                    [ display block
-                    , margin2 (px 30) zero
+                    [ display inlineBlock
                     , textAlign center
                     , focus
                         [ outline none ]
@@ -414,7 +429,7 @@ loginCss =
                         [ outline none ]
                     , children
                         [ img
-                            [ width (px 200) ]
+                            [ width (px 190) ]
                         ]
                     ]
                 ]
@@ -454,16 +469,63 @@ errorCss =
 accountCss : Stylesheet
 accountCss =
     (stylesheet << namespace accountNamespace.name)
-        [ class Account
-            [ padding4 (px 40) zero zero (px 50)
-            , descendants
-                [ img
-                    [ width (px 50) ]
+        [ class CenterContent
+            [ margin2 zero auto
+            , width (px 600)
+            , children
+                [ h2
+                    []
                 , div
-                    [ marginTop (px 10) ]
-                , span
-                    [ fontWeight (int 700)
-                    , marginRight (px 5)
+                    [ border3 (px 1) solid rgbLightGray
+                    , borderRadius (px 2)
+                    , boxShadow4 zero (px 1) (px 2) rgbDarkGray
+                    , padding2 (px 50) zero
+                    , descendants
+                        [ img
+                            [ width (px 200)
+                            , display block
+                            , margin2 zero auto
+                            ]
+                        , h3
+                            [ width (pct 100)
+                            , textAlign center
+                            ]
+                        , div
+                            [ marginTop (px 10)
+                            , width (pct 100)
+                            , children
+                                [ span
+                                    [ display inlineBlock
+                                    , firstChild
+                                        [ width (pct 35)
+                                        , fontWeight (int 700)
+                                        , marginRight (px 20)
+                                        , textAlign right
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+
+aboutCss : Stylesheet
+aboutCss =
+    (stylesheet << namespace aboutNamespace.name)
+        [ class CenterContent
+            [ margin2 zero auto
+            , width (px 600)
+            , children
+                [ h2
+                    []
+                , div
+                    [ border3 (px 1) solid rgbLightGray
+                    , borderRadius (px 2)
+                    , boxShadow4 zero (px 1) (px 2) rgbDarkGray
+                    , padding (px 50)
                     ]
                 ]
             ]
@@ -496,6 +558,7 @@ mapCss =
                             [ display inlineBlock
                             , maxWidth (px 500)
                             , marginRight (px 5)
+                            , children [ a [ color rgbTrifectaGreen ] ]
                             ]
                         , input
                             [ padding (px 10)
@@ -761,7 +824,7 @@ mapCss =
             ]
         , class GoToAccount
             [ position absolute
-            , top (px 10)
+            , top (px 6)
             , right (px 10)
             , zIndex (int 2)
             ]
