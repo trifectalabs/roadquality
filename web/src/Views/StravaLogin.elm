@@ -13,7 +13,7 @@ import Views.Assets as Assets
 view : Html msg
 view =
     div
-        [ id Content, class [ Login ] ]
+        [ class [ Login ] ]
         [ a
             [ href "/login" ]
             [ img [ Assets.src Assets.stravaLogin ] [] ]

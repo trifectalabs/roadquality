@@ -3,6 +3,7 @@ module Main exposing (..)
 import Page.Home as Home
 import Page.Login as Login
 import Page.Account as Account
+import Page.About as About
 import Page.Register as Register
 import Page.Errored as Errored exposing (PageLoadError)
 import Navigation exposing (Location, modifyUrl)
@@ -35,6 +36,7 @@ type Page
     | Login Login.Model
     | Register Register.Model
     | Account Account.Model
+    | About About.Model
 
 
 type PageState
@@ -164,6 +166,11 @@ viewPage session isLoading page =
                     |> frame Page.Account
                     |> Html.map AccountMsg
 
+            About subModel ->
+                About.view subModel
+                    |> frame Page.About
+                    |> Html.map AboutMsg
+
             Home subModel ->
                 Home.view session subModel
                     |> Html.map HomeMsg
@@ -228,6 +235,7 @@ type Msg
     | LoginMsg Login.Msg
     | RegisterMsg Register.Msg
     | AccountMsg Account.Msg
+    | AboutMsg About.Msg
     | SetUser (Maybe User)
 
 
@@ -302,6 +310,9 @@ setRoute maybeRoute model =
 
                     _ ->
                         { model | pageState = Loaded (Login Login.initModel) } => Ports.down ()
+
+            Just Route.About ->
+                { model | pageState = Loaded (About About.initModel) } => Ports.down ()
 
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )
@@ -435,6 +446,9 @@ updatePage page msg model =
 
             ( AccountMsg subMsg, Account subModel ) ->
                 toPage Account AccountMsg (Account.update session) subMsg subModel
+
+            ( AboutMsg subMsg, About subModel ) ->
+                toPage About AboutMsg About.update subMsg subModel
 
             ( SetUser user, _ ) ->
                 let

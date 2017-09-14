@@ -14,6 +14,7 @@ import Html.Lazy exposing (lazy2)
 import Views.Spinner exposing (spinner)
 import Util exposing ((=>))
 import Stylesheets exposing (frameNamespace, CssIds(..), CssClasses(..))
+import Views.StravaLogin as StravaLogin
 
 
 { id, class, classList } =
@@ -31,6 +32,7 @@ type ActivePage
     | Login
     | Register
     | Account
+    | About
 
 
 {-| Take a page's Html and frame it with a header and footer.
@@ -44,7 +46,7 @@ frame isLoading user page content =
     div [ class [ PageFrame ] ]
         [ viewHeader page user isLoading
         , content
-        , viewFooter
+        , viewFooter page
         ]
 
 
@@ -57,7 +59,7 @@ viewHeader page user isLoading =
             , ul [ class [ Nav ] ] <|
                 -- TODO: add loading spinner to main map ui
                 lazy2 Util.viewIf isLoading spinner
-                    :: (navbarLink (page == Home) Route.Home [ text "Map" ])
+                    -- :: (navbarLink (page == Home) Route.Home [ text "Map" ])
                     :: viewSignIn page user
             ]
         ]
@@ -67,27 +69,20 @@ viewSignIn : ActivePage -> Maybe User -> List (Html msg)
 viewSignIn page user =
     case user of
         Nothing ->
-            [ navbarLink (page == Login) Route.Login [ text "Sign in" ]
+            [ li [ class [ NavBox ] ] [ StravaLogin.view ]
 
+            -- navbarLink (page == Login) Route.Login [ text "Sign in" ]
             -- , navbarLink (page == Register) Route.Register [ text "Sign up" ]
             ]
 
         Just user ->
             [ navbarLink (page == Account) Route.Account [ text "Account" ]
             , navbarLink False Route.Logout [ text "Sign out" ]
-            , li
-                [ class [ NavItem ] ]
-                [ a
-                    [ class [ NavLink ]
-                    , href "https://goo.gl/forms/moVg23W1xmSMC2g83"
-                    ]
-                    [ text "Feedback" ]
-                ]
             ]
 
 
-viewFooter : Html msg
-viewFooter =
+viewFooter : ActivePage -> Html msg
+viewFooter page =
     footer []
         [ div []
             [ a
@@ -100,6 +95,17 @@ viewFooter =
                 , a [ href "https://github.com/trifectalabs/roadquality/blob/master/LICENSE" ] [ text "MIT" ]
                 , text "."
                 ]
+            ]
+        , ul [ class [ Nav ] ]
+            [ li
+                [ class [ NavItem ] ]
+                [ a
+                    [ class [ NavLink ]
+                    , href "https://goo.gl/forms/moVg23W1xmSMC2g83"
+                    ]
+                    [ text "Feedback" ]
+                ]
+            , navbarLink (page == About) Route.About [ text "About" ]
             ]
         ]
 

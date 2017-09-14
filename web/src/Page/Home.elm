@@ -18,7 +18,7 @@ import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Polyline
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (type_, value)
+import Html.Attributes exposing (type_, value, href)
 import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClasses(..))
 import Html.CssHelpers exposing (Namespace)
 import Util exposing ((=>), pair)
@@ -33,6 +33,7 @@ import Random.Char exposing (english)
 import Time exposing (Time)
 import Json.Encode as Encode
 import Alert exposing (Msg(..))
+import Views.StravaLogin as StravaLogin
 
 
 -- MODEL --
@@ -208,15 +209,16 @@ accountView : Session -> Html Msg
 accountView session =
     case session.user of
         Nothing ->
-            a
-                [ Route.href Route.Login ]
-                [ div
-                    [ class [ GoToAccount ]
-                    , g.class [ SecondaryButton ]
-                    ]
-                    [ text "Sign In" ]
-                ]
+            div [ class [ GoToAccount ] ] [ StravaLogin.view ]
 
+        -- a
+        --     [ Route.href Route.Login ]
+        --     [ div
+        --         [ class [ GoToAccount ]
+        --         , g.class [ SecondaryButton ]
+        --         ]
+        --         [ text "Sign In" ]
+        --     ]
         Just user ->
             a
                 [ Route.href Route.Account ]
@@ -228,7 +230,10 @@ signUpBanner email showBanner =
     if showBanner == True then
         div [ id EmailListBanner ]
             [ div []
-                [ span [] [ text "Want access to Road Quality? Add your email here and we will let you know when we're adding more users!" ]
+                [ span []
+                    [ text "Want access to Road Quality? Add your email here and we will let you know when we're adding more users! "
+                    , a [ href "#/about" ] [ text "Click here to learn more." ]
+                    ]
                 , input [ type_ "text", onInput ChangeEmailList, value email ] []
                 , div [ g.class [ SecondaryButton ], onClick EmailListSignup ] [ text "Let me know!" ]
                 ]
