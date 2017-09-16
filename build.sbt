@@ -48,7 +48,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val dockerSettings: Seq[Setting[_]] = Seq(
-  dockerRepository := Some("kiambogo"),
+  dockerRepository := Some("trifectalabs"),
   maintainer in Docker := "Christopher Poenaru <kiambogo@gmail.com>",
   dockerBaseImage := "openjdk",
   dockerExposedPorts := Seq(9000),
