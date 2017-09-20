@@ -1,39 +1,29 @@
 module Page.Home exposing (view, subscriptions, update, Model, Msg, ExternalMsg(..), init)
 
-import Dict exposing (Dict)
-import Set exposing (Set)
-import OrderedDict as OrdDict exposing (OrderedDict)
-import List.Extra exposing (elemIndex)
-import Data.Map exposing (MapLayer(..), CycleRoute, Point, Segment, SurfaceType(..), PathType(..), encodePoint, decodeCycleRoute, decodeSegment, encodeCreateSegmentForm)
-import Data.AuthToken exposing (AuthToken)
+import Data.Map exposing (MapLayer(..), Point)
 import Data.Session as Session exposing (Session)
 import Data.UserPhoto as UserPhoto
-import Request.Map exposing (snap, makeRoute, saveSegment, saveRating)
 import Request.User exposing (emailListSignUp)
 import Ports
 import Http
 import Task exposing (Task)
 import Views.Page as Page
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
-import Polyline
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Html.Attributes exposing (type_, value, href)
 import Stylesheets exposing (globalNamespace, mapNamespace, CssIds(..), CssClasses(..))
 import Html.CssHelpers exposing (Namespace)
-import Util exposing ((=>), pair)
+import Util exposing ((=>), generateNewKey)
 import Route
 import Views.Assets as Assets
 import Page.Home.RatingsMenu as Menu
 import Animation exposing (px)
-import Fifo exposing (Fifo)
-import Random exposing (Seed)
-import Random.String exposing (string)
-import Random.Char exposing (english)
 import Time exposing (Time)
-import Json.Encode as Encode
 import Alert exposing (Msg(..))
 import Views.StravaLogin as StravaLogin
+import Page.Home.RouteCreator as RouteCreator
+import Page.Home.Segments as Segments
 
 
 -- MODEL --
@@ -48,15 +38,8 @@ type alias Model =
     , mapBounds : Maybe ( Point, Point )
     , switchStyle : Animation.State
     , alertsStyle : Animation.State
-    , anchors : OrderedDict String Point
-    , cycleRoutes : OrderedDict String CycleRoute
-    , mapRouteKeys : Dict String String
-    , segments : Dict String Segment
-    , visibleSegments : Set String
-    , startAnchorUnused : Bool
-    , unusedAnchors : Fifo String
-    , unusedRoutes : Fifo String
-    , keySeed : Seed
+    , routeCreator : RouteCreator.Model
+    , segments : Segments.Model
     }
 
 
@@ -65,11 +48,6 @@ type alias Styles =
     , closed : List Animation.Property
     , msgOpen : List Animation.Property
     }
-
-
-cycleRouteKey : String -> String -> String
-cycleRouteKey first second =
-    first ++ "_" ++ second
 
 
 init : Session -> Task PageLoadError Model
@@ -104,15 +82,8 @@ initModel zoom now =
     , mapBounds = Nothing
     , switchStyle = Animation.style styles.closed
     , alertsStyle = Animation.style styles.closed
-    , anchors = OrdDict.empty
-    , cycleRoutes = OrdDict.empty
-    , mapRouteKeys = Dict.empty
-    , segments = Dict.empty
-    , visibleSegments = Set.empty
-    , startAnchorUnused = False
-    , unusedAnchors = Fifo.empty
-    , unusedRoutes = Fifo.empty
-    , keySeed = Random.initialSeed <| round now
+    , routeCreator = RouteCreator.initModel <| round now
+    , segments = Segments.initModel
     }
 
 
@@ -199,7 +170,7 @@ view session model =
                         [ text "Traffic Safety" ]
                     ]
                 ]
-            , Menu.view model.menu model.segments |> Html.map MenuMsg
+            , Menu.view model.menu model.segments.segments |> Html.map MenuMsg
             , accountView session
             , signUpBanner model.listEmail (session.user == Nothing)
             ]
@@ -242,16 +213,18 @@ signUpBanner email showBanner =
         span [] []
 
 
+
+-- SUBSCRIPTIONS --
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Ports.removedAnchor RemoveAnchorPoint
-        , Ports.setAnchor DropAnchorPoint
-        , Ports.movedAnchor MoveAnchorPoint
-        , Ports.zoomLevel ZoomLevel
+        [ Ports.zoomLevel ZoomLevel
         , Ports.mapBounds MapBounds
-        , Ports.loadSegments LoadSegments
         , Menu.subscriptions model.menu |> Sub.map MenuMsg
+        , RouteCreator.subscriptions model.routeCreator |> Sub.map RouteCreatorMsg
+        , Segments.subscriptions model.segments |> Sub.map SegmentsMsg
         , Animation.subscription AnimateSwitcher [ model.switchStyle ]
         , Animation.subscription AnimateAlerts [ model.alertsStyle ]
         , Alert.subscriptions model.alerts |> Sub.map AlertMsg
@@ -273,16 +246,9 @@ type Msg
     | EmailListSignupResult (Result Http.Error String)
     | AnimateSwitcher Animation.Msg
     | AnimateAlerts Animation.Msg
-    | DropAnchorPoint ( Float, Float )
-    | MoveAnchorPoint ( String, Float, Float )
-    | NewAnchorPoint String (Result Http.Error Point)
-    | ChangeAnchorPoint String (Result Http.Error Point)
-    | RemoveAnchorPoint String
-    | ReceiveRoute String String Int (Result Http.Error CycleRoute)
+    | RouteCreatorMsg RouteCreator.Msg
+    | SegmentsMsg Segments.Msg
     | MenuMsg Menu.Msg
-    | ReceiveSegment Int (Result Http.Error Segment)
-    | LoadSegments ()
-    | ReceiveSegments Bool (Result Http.Error (List Segment))
 
 
 type ExternalMsg
@@ -293,54 +259,18 @@ type ExternalMsg
 update : Session -> Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
 update session msg model =
     let
-        alerts =
-            model.alerts
-
-        anchors =
-            model.anchors
-
-        cycleRoutes =
-            model.cycleRoutes
-
-        mapRouteKeys =
-            model.mapRouteKeys
-
-        startAnchorUnused =
-            model.startAnchorUnused
-
-        unusedAnchors =
-            model.unusedAnchors
-
-        unusedRoutes =
-            model.unusedRoutes
-
-        mapBounds =
-            model.mapBounds
-
-        segments =
-            model.segments
-
-        visibleSegments =
-            model.visibleSegments
-
-        menu =
-            model.menu
-
         maybeAuthToken =
             session.user
                 |> Maybe.map .token
 
         apiUrl =
             session.apiUrl
-
-        authedAddRoute =
-            addRoute apiUrl maybeAuthToken cycleRoutes
     in
         case msg of
             AlertMsg subMsg ->
                 let
                     ( newAlerts, alertsCmd ) =
-                        Alert.update subMsg alerts
+                        Alert.update subMsg model.alerts
                 in
                     { model | alerts = newAlerts }
                         => Cmd.map AlertMsg alertsCmd
@@ -374,34 +304,19 @@ update session msg model =
                     newBounds =
                         Just bounds
 
-                    display =
-                        segmentsToDisplay newBounds segments visibleSegments
+                    subMsg =
+                        Segments.MapBoundsUpdate ( viewOnly, segmentMode )
 
-                    displayIds =
-                        Set.fromList <| List.map .id display
+                    boundsModel =
+                        { model | mapBounds = newBounds }
 
-                    hide =
-                        segmentsToHide newBounds segments visibleSegments
-
-                    hideIds =
-                        Set.fromList <| List.map .id hide
-
-                    newVisibleSegments =
-                        Set.diff visibleSegments hideIds
-                            |> Set.union displayIds
+                    ( newModel, cmd ) =
+                        updateSegments session subMsg boundsModel
                 in
                     if viewOnly || not segmentMode then
-                        { model | mapBounds = newBounds } => Cmd.none => NoOp
+                        boundsModel => Cmd.none => NoOp
                     else
-                        { model
-                            | mapBounds = newBounds
-                            , visibleSegments = newVisibleSegments
-                        }
-                            => Cmd.batch
-                                [ hideSegments hide
-                                , displaySegments display
-                                ]
-                            => NoOp
+                        newModel => cmd => NoOp
 
             ShowLogin ->
                 model => Cmd.none => Unauthorized
@@ -429,7 +344,7 @@ update session msg model =
                             _ ->
                                 ( 0, "" )
 
-                    alertMsg =
+                    alert =
                         case ( code, message ) of
                             ( 400, "\"Member Exists\"" ) ->
                                 { message = "You already signed up!"
@@ -444,29 +359,19 @@ update session msg model =
                                 , untilRemove = 5000
                                 , icon = True
                                 }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
                 in
-                    { model | alerts = newAlerts }
-                        => Cmd.map AlertMsg alertCmd
-                        => NoOp
+                    addAlert alert model => NoOp
 
             EmailListSignupResult (Ok response) ->
                 let
-                    alertMsg =
+                    alert =
                         { message = "We'll let you know when you can sign up!"
                         , type_ = Alert.Info
                         , untilRemove = 5000
                         , icon = True
                         }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
                 in
-                    { model | alerts = newAlerts }
-                        => Cmd.map AlertMsg alertCmd
-                        => NoOp
+                    addAlert alert model => NoOp
 
             AnimateSwitcher animMsg ->
                 { model
@@ -482,608 +387,11 @@ update session msg model =
                     => Cmd.none
                     => NoOp
 
-            DropAnchorPoint ( lng, lat ) ->
-                let
-                    newMenu =
-                        Menu.anchorCountUpdate (List.length anchors.order + 1) menu
-
-                    point =
-                        { lng = lng
-                        , lat = lat
-                        }
-
-                    ( ( ( pointId, nextSeed ), newUnusedAnchors ), nextStartAnchor ) =
-                        if startAnchorUnused == True then
-                            "startMarker" => model.keySeed => unusedAnchors => False
-                        else if (List.length <| Fifo.toList unusedAnchors) > 0 then
-                            Fifo.remove unusedAnchors
-                                |> (\( maybeKey, nextUnused ) ->
-                                        case maybeKey of
-                                            Nothing ->
-                                                generateNewKey model.keySeed => nextUnused => startAnchorUnused
-
-                                            Just key ->
-                                                key => model.keySeed => nextUnused => startAnchorUnused
-                                   )
-                        else if List.length anchors.order == 0 then
-                            "startMarker" => model.keySeed => unusedAnchors => startAnchorUnused
-                        else
-                            generateNewKey model.keySeed => unusedAnchors => startAnchorUnused
-
-                    newAnchors =
-                        OrdDict.insert pointId point anchors
-
-                    req =
-                        snap apiUrl maybeAuthToken ( lat, lng )
-
-                    paint =
-                        if pointId == "startMarker" then
-                            Encode.object
-                                [ "circle-radius" => Encode.int 7
-                                , "circle-color" => Encode.string "#40B34F"
-                                , "circle-stroke-color" => Encode.string "#FFFFFF"
-                                , "circle-stroke-width" => Encode.int 2
-                                ]
-                        else
-                            Encode.object
-                                [ "circle-radius" => Encode.int 4
-                                , "circle-color" => Encode.string "#FFFFFF"
-                                , "circle-stroke-width" => Encode.int 2
-                                ]
-
-                    cmd =
-                        Cmd.batch
-                            [ Http.send (NewAnchorPoint pointId) req
-                            , Ports.addSource
-                                ( pointId
-                                , Just "circle"
-                                , [ ( lng, lat ) ]
-                                , Just paint
-                                , Nothing
-                                )
-                            ]
-
-                    currentAnchor =
-                        Dict.get pointId anchors.dict
-                            -- Impossible Values
-                            |> Maybe.withDefault { lat = 1000.0, lng = 1000.0 }
-                in
-                    if
-                        ((abs <| currentAnchor.lat - lat) < 0.0001)
-                            && ((abs <| currentAnchor.lng - lng) < 0.0001)
-                    then
-                        model => Cmd.none => NoOp
-                    else
-                        { model
-                            | anchors = newAnchors
-                            , startAnchorUnused = nextStartAnchor
-                            , unusedAnchors = newUnusedAnchors
-                            , keySeed = nextSeed
-                            , menu = newMenu
-                        }
-                            => cmd
-                            => NoOp
-
-            MoveAnchorPoint ( pointId, lng, lat ) ->
-                let
-                    newMenu =
-                        Menu.anchorCountUpdate (List.length anchors.order) menu
-
-                    req =
-                        snap apiUrl maybeAuthToken ( lat, lng )
-
-                    cmd =
-                        Http.send (ChangeAnchorPoint pointId) req
-
-                    currentAnchor =
-                        Dict.get pointId anchors.dict
-                            -- Impossible Values
-                            |> Maybe.withDefault { lat = 1000.0, lng = 1000.0 }
-                in
-                    if
-                        ((abs <| currentAnchor.lat - lat) < 0.0001)
-                            && ((abs <| currentAnchor.lng - lng) < 0.0001)
-                    then
-                        model => Cmd.none => NoOp
-                    else
-                        { model | menu = newMenu } => cmd => NoOp
-
-            NewAnchorPoint pointId (Err error) ->
-                let
-                    responseCode =
-                        case error of
-                            Http.BadPayload _ response ->
-                                response.status.code
-
-                            Http.BadStatus response ->
-                                response.status.code
-
-                            _ ->
-                                0
-
-                    ( externalMsg, alertMsg ) =
-                        if responseCode == 401 then
-                            Unauthorized
-                                => { type_ = Alert.Error
-                                   , message = "You must login to place a point. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else if responseCode == 204 then
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "You're trying to place a point outside the currently supported area. Whoops!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "There was a server error trying to place your point. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
-
-                    cmd =
-                        Cmd.batch
-                            [ Ports.hideSources [ pointId ]
-                            , Cmd.map AlertMsg alertCmd
-                            ]
-                in
-                    { model | alerts = newAlerts }
-                        => cmd
-                        => externalMsg
-
-            -- Scenario One
-            ---------------
-            -- Route between point and before
-            ---------------------
-            -- TODO: Scenario Two
-            ---------------------
-            -- Delete route added on
-            -- Route between point and before
-            -- Route between point and after
-            NewAnchorPoint pointId (Ok point) ->
-                let
-                    newAnchors =
-                        OrdDict.insert pointId point anchors
-
-                    anchorCount =
-                        List.length newAnchors.order
-
-                    start =
-                        newAnchors.order
-                            |> List.drop (anchorCount - 2)
-                            |> List.head
-
-                    end =
-                        newAnchors.order
-                            |> List.drop (anchorCount - 1)
-                            |> List.head
-
-                    -- Route between point and before
-                    addCmd =
-                        Maybe.map2
-                            (\s e ->
-                                if s /= e then
-                                    authedAddRoute newAnchors s e
-                                else
-                                    Cmd.none
-                            )
-                            start
-                            end
-                            |> Maybe.withDefault Cmd.none
-
-                    cmd =
-                        Cmd.batch
-                            [ Ports.addSource
-                                ( pointId
-                                , Nothing
-                                , [ ( point.lng, point.lat ) ]
-                                , Nothing
-                                , Nothing
-                                )
-                            , addCmd
-                            ]
-                in
-                    { model | anchors = newAnchors } => cmd => NoOp
-
-            ChangeAnchorPoint pointId (Err error) ->
-                let
-                    responseCode =
-                        case error of
-                            Http.BadPayload _ response ->
-                                response.status.code
-
-                            Http.BadStatus response ->
-                                response.status.code
-
-                            _ ->
-                                0
-
-                    ( externalMsg, alertMsg ) =
-                        if responseCode == 401 then
-                            Unauthorized
-                                => { type_ = Alert.Error
-                                   , message = "You must login to move a point. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else if responseCode == 204 then
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "You're trying to move a point outside the currently supported area. Whoops!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "There was a server error trying to move your point. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
-
-                    cmd =
-                        Cmd.batch
-                            [ Ports.hideSources [ pointId ]
-                            , Cmd.map AlertMsg alertCmd
-                            ]
-                in
-                    { model | alerts = newAlerts }
-                        => cmd
-                        => externalMsg
-
-            -- Scenario One
-            ---------------
-            -- Delete route before
-            -- Route between point and before
-            ---------------
-            -- Scenario Two
-            ---------------
-            -- Delete route after
-            -- Route between point and after
-            -----------------
-            -- Scenario Three
-            -----------------
-            -- Delete route before
-            -- Delete route after
-            -- Route between point and before
-            -- Route between point and after
-            ChangeAnchorPoint pointId (Ok point) ->
-                let
-                    newAnchors =
-                        OrdDict.insert pointId point anchors
-
-                    anchorIndex =
-                        elemIndex pointId anchors.order
-                            |> Maybe.withDefault -1
-
-                    anchorCount =
-                        List.length anchors.order
-
-                    start =
-                        anchors.order
-                            |> List.drop (anchorIndex - 1)
-                            |> List.head
-
-                    end =
-                        anchors.order
-                            |> List.drop (anchorIndex + 1)
-                            |> List.head
-
-                    deleteBeforeCmd =
-                        Maybe.map (\s -> removeRouteFromMap mapRouteKeys s pointId) start
-                            |> Maybe.withDefault Cmd.none
-
-                    addBeforeCmd =
-                        Maybe.map
-                            (\s -> authedAddRoute newAnchors s pointId)
-                            start
-                            |> Maybe.withDefault Cmd.none
-
-                    deleteAfterCmd =
-                        Maybe.map (\e -> removeRouteFromMap mapRouteKeys pointId e) end
-                            |> Maybe.withDefault Cmd.none
-
-                    addAfterCmd =
-                        Maybe.map
-                            (\e -> authedAddRoute newAnchors pointId e)
-                            end
-                            |> Maybe.withDefault Cmd.none
-
-                    ( removedRoutes, removedRoutesMap, deleteAddCmd ) =
-                        -- Moving first anchor with no routes, do nothing
-                        if anchorIndex == 0 && anchorCount == 1 then
-                            ( Just cycleRoutes, Just ( unusedRoutes, mapRouteKeys ), Cmd.none )
-                            -- Delete route before, Delete/Add route before cmd
-                        else if anchorIndex == (anchorCount - 1) then
-                            ( Maybe.map
-                                (\s -> removeRoute s pointId cycleRoutes)
-                                start
-                            , Maybe.map
-                                (\s -> removeRouteMap s pointId ( unusedRoutes, mapRouteKeys ))
-                                start
-                            , Cmd.batch [ deleteBeforeCmd, addBeforeCmd ]
-                            )
-                            -- Delete route after, Delete/Add route after cmd
-                        else if anchorIndex == 0 then
-                            ( Maybe.map
-                                (\e -> removeRoute pointId e cycleRoutes)
-                                end
-                            , Maybe.map
-                                (\e -> removeRouteMap pointId e ( unusedRoutes, mapRouteKeys ))
-                                end
-                            , Cmd.batch [ deleteAfterCmd, addAfterCmd ]
-                            )
-                            -- Delete route before/after,
-                            -- Delete/Add route before/after cmd
-                        else
-                            ( Maybe.map2
-                                (\s e ->
-                                    cycleRoutes
-                                        |> removeRoute s pointId
-                                        |> removeRoute pointId e
-                                )
-                                start
-                                end
-                            , Maybe.map2
-                                (\s e ->
-                                    ( unusedRoutes, mapRouteKeys )
-                                        |> removeRouteMap s pointId
-                                        |> removeRouteMap pointId e
-                                )
-                                start
-                                end
-                            , Cmd.batch
-                                [ deleteBeforeCmd
-                                , deleteAfterCmd
-                                , addBeforeCmd
-                                , addAfterCmd
-                                ]
-                            )
-
-                    cmd =
-                        Cmd.batch
-                            [ Ports.addSource
-                                ( pointId
-                                , Nothing
-                                , [ ( point.lng, point.lat ) ]
-                                , Nothing
-                                , Nothing
-                                )
-                            , deleteAddCmd
-                            ]
-
-                    newCycleRoutes =
-                        Maybe.withDefault cycleRoutes removedRoutes
-
-                    ( newUnusedRoutes, newMapRouteKeys ) =
-                        Maybe.withDefault ( unusedRoutes, mapRouteKeys ) removedRoutesMap
-                in
-                    { model
-                        | anchors = newAnchors
-                        , cycleRoutes = newCycleRoutes
-                        , mapRouteKeys = newMapRouteKeys
-                        , unusedRoutes = newUnusedRoutes
-                    }
-                        => cmd
-                        => NoOp
-
-            -- Scenario One
-            ---------------
-            -- Delete route before
-            -- Delete route after
-            -- Route between before and after
-            ---------------
-            -- Scenario Two
-            ---------------
-            -- Delete route before
-            -----------------
-            -- Scenario Three
-            -----------------
-            -- Cannot delete starting anchor
-            RemoveAnchorPoint pointId ->
-                let
-                    anchorIndex =
-                        elemIndex pointId anchors.order
-                            |> Maybe.withDefault -1
-
-                    anchorCount =
-                        List.length anchors.order
-
-                    start =
-                        anchors.order
-                            |> List.drop (anchorIndex - 1)
-                            |> List.head
-
-                    end =
-                        anchors.order
-                            |> List.drop (anchorIndex + 1)
-                            |> List.head
-
-                    routeIndex =
-                        start
-                            |> Maybe.map (\s -> cycleRouteKey s pointId)
-                            |> Maybe.map (\r -> elemIndex r cycleRoutes.order)
-
-                    -- Delete route before
-                    beforeRemoved =
-                        Maybe.map
-                            (\s -> removeRoute s pointId cycleRoutes)
-                            start
-
-                    beforeRemovedMap =
-                        Maybe.map
-                            (\s -> removeRouteMap s pointId ( unusedRoutes, mapRouteKeys ))
-                            start
-
-                    -- Delete route before cmd
-                    removeFirstCmd =
-                        Maybe.map (\s -> removeRouteFromMap mapRouteKeys s pointId) start
-                            |> Maybe.withDefault Cmd.none
-
-                    -- Delete route after,
-                    -- Delete route after cmd,
-                    -- Route between before and after cmd
-                    ( afterRemoved, afterRemovedMap, removeSecondCmd, addCmd ) =
-                        if anchorIndex == (anchorCount - 1) then
-                            ( beforeRemoved, beforeRemovedMap, Cmd.none, Cmd.none )
-                        else
-                            ( Maybe.map2
-                                (\e routes -> removeRoute pointId e routes)
-                                end
-                                beforeRemoved
-                            , Maybe.map2
-                                (\e routes -> removeRouteMap pointId e routes)
-                                end
-                                beforeRemovedMap
-                            , Maybe.map
-                                (\e -> removeRouteFromMap mapRouteKeys pointId e)
-                                end
-                                |> Maybe.withDefault Cmd.none
-                            , Maybe.map2
-                                (\s e -> authedAddRoute anchors s e)
-                                start
-                                end
-                                |> Maybe.withDefault Cmd.none
-                            )
-
-                    newCycleRoutes =
-                        Maybe.withDefault cycleRoutes afterRemoved
-
-                    ( newUnusedRoutes, newMapRouteKeys ) =
-                        Maybe.withDefault ( unusedRoutes, mapRouteKeys ) afterRemovedMap
-
-                    newAnchors =
-                        OrdDict.remove pointId anchors
-
-                    ( nextStartAnchor, newUnusedAnchors ) =
-                        if (pointId == "startMarker") then
-                            True => unusedAnchors
-                        else
-                            startAnchorUnused => Fifo.insert pointId unusedAnchors
-
-                    newMenu =
-                        Menu.anchorCountUpdate (anchorCount - 1) menu
-
-                    cmd =
-                        Cmd.batch
-                            [ removeFirstCmd
-                            , removeSecondCmd
-                            , addCmd
-                            ]
-                in
-                    { model
-                        | anchors = newAnchors
-                        , cycleRoutes = newCycleRoutes
-                        , mapRouteKeys = newMapRouteKeys
-                        , startAnchorUnused = nextStartAnchor
-                        , unusedAnchors = newUnusedAnchors
-                        , unusedRoutes = newUnusedRoutes
-                        , menu = newMenu
-                    }
-                        => cmd
-                        => NoOp
-
-            ReceiveRoute _ endPointId _ (Err error) ->
-                let
-                    responseCode =
-                        case error of
-                            Http.BadPayload _ response ->
-                                response.status.code
-
-                            Http.BadStatus response ->
-                                response.status.code
-
-                            _ ->
-                                0
-
-                    ( externalMsg, alertMsg ) =
-                        if responseCode == 401 then
-                            Unauthorized
-                                => { type_ = Alert.Error
-                                   , message = "You must login to creating your route. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else if responseCode == 204 then
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "We weren't able to find a path between those points. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "There was a server error creating your route. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
-
-                    cmd =
-                        Cmd.batch
-                            [ Ports.hideSources [ endPointId ]
-                            , Cmd.map AlertMsg alertCmd
-                            ]
-                in
-                    { model | alerts = newAlerts }
-                        => cmd
-                        => NoOp
-
-            ReceiveRoute startPointId endPointId index (Ok route) ->
-                let
-                    routeKey =
-                        cycleRouteKey startPointId endPointId
-
-                    line =
-                        Polyline.decode route.polyline
-
-                    newCycleRoutes =
-                        OrdDict.insertAt index routeKey route cycleRoutes
-
-                    ( ( mapKey, nextSeed ), newUnusedRoutes ) =
-                        if (List.length <| Fifo.toList unusedRoutes) > 0 then
-                            Fifo.remove unusedRoutes
-                                |> (\( maybeKey, nextUnused ) ->
-                                        case maybeKey of
-                                            Nothing ->
-                                                generateNewKey model.keySeed => nextUnused
-
-                                            Just key ->
-                                                key => model.keySeed => nextUnused
-                                   )
-                        else
-                            generateNewKey model.keySeed => unusedRoutes
-
-                    newMapRouteKeys =
-                        Dict.insert routeKey mapKey mapRouteKeys
-
-                    paint =
-                        Encode.object
-                            [ "line-opacity" => Encode.float 0.5
-                            , "line-width" => Encode.int 5
-                            ]
-                in
-                    { model
-                        | cycleRoutes = newCycleRoutes
-                        , mapRouteKeys = newMapRouteKeys
-                        , unusedRoutes = newUnusedRoutes
-                        , keySeed = nextSeed
-                    }
-                        => Ports.addSource
-                            ( mapKey, Just "line", line, Just paint, Nothing )
-                        => NoOp
+            RouteCreatorMsg subMsg ->
+                updateRouteCreator session subMsg model => NoOp
+
+            SegmentsMsg subMsg ->
+                updateSegments session subMsg model => NoOp
 
             MenuMsg subMsg ->
                 let
@@ -1097,148 +405,91 @@ update session msg model =
 
                             Menu.Error error ->
                                 let
-                                    alertMsg =
+                                    alert =
                                         { type_ = Alert.Error
                                         , message = error
                                         , untilRemove = 5000
                                         , icon = True
                                         }
-
-                                    ( newAlerts, alertCmd ) =
-                                        Alert.update
-                                            (AddAlert alertMsg)
-                                            alerts
                                 in
-                                    { model | alerts = newAlerts }
-                                        => Cmd.map AlertMsg alertCmd
+                                    addAlert alert model
 
                             Menu.OpenMenu ->
-                                { model
-                                    | switchStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.switchOpen ]
-                                            model.switchStyle
-                                    , alertsStyle =
-                                        Animation.interrupt
-                                            [ Animation.to styles.msgOpen ]
-                                            model.alertsStyle
-                                }
-                                    => (model.mapBounds
-                                            |> Maybe.map
-                                                (\( southWest, northEast ) ->
-                                                    Request.Map.getBoundedSegments
-                                                        apiUrl
-                                                        maybeAuthToken
-                                                        southWest
-                                                        northEast
-                                                )
-                                            |> Maybe.map (Http.send <| ReceiveSegments True)
-                                            |> Maybe.withDefault Cmd.none
-                                       )
-
-                            Menu.CloseMenu ->
-                                let
-                                    ( nextStartAnchor, filteredAnchors ) =
-                                        if List.member "startMarker" anchors.order then
-                                            True => List.filter (\key -> key /= "startMarker") anchors.order
-                                        else
-                                            False => anchors.order
-
-                                    newUnusedAnchors =
-                                        Fifo.toList unusedAnchors
-                                            |> List.append filteredAnchors
-                                            |> Fifo.fromList
-
-                                    newUnusedRoutes =
-                                        Fifo.toList unusedRoutes
-                                            |> List.append cycleRoutes.order
-                                            |> Fifo.fromList
-
-                                    sourcesToClear =
-                                        cycleRoutes.order
-                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
-                                            |> List.append anchors.order
-                                            |> List.append (Set.toList visibleSegments)
-                                in
+                                updateSegments
+                                    session
+                                    (Segments.LoadSegments ())
                                     { model
-                                        | anchors = OrdDict.empty
-                                        , cycleRoutes = OrdDict.empty
-                                        , startAnchorUnused = nextStartAnchor
-                                        , unusedAnchors = newUnusedAnchors
-                                        , unusedRoutes = newUnusedRoutes
-                                        , visibleSegments = Set.empty
-                                        , switchStyle =
+                                        | switchStyle =
                                             Animation.interrupt
-                                                [ Animation.to styles.closed ]
+                                                [ Animation.to styles.switchOpen ]
                                                 model.switchStyle
                                         , alertsStyle =
                                             Animation.interrupt
-                                                [ Animation.to styles.closed ]
+                                                [ Animation.to styles.msgOpen ]
                                                 model.alertsStyle
                                     }
-                                        => Ports.hideSources sourcesToClear
+
+                            Menu.CloseMenu ->
+                                let
+                                    ( creatorModel, creatorCmd ) =
+                                        updateRouteCreator
+                                            session
+                                            RouteCreator.HideCurrentRoute
+                                            model
+
+                                    ( segmentsModel, segmentsCmd ) =
+                                        updateSegments
+                                            session
+                                            Segments.HideVisibleSegments
+                                            creatorModel
+                                in
+                                    segmentsModel
+                                        => Cmd.batch [ creatorCmd, segmentsCmd ]
 
                             Menu.ShowSegments show ->
                                 if show == True then
-                                    model
-                                        => (model.mapBounds
-                                                |> Maybe.map
-                                                    (\( southWest, northEast ) ->
-                                                        Request.Map.getBoundedSegments
-                                                            apiUrl
-                                                            maybeAuthToken
-                                                            southWest
-                                                            northEast
-                                                    )
-                                                |> Maybe.map (Http.send <| ReceiveSegments True)
-                                                |> Maybe.withDefault Cmd.none
-                                           )
+                                    updateSegments
+                                        session
+                                        (Segments.LoadSegments ())
+                                        model
                                 else
-                                    { model | visibleSegments = Set.empty }
-                                        => Ports.hideSources (Set.toList visibleSegments)
+                                    updateSegments
+                                        session
+                                        Segments.HideVisibleSegments
+                                        model
 
                             Menu.SaveRating sRating tRating segmentId ->
                                 let
-                                    polylines =
-                                        Dict.get segmentId model.segments
-                                            |> Maybe.map (\s -> [ s.polyline ])
-                                            |> Maybe.withDefault []
-
-                                    createSegmentForm =
-                                        { name = Nothing
-                                        , description = Nothing
-                                        , polylines = polylines
-                                        , surfaceRating = sRating
-                                        , trafficRating = tRating
-                                        , surfaceType = UnknownSurface
-                                        , pathType = UnknownPath
-                                        }
-
-                                    req =
-                                        saveRating
-                                            apiUrl
-                                            maybeAuthToken
-                                            createSegmentForm
-                                            segmentId
-                                            model.zoom
-
-                                    loadMsg =
+                                    alert =
                                         { type_ = Alert.Loading
                                         , message = "We're processing your rating"
                                         , untilRemove = -1
                                         , icon = True
                                         }
 
-                                    msgKey =
-                                        alerts.nextKey
+                                    ( alertsModel, alertCmd ) =
+                                        addAlert alert model
 
-                                    ( newAlerts, alertCmd ) =
-                                        Alert.update (AddAlert loadMsg) alerts
+                                    ( hideModel, hideCmd ) =
+                                        updateSegments
+                                            session
+                                            Segments.HideVisibleSegments
+                                            alertsModel
+
+                                    ( segmentModel, segmentCmd ) =
+                                        updateSegments
+                                            session
+                                            (Segments.SaveRating
+                                                model.alerts.nextKey
+                                                model.zoom
+                                                sRating
+                                                tRating
+                                                segmentId
+                                            )
+                                            hideModel
                                 in
-                                    { model
-                                        | visibleSegments = Set.empty
-                                        , alerts = newAlerts
-                                        , switchStyle =
+                                    { segmentModel
+                                        | switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
                                                 model.switchStyle
@@ -1248,78 +499,46 @@ update session msg model =
                                                 model.alertsStyle
                                     }
                                         => Cmd.batch
-                                            [ Http.send (ReceiveSegment msgKey) req
-                                            , Cmd.map AlertMsg alertCmd
-                                            , Ports.hideSources <| Set.toList visibleSegments
+                                            [ alertCmd
+                                            , hideCmd
+                                            , segmentCmd
                                             ]
 
                             Menu.CreateSegment sRating tRating name desc quick ->
                                 let
-                                    ( nextStartAnchor, filteredAnchors ) =
-                                        if List.member "startMarker" anchors.order then
-                                            True => List.filter (\key -> key /= "startMarker") anchors.order
-                                        else
-                                            False => anchors.order
-
-                                    newUnusedAnchors =
-                                        Fifo.toList unusedAnchors
-                                            |> List.append filteredAnchors
-                                            |> Fifo.fromList
-
-                                    newUnusedRoutes =
-                                        Fifo.toList unusedRoutes
-                                            |> List.append cycleRoutes.order
-                                            |> Fifo.fromList
-
-                                    sourcesToClear =
-                                        cycleRoutes.order
-                                            |> List.filterMap (\key -> Dict.get key mapRouteKeys)
-                                            |> List.append anchors.order
-
-                                    polylines =
-                                        model.cycleRoutes
-                                            |> OrdDict.orderedValues
-                                            |> List.map .polyline
-
-                                    createSegmentForm =
-                                        { name = name
-                                        , description = desc
-                                        , polylines = polylines
-                                        , surfaceRating = sRating
-                                        , trafficRating = tRating
-                                        , surfaceType = UnknownSurface
-                                        , pathType = UnknownPath
-                                        }
-
-                                    req =
-                                        saveSegment
-                                            apiUrl
-                                            maybeAuthToken
-                                            createSegmentForm
-                                            model.zoom
-                                            quick
-
-                                    loadMsg =
+                                    alert =
                                         { type_ = Alert.Loading
                                         , message = "We're processing your rating"
                                         , untilRemove = -1
                                         , icon = True
                                         }
 
-                                    msgKey =
-                                        alerts.nextKey
+                                    ( alertsModel, alertCmd ) =
+                                        addAlert alert model
 
-                                    ( newAlerts, alertCmd ) =
-                                        Alert.update (AddAlert loadMsg) alerts
+                                    ( hideModel, hideCmd ) =
+                                        updateRouteCreator
+                                            session
+                                            RouteCreator.HideCurrentRoute
+                                            alertsModel
+
+                                    ( createModel, createCmd ) =
+                                        updateSegments
+                                            session
+                                            (Segments.CreateSegment
+                                                model.alerts.nextKey
+                                                model.zoom
+                                                model.routeCreator.cycleRoutes
+                                                sRating
+                                                tRating
+                                                name
+                                                desc
+                                                quick
+                                            )
+                                            hideModel
                                 in
-                                    { model
-                                        | anchors = OrdDict.empty
-                                        , cycleRoutes = OrdDict.empty
-                                        , startAnchorUnused = nextStartAnchor
-                                        , unusedAnchors = newUnusedAnchors
-                                        , unusedRoutes = newUnusedRoutes
-                                        , alerts = newAlerts
-                                        , switchStyle =
+                                    { createModel
+                                        | switchStyle =
                                             Animation.interrupt
                                                 [ Animation.to styles.closed ]
                                                 model.switchStyle
@@ -1329,9 +548,9 @@ update session msg model =
                                                 model.alertsStyle
                                     }
                                         => Cmd.batch
-                                            [ Http.send (ReceiveSegment msgKey) req
-                                            , Cmd.map AlertMsg alertCmd
-                                            , Ports.hideSources sourcesToClear
+                                            [ alertCmd
+                                            , hideCmd
+                                            , createCmd
                                             ]
 
                     cmd =
@@ -1342,292 +561,98 @@ update session msg model =
                 in
                     { newModel | menu = menuModel } => cmd => NoOp
 
-            ReceiveSegment loadingMsgKey (Err error) ->
-                let
-                    responseCode =
-                        case error of
-                            Http.BadPayload _ response ->
-                                response.status.code
 
-                            Http.BadStatus response ->
-                                response.status.code
+addAlert : Alert.Alert -> Model -> ( Model, Cmd Msg )
+addAlert alert model =
+    let
+        ( newAlerts, alertCmd ) =
+            Alert.update (AddAlert alert) model.alerts
+    in
+        { model | alerts = newAlerts } => Cmd.map AlertMsg alertCmd
 
-                            _ ->
-                                0
 
-                    ( externalMsg, alertMsg ) =
-                        if responseCode == 401 then
-                            Unauthorized
-                                => { type_ = Alert.Error
-                                   , message = "You must login to save a segment. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
-                        else
-                            NoOp
-                                => { type_ = Alert.Error
-                                   , message = "There was a server error saving your segment. Sorry!"
-                                   , untilRemove = 5000
-                                   , icon = True
-                                   }
+hideAlert : Int -> Model -> ( Model, Cmd Msg )
+hideAlert key model =
+    let
+        ( newAlerts, alertCmd ) =
+            Alert.update (RemoveAlert key) model.alerts
+    in
+        { model | alerts = newAlerts } => Cmd.map AlertMsg alertCmd
 
-                    ( newAlerts, alertCmd ) =
-                        [ RemoveAlert loadingMsgKey
-                        , AddAlert alertMsg
-                        ]
-                            |> List.foldl
-                                (\message ( prevErr, prevCmd ) ->
-                                    let
-                                        ( nextErr, nextCmd ) =
-                                            Alert.update message prevErr
-                                    in
-                                        nextErr => Cmd.batch [ prevCmd, nextCmd ]
-                                )
-                                ( alerts, Cmd.none )
-                in
-                    { model | alerts = newAlerts }
-                        => Cmd.map AlertMsg alertCmd
-                        => externalMsg
 
-            ReceiveSegment loadingMsgKey (Ok segment) ->
-                let
-                    segments =
-                        Dict.insert segment.id segment model.segments
+updateRouteCreator : Session -> RouteCreator.Msg -> Model -> ( Model, Cmd Msg )
+updateRouteCreator session subMsg model =
+    let
+        ( ( routeModel, routeCmd ), msgFromCreator ) =
+            RouteCreator.update session subMsg model.routeCreator
 
-                    layer =
-                        toString model.mapLayer
+        ( newModel, mainCmd ) =
+            case msgFromCreator of
+                RouteCreator.NoOp ->
+                    model => Cmd.none
 
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (RemoveAlert loadingMsgKey) alerts
-                in
-                    { model | segments = segments, alerts = newAlerts }
-                        => Cmd.batch
-                            [ Ports.refreshLayer layer
-                            , Cmd.map AlertMsg alertCmd
-                            ]
-                        => NoOp
+                RouteCreator.AddAlert alert ->
+                    addAlert alert model
 
-            LoadSegments () ->
-                let
-                    req =
-                        model.mapBounds
-                            |> Maybe.map
-                                (\( southWest, northEast ) ->
-                                    Request.Map.getBoundedSegments
-                                        apiUrl
-                                        maybeAuthToken
-                                        southWest
-                                        northEast
-                                )
-                            |> Maybe.map (Http.send <| ReceiveSegments False)
-                            |> Maybe.withDefault Cmd.none
-                in
-                    case maybeAuthToken of
-                        Nothing ->
-                            model => Cmd.none => NoOp
-
-                        Just _ ->
-                            model => req => NoOp
-
-            ReceiveSegments _ (Err error) ->
-                let
-                    alertMsg =
-                        { type_ = Alert.Error
-                        , message = "There was a server error loading segments. Sorry!"
-                        , untilRemove = 5000
-                        , icon = True
-                        }
-
-                    ( newAlerts, alertCmd ) =
-                        Alert.update (AddAlert alertMsg) alerts
-                in
-                    { model | alerts = newAlerts }
-                        => Cmd.map AlertMsg alertCmd
-                        => NoOp
-
-            ReceiveSegments alterMode (Ok someSegments) ->
-                let
-                    newSegments =
-                        List.foldl
-                            (\seg acc -> Dict.insert seg.id seg acc)
-                            segments
-                            someSegments
-
-                    addSegments =
-                        segmentsToDisplay mapBounds newSegments visibleSegments
-                            |> displaySegments
-
-                    newVisibleSegments =
-                        List.foldl
-                            (\seg acc -> Set.insert seg.id acc)
-                            visibleSegments
-                            someSegments
-
-                    ( newMenu, menuCmd ) =
-                        if alterMode then
-                            Menu.visibleSegmentsUpdate newVisibleSegments menu
-                        else
-                            ( menu, Cmd.none )
-
-                    ( newAlerts, alertCmd ) =
-                        if alterMode && Set.size newVisibleSegments == 0 then
-                            let
-                                alertMsg =
-                                    { type_ = Alert.Info
-                                    , message = "Looks like there's no segments in this area. Try making your own!"
-                                    , untilRemove = 5000
-                                    , icon = True
-                                    }
-                            in
-                                Alert.update (AddAlert alertMsg) alerts
-                        else
-                            ( alerts, Cmd.none )
-
-                    cmd =
-                        Cmd.batch
-                            [ addSegments
-                            , menuCmd |> Cmd.map MenuMsg
-                            , alertCmd |> Cmd.map AlertMsg
-                            ]
-                in
+                RouteCreator.AnchorCount count ->
                     { model
-                        | segments = newSegments
-                        , visibleSegments = newVisibleSegments
-                        , menu = newMenu
-                        , alerts = newAlerts
+                        | menu =
+                            Menu.anchorCountUpdate count model.menu
                     }
-                        => cmd
-                        => NoOp
+                        => Cmd.none
 
-
-generateNewKey : Seed -> ( String, Seed )
-generateNewKey seed =
-    Random.step (string 16 english) seed
-
-
-removeRoute : String -> String -> OrderedDict String CycleRoute -> OrderedDict String CycleRoute
-removeRoute startPointId endPointId cycleRoutes =
-    OrdDict.remove (cycleRouteKey startPointId endPointId) cycleRoutes
-
-
-removeRouteMap : String -> String -> ( Fifo String, Dict String String ) -> ( Fifo String, Dict String String )
-removeRouteMap startPointId endPointId ( unusedRoutes, mapRouteKeys ) =
-    let
-        routeKey =
-            cycleRouteKey startPointId endPointId
-
-        newUnusedRoutes =
-            Dict.get routeKey mapRouteKeys
-                |> Maybe.map (\mapKey -> Fifo.insert mapKey unusedRoutes)
-                |> Maybe.withDefault unusedRoutes
+        cmd =
+            Cmd.batch
+                [ mainCmd, Cmd.map RouteCreatorMsg routeCmd ]
     in
-        newUnusedRoutes => Dict.remove routeKey mapRouteKeys
+        { newModel | routeCreator = routeModel } => cmd
 
 
-removeRouteFromMap : Dict String String -> String -> String -> Cmd Msg
-removeRouteFromMap mapRouteKeys startPointId endPointId =
-    cycleRouteKey startPointId endPointId
-        |> (\routeKey -> Dict.get routeKey mapRouteKeys)
-        |> Maybe.map (\key -> Ports.hideSources [ key ])
-        |> Maybe.withDefault Cmd.none
-
-
-addRoute : String -> Maybe AuthToken -> OrderedDict String CycleRoute -> OrderedDict String Point -> String -> String -> Cmd Msg
-addRoute apiUrl maybeAuthToken cycleRoutes anchors startPointId endPointId =
+updateSegments : Session -> Segments.Msg -> Model -> ( Model, Cmd Msg )
+updateSegments session subMsg model =
     let
-        routeKey =
-            cycleRouteKey startPointId endPointId
+        ( ( segmentsModel, segmentsCmd ), msgsFromSegments ) =
+            Segments.update
+                session
+                model.mapBounds
+                model.mapLayer
+                subMsg
+                model.segments
 
-        routeIndex =
-            elemIndex routeKey cycleRoutes.order
-                |> Maybe.withDefault (List.length cycleRoutes.order)
+        ( newModel, mainCmd ) =
+            List.foldl
+                (\extMsg ( prevModel, prevCmd ) ->
+                    let
+                        ( nextModel, cmd ) =
+                            processSegemntsExternalMsg extMsg model
 
-        points =
-            [ startPointId, endPointId ]
-                |> List.filterMap (\id -> Dict.get id anchors.dict)
-    in
-        Http.send
-            (ReceiveRoute startPointId endPointId routeIndex)
-            (makeRoute apiUrl maybeAuthToken points)
-
-
-withinMapBounds : Maybe ( Point, Point ) -> Segment -> Bool
-withinMapBounds mapBounds segment =
-    case mapBounds of
-        Nothing ->
-            True
-
-        Just ( southWest, northEast ) ->
-            Polyline.decode segment.polyline
-                |> List.foldl
-                    (\( lat, lng ) within ->
-                        ((lat <= northEast.lat)
-                            && (lng <= northEast.lng)
-                            && (lat >= southWest.lat)
-                            && (lng >= southWest.lng)
-                        )
-                            || within
-                    )
-                    False
-
-
-segmentsToDisplay : Maybe ( Point, Point ) -> Dict String Segment -> Set String -> List Segment
-segmentsToDisplay mapBounds segments visibleSegments =
-    Dict.values segments
-        |> List.filter (\seg -> not <| Set.member seg.id visibleSegments)
-        |> List.filter (withinMapBounds mapBounds)
-
-
-segmentsToHide : Maybe ( Point, Point ) -> Dict String Segment -> Set String -> List Segment
-segmentsToHide mapBounds segments visibleSegments =
-    Dict.values segments
-        |> List.filter (\seg -> Set.member seg.id visibleSegments)
-        |> List.filter (\seg -> not <| withinMapBounds mapBounds seg)
-
-
-displaySegments : List Segment -> Cmd Msg
-displaySegments segments =
-    let
-        paint =
-            Encode.object
-                [ "line-width" => Encode.int 4
-                , "line-color" => Encode.string "rgb(176, 215, 51)"
-                ]
-
-        hoverPaint =
-            Encode.object
-                [ "line-width" => Encode.int 4
-                , "line-color" => Encode.string "rgb(100, 175, 60)"
-                ]
-
-        activePaint =
-            Encode.object
-                [ "line-width" => Encode.int 4
-                , "line-color" => Encode.string "rgb(2, 126, 51)"
-                ]
-
-        selectedPaint =
-            Encode.object
-                [ "line-width" => Encode.int 4
-                , "line-color" => Encode.string "rgb(22, 146, 71)"
-                ]
-    in
-        segments
-            |> List.map
-                (\seg ->
-                    Ports.addSource
-                        ( seg.id
-                        , Just "line"
-                        , Polyline.decode seg.polyline
-                        , Just paint
-                        , Just ( hoverPaint, activePaint, selectedPaint )
-                        )
+                        nextCmd =
+                            Cmd.batch [ prevCmd, cmd ]
+                    in
+                        ( nextModel, nextCmd )
                 )
-            |> Cmd.batch
+                ( model, Cmd.none )
+                msgsFromSegments
+
+        cmd =
+            Cmd.batch
+                [ mainCmd, Cmd.map SegmentsMsg segmentsCmd ]
+    in
+        { newModel | segments = segmentsModel } => cmd
 
 
-hideSegments : List Segment -> Cmd Msg
-hideSegments segments =
-    segments
-        |> List.map .id
-        |> Ports.hideSources
+processSegemntsExternalMsg : Segments.ExternalMsg -> Model -> ( Model, Cmd Msg )
+processSegemntsExternalMsg msgFromSegments model =
+    case msgFromSegments of
+        Segments.AddAlert alert ->
+            addAlert alert model
+
+        Segments.HideAlert key ->
+            hideAlert key model
+
+        Segments.VisibleSegments visibleSegments ->
+            let
+                ( newMenu, menuCmd ) =
+                    Menu.visibleSegmentsUpdate visibleSegments model.menu
+            in
+                { model | menu = newMenu } => Cmd.map MenuMsg menuCmd

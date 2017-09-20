@@ -1,6 +1,9 @@
-module Util exposing ((=>), pair, viewIf, appendErrors)
+module Util exposing ((=>), pair, viewIf, appendErrors, generateNewKey)
 
 import Html exposing (Html)
+import Random exposing (Seed)
+import Random.String exposing (string)
+import Random.Char exposing (english)
 
 
 (=>) : a -> b -> ( a, b )
@@ -16,10 +19,10 @@ infixl 0 =>
 
 {-| Useful when building up a Cmd via a pipeline, and then pairing it with
 a model at the end.
-    session.user
-        |> User.Request.foo
-        |> Task.attempt Foo
-        |> pair { model | something = blah }
+session.user
+|> User.Request.foo
+|> Task.attempt Foo
+|> pair { model | something = blah }
 -}
 pair : a -> b -> ( a, b )
 pair first second =
@@ -39,3 +42,8 @@ viewIf condition content =
 appendErrors : { model | errors : List error } -> List error -> { model | errors : List error }
 appendErrors model errors =
     { model | errors = model.errors ++ errors }
+
+
+generateNewKey : Seed -> ( String, Seed )
+generateNewKey seed =
+    Random.step (string 16 english) seed
