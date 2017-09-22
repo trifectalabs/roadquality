@@ -1,4 +1,5 @@
 package db.dao
+
 import javax.inject.{Inject, Singleton}
 import com.vividsolutions.jts.geom.{ Geometry, LineString, Coordinate }
 import com.trifectalabs.roadquality.v0.models.{ Point, MapRoute }
@@ -8,11 +9,12 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
 import models.Exceptions._
 import util.Metrics
+import play.Environment
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
+class PostgresMapDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider, override val env: Environment)(implicit ec: ExecutionContext)
   extends MapDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import profile.api._
 

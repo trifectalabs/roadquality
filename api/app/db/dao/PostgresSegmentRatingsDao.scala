@@ -11,11 +11,12 @@ import util.Metrics
 import models.Extent
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
+import play.Environment
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
+class PostgresSegmentRatingsDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider, override val env: Environment)(implicit ec: ExecutionContext)
   extends SegmentRatingsDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import _root_.db.TablesHelper._
   import profile.api._

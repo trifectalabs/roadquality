@@ -10,6 +10,7 @@ import util.Metrics
 import nl.grons.metrics.scala._
 import play.api.mvc.Security._
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.Environment
 
 import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 
@@ -45,7 +46,7 @@ class AuthenticatedRequest[A](val user: User, request: Request[A]) extends Wrapp
   }
 }
 
-object Authenticated extends ActionBuilder[AuthenticatedRequest] with Metrics {
+object Authenticated extends ActionBuilder[AuthenticatedRequest] {
   def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
     RequestHelper.userAuth(request.headers) match {
       case None => {
@@ -53,7 +54,7 @@ object Authenticated extends ActionBuilder[AuthenticatedRequest] with Metrics {
       }
 
       case Some(user) => {
-        apiMetrics.timer(s"${request.path.tail} ${request.method}").timeFuture {
+//        apiMetrics.timer(s"${request.path.tail} ${request.method}").timeFuture {
           try {
             block {
               new AuthenticatedRequest(user, request)
@@ -62,9 +63,8 @@ object Authenticated extends ActionBuilder[AuthenticatedRequest] with Metrics {
             case e: UnauthenticatedException => Future(Unauthorized(e.msg))
             case e: UnauthorizedException => Future(Forbidden(e.msg))
           }
-        }
+        //}
       }
     }
   }
-
 }

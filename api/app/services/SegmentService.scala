@@ -18,6 +18,7 @@ import play.api.Logger
 import play.api.libs.ws._
 import play.api.libs.json._
 import play.api.Configuration
+import play.Environment
 
 import scala.concurrent.{ExecutionContext, Future}
 import com.trifectalabs.roadquality.v0.models._
@@ -32,7 +33,7 @@ trait SegmentService {
 }
 
 class SegmentServiceImpl @Inject()
-  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, wsClient: WSClient, configuration: Configuration)
+  (segmentsDao: SegmentsDao, miniSegmentsDao: MiniSegmentsDao, mapDao: MapDao, ratingsDao: SegmentRatingsDao, wsClient: WSClient, configuration: Configuration, override val env: Environment)
   (implicit ec: ExecutionContext) extends SegmentService with Metrics {
   implicit def latLng2Point(latLng: LatLng): Point = Point(lat = latLng.lat, lng = latLng.lng)
   lazy val ratingsTileserverUrl = configuration.getString("ratings.tileserver.url").get

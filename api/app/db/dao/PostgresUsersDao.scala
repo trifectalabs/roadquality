@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.GetResult
 import scala.concurrent.{ExecutionContext, Future}
+import play.Environment
 
 import com.trifectalabs.roadquality.v0.models.{ User, UserRole }
 import db.MyPostgresDriver
@@ -15,7 +16,7 @@ import util.Metrics
 
 
 @Singleton
-class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
+class PostgresUsersDao @Inject() (protected val dbConfigProvider: DatabaseConfigProvider, override val env: Environment)(implicit ec: ExecutionContext)
 extends UsersDao with HasDatabaseConfigProvider[MyPostgresDriver] with Metrics {
   import profile.api._
 
