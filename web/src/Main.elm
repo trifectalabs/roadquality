@@ -6,7 +6,7 @@ import Page.Account as Account
 import Page.About as About
 import Page.Register as Register
 import Page.Errored as Errored exposing (PageLoadError)
-import Navigation exposing (Location, modifyUrl)
+import Navigation exposing (load, Location, modifyUrl)
 import Route exposing (Route)
 import Ports
 import Page.NotFound as NotFound
@@ -14,7 +14,6 @@ import Page.Errored as Errored exposing (PageLoadError)
 import Views.Page as Page exposing (ActivePage)
 import Data.User as User exposing (User)
 import Json.Decode as Decode exposing (Value)
-import Navigation exposing (load)
 import Task
 import Util exposing ((=>))
 import Route exposing (Route)
@@ -25,6 +24,7 @@ import Route exposing (Route)
 import Html
 import Regex exposing (HowMany(All), replace, regex)
 import UrlParser as Url exposing ((<?>))
+import TimeTravel.Navigation as TimeTravel
 
 
 type Page
@@ -470,9 +470,10 @@ updatePage page msg model =
 
 
 -- MAIN --
+-- For better debugging replace Navigation.programWithFlags with
+-- TimeTravel.programWithFlags
 
 
-main : Program Value Model Msg
 main =
     Navigation.programWithFlags (Route.fromLocation >> SetRoute)
         { init = init
